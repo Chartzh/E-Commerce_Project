@@ -50,7 +50,7 @@ public class UserDashboardUI extends JFrame {
         // Add panels to the card layout
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
-        mainPanel.add(ordersPanel, "Order");
+        mainPanel.add(ordersPanel, "Orders");
         
         // Add components to frame
         add(headerPanel, BorderLayout.NORTH);
