@@ -266,6 +266,38 @@ public class AdminDashboardUI extends JFrame {
         return menuItem;
     }
     
+    // metode untuk menghubungkan stats dengan database
+    private int getTotalUserCountByRole(String role) {
+    int count = 0;
+    String query = "SELECT COUNT(*) FROM users WHERE role = ?";
+
+    Connection conn = null;
+    PreparedStatement stmt = null;
+    ResultSet rs = null;
+
+    try {
+        conn = DatabaseConnection.getConnection();
+        stmt = conn.prepareStatement(query);
+
+        // Ini baris pentingnya
+        stmt.setString(1, role);
+
+        rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            count = rs.getInt(1);
+        }
+
+    } catch (SQLException e) {
+        e.printStackTrace();
+    } finally {
+        DatabaseConnection.closeConnection(conn, stmt, rs);
+    }
+
+    return count;
+}
+
+    
     private JPanel createAdminDashboardPanel() {
         JPanel dashboardPanel = new JPanel();
         dashboardPanel.setLayout(new BorderLayout());
@@ -286,7 +318,8 @@ public class AdminDashboardUI extends JFrame {
         statsPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
         
         // Stat cards
-        statsPanel.add(createStatCard("Total Pengguna", "125", new Color(41, 128, 185)));
+        int totalUserOnly = getTotalUserCountByRole("user");
+        statsPanel.add(createStatCard("Total Pengguna", String.valueOf(totalUserOnly), new Color(41, 128, 185)));
         statsPanel.add(createStatCard("Total Produk", "48", new Color(39, 174, 96)));
         statsPanel.add(createStatCard("Total Transaksi", "312", new Color(231, 76, 60)));
         
