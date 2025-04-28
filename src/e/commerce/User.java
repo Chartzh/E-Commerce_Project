@@ -1,3 +1,5 @@
+package e.commerce;
+
 import java.awt.Image;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -27,7 +29,7 @@ public class User {
 
     public User(String username, String password, String email, String nik, String address, String phone, String role) {
         this.username = username;
-        this.password = password;
+        this.password = password; // Password diharapkan sudah di-hash
         this.email = email;
         this.nik = nik;
         this.address = address;
@@ -101,11 +103,11 @@ public class User {
     }
     
     public String getRole() {
-    return role;
+        return role;
     }
 
     public void setRole(String role) {
-    this.role = role;
+        this.role = role;
     }
 
     public ImageIcon getProfileImageIcon() {
@@ -122,41 +124,42 @@ public class User {
 
     // Method untuk menyimpan user baru ke database
     public boolean register() {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            String sql = "INSERT INTO users (username, password, email, nik, address, phone) VALUES (?, ?, ?, ?, ?, ?)";
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, username);
-            pstmt.setString(2, password); // Ideally should be hashed
-            pstmt.setString(3, email);
-            pstmt.setString(4, nik);
-            pstmt.setString(5, address);
-            pstmt.setString(6, phone);
-            
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            System.err.println("Error saat registrasi user: " + e.getMessage());
-            return false;
-        } finally {
-            try {
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement: " + e.getMessage());
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            // Cek apakah email sudah ada (data sementara)
+            String checkSql = "SELECT email FROM users WHERE email = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, email);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                // Email sudah ada, update data
+                String sql = "UPDATE users SET username = ?, password = ?, nik = ?, address = ?, phone = ?, role = ?, otp_code = NULL, otp_expires_at = NULL WHERE email = ?";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, username);
+                stmt.setString(2, password);
+                stmt.setString(3, nik);
+                stmt.setString(4, address);
+                stmt.setString(5, phone);
+                stmt.setString(6, role);
+                stmt.setString(7, email);
+                int affectedRows = stmt.executeUpdate();
+                return affectedRows > 0;
+            } else {
+                // Email belum ada (seharusnya tidak terjadi karena data sementara sudah dimasukkan)
+                System.err.println("Email " + email + " tidak ditemukan di tabel users saat registrasi.");
+                return false;
             }
+        } catch (SQLException e) {
+            System.err.println("Error saat registrasi user: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
+            return false;
         }
     }
     
     // Method untuk update profil user
     public boolean updateProfile() {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "UPDATE users SET email = ?, nik = ?, address = ?, phone = ? WHERE username = ?";
-            pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, email);
             pstmt.setString(2, nik);
             pstmt.setString(3, address);
@@ -166,26 +169,16 @@ public class User {
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
         } catch (SQLException e) {
-            System.err.println("Error saat update profil: " + e.getMessage());
+            System.err.println("Error saat update profil: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return false;
-        } finally {
-            try {
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement: " + e.getMessage());
-            }
         }
     }
     
     // Method untuk update foto profil
     public boolean updateProfileImage(File imageFile) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            
+        try (Connection conn = DatabaseConnection.getConnection();
+             FileInputStream fis = new FileInputStream(imageFile)) {
             // Convert image file to byte array
-            FileInputStream fis = new FileInputStream(imageFile);
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             byte[] buf = new byte[1024];
             for (int readNum; (readNum = fis.read(buf)) != -1;) {
@@ -194,36 +187,25 @@ public class User {
             profileImage = bos.toByteArray();
             
             String sql = "UPDATE users SET profile_image = ? WHERE username = ?";
-            pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setBytes(1, profileImage);
             pstmt.setString(2, username);
             
             int affectedRows = pstmt.executeUpdate();
-            fis.close();
             return affectedRows > 0;
         } catch (IOException | SQLException e) {
             System.err.println("Error saat update foto profil: " + e.getMessage());
             return false;
-        } finally {
-            try {
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement: " + e.getMessage());
-            }
         }
     }
     
     // Method untuk load user data dari database berdasarkan username
     public boolean loadUserByUsername(String username) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "SELECT * FROM users WHERE username = ?";
-            pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
-            rs = pstmt.executeQuery();
+            ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
                 this.id = rs.getInt("id");
@@ -233,6 +215,7 @@ public class User {
                 this.nik = rs.getString("nik");
                 this.address = rs.getString("address");
                 this.phone = rs.getString("phone");
+                this.role = rs.getString("role");
                 
                 Blob blob = rs.getBlob("profile_image");
                 if (blob != null) {
@@ -242,15 +225,8 @@ public class User {
             }
             return false;
         } catch (SQLException e) {
-            System.err.println("Error saat load user: " + e.getMessage());
+            System.err.println("Error saat load user: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement/resultset: " + e.getMessage());
-            }
         }
     }
 }

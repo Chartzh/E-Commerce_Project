@@ -1,101 +1,74 @@
+package e.commerce;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class Authentication {
     private static User currentUser = null;
 
     // Method untuk login
     public static User login(String username, String password) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
-            pstmt = conn.prepareStatement(sql);
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            String sql = "SELECT * FROM users WHERE username = ?";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
-            pstmt.setString(2, password); // Ideally password should be hashed
-            rs = pstmt.executeQuery();
+            ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                User user = new User();
-                user.setId(rs.getInt("id"));
-                user.setUsername(rs.getString("username"));
-                user.setPassword(rs.getString("password"));
-                user.setEmail(rs.getString("email"));
-                user.setNik(rs.getString("nik"));
-                user.setAddress(rs.getString("address"));
-                user.setPhone(rs.getString("phone"));
-                user.setRole(rs.getString("role")); // <-- ambil role dari DB
+                String hashedPassword = rs.getString("password");
+                // Verifikasi password menggunakan BCrypt
+                if (BCrypt.checkpw(password, hashedPassword)) {
+                    User user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPassword(hashedPassword); // Simpan hash, bukan plain text
+                    user.setEmail(rs.getString("email"));
+                    user.setNik(rs.getString("nik"));
+                    user.setAddress(rs.getString("address"));
+                    user.setPhone(rs.getString("phone"));
+                    user.setRole(rs.getString("role"));
 
-                currentUser = user;
-                return user;
+                    currentUser = user;
+                    return user;
+                }
             }
             return null;
         } catch (SQLException e) {
-            System.err.println("Error saat login: " + e.getMessage());
+            System.err.println("Error saat login: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return null;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement/resultset: " + e.getMessage());
-            }
         }
     }
 
     // Method untuk cek username tersedia
     public static boolean isUsernameAvailable(String username) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "SELECT username FROM users WHERE username = ?";
-            pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
-            rs = pstmt.executeQuery();
+            ResultSet rs = pstmt.executeQuery();
 
             return !rs.next(); // Return true jika username tidak ditemukan
         } catch (SQLException e) {
-            System.err.println("Error saat cek username: " + e.getMessage());
+            System.err.println("Error saat cek username: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement/resultset: " + e.getMessage());
-            }
         }
     }
 
     // Method untuk cek email tersedia
     public static boolean isEmailAvailable(String email) {
-        Connection conn = null;
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "SELECT email FROM users WHERE email = ?";
-            pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, email);
-            rs = pstmt.executeQuery();
+            ResultSet rs = pstmt.executeQuery();
 
             return !rs.next(); // Return true jika email tidak ditemukan
         } catch (SQLException e) {
-            System.err.println("Error saat cek email: " + e.getMessage());
+            System.err.println("Error saat cek email: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return false;
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (pstmt != null) pstmt.close();
-            } catch (SQLException e) {
-                System.err.println("Error menutup statement/resultset: " + e.getMessage());
-            }
         }
     }
 

@@ -1,3 +1,5 @@
+package e.commerce;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.filechooser.FileNameExtensionFilter;

@@ -1,3 +1,5 @@
+package e.commerce;
+
 import java.sql.*;
 
 /**
@@ -6,7 +8,7 @@ import java.sql.*;
  */
 public class DatabaseConnection {
     // Database connection parameters
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/ecommerce_database";
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/ecommerce_database?useSSL=false&serverTimezone=Asia/Jakarta";
     private static final String USER = "root";
     private static final String PASSWORD = "rajif1234"; // Change this to your actual MySQL password
     
@@ -26,7 +28,7 @@ public class DatabaseConnection {
         } catch (ClassNotFoundException e) {
             throw new SQLException("MySQL JDBC Driver not found", e);
         } catch (SQLException e) {
-            throw new SQLException("Failed to connect to database", e);
+            throw new SQLException("Failed to connect to database: " + e.getMessage(), e);
         }
     }
     
@@ -85,14 +87,17 @@ public class DatabaseConnection {
             
             // Create users table if it doesn't exist
             String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
-                                      "user_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                                      "id INT AUTO_INCREMENT PRIMARY KEY, " +
                                       "username VARCHAR(50) NOT NULL UNIQUE, " +
-                                      "email VARCHAR(100) NOT NULL, " +
-                                      "password VARCHAR(255) NOT NULL, " +
-                                      "nik VARCHAR(20), " +
-                                      "phone VARCHAR(20), " +
+                                      "email VARCHAR(255) NOT NULL UNIQUE, " +
+                                      "password VARCHAR(60), " + // Allow NULL for temporary data
+                                      "nik VARCHAR(16), " +
+                                      "phone VARCHAR(13), " +
                                       "address TEXT, " +
-                                      "profile_picture MEDIUMBLOB, " +
+                                      "profile_image BLOB, " +
+                                      "role VARCHAR(20) DEFAULT 'user', " +
+                                      "otp_code VARCHAR(6), " +
+                                      "otp_expires_at TIMESTAMP, " +
                                       "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
             stmt.executeUpdate(createUsersTable);
             
@@ -114,7 +119,7 @@ public class DatabaseConnection {
                                        "total_amount DECIMAL(10,2) NOT NULL, " +
                                        "status VARCHAR(20) NOT NULL DEFAULT 'pending', " +
                                        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                                       "FOREIGN KEY (user_id) REFERENCES users(user_id))";
+                                       "FOREIGN KEY (user_id) REFERENCES users(id))";
             stmt.executeUpdate(createOrdersTable);
             
             // Create order_items table if it doesn't exist
@@ -131,7 +136,7 @@ public class DatabaseConnection {
             System.out.println("Database schema initialized successfully");
             
         } catch (SQLException e) {
-            System.err.println("Error initializing database schema: " + e.getMessage());
+            System.err.println("Error initializing database schema: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             e.printStackTrace();
         } finally {
             closeConnection(conn, stmt);

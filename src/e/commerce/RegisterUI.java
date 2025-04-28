@@ -1,6 +1,10 @@
+package e.commerce;
+
+import e.commerce.OTPVerificationUI;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class RegisterUI extends JFrame {
     private JTextField txtUsername, txtEmail, txtNik, txtNotelp;
@@ -104,71 +108,119 @@ public class RegisterUI extends JFrame {
         add(mainPanel);
         
         // Button event listeners
-        btnRegister.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                register();
-            }
-        });
+        btnRegister.addActionListener(e -> register());
         
-        btnCancel.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                LoginUI loginUI = new LoginUI();
-                loginUI.setVisible(true);
-                dispose();
-            }
+        btnCancel.addActionListener(e -> {
+            new LoginUI().setVisible(true);
+            dispose();
         });
     }
     
     private void register() {
-        String username = txtUsername.getText();
+        // Nonaktifkan tombol register untuk mencegah klik ganda
+        btnRegister.setEnabled(false);
+        
+        String username = txtUsername.getText().trim();
         String password = new String(txtPassword.getPassword());
         String confirmPassword = new String(txtConfirmPassword.getPassword());
-        String email = txtEmail.getText();
-        String nik = txtNik.getText();
-        String alamat = txtAlamat.getText();
-        String notelp = txtNotelp.getText();
+        String email = txtEmail.getText().trim();
+        String nik = txtNik.getText().trim();
+        String alamat = txtAlamat.getText().trim();
+        String notelp = txtNotelp.getText().trim();
         
         // Validasi input
-        if (username.isEmpty() || password.isEmpty() || email.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Username, password, dan email harus diisi!", "Error", JOptionPane.ERROR_MESSAGE);
+        if (username.isEmpty() || password.isEmpty() || email.isEmpty() || nik.isEmpty() || alamat.isEmpty() || notelp.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Semua kolom harus diisi!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
             return;
         }
         
         if (!password.equals(confirmPassword)) {
             JOptionPane.showMessageDialog(this, "Password dan konfirmasi password tidak cocok!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
+            return;
+        }
+        
+        // Validasi panjang password
+        if (password.length() < 8) {
+            JOptionPane.showMessageDialog(this, "Password harus minimal 8 karakter!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
             return;
         }
         
         // Validasi email format
         if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
             JOptionPane.showMessageDialog(this, "Format email tidak valid!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
+            return;
+        }
+        
+        // Validasi NIK (hanya angka, misalnya 16 digit)
+        if (!nik.matches("\\d{16}")) {
+            JOptionPane.showMessageDialog(this, "NIK harus 16 digit angka!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
+            return;
+        }
+        
+        // Validasi nomor telepon (hanya angka, 10-13 digit)
+        if (!notelp.matches("\\d{10,13}")) {
+            JOptionPane.showMessageDialog(this, "Nomor telepon harus 10-13 digit angka!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
             return;
         }
         
         // Cek username dan email tersedia
         if (!Authentication.isUsernameAvailable(username)) {
             JOptionPane.showMessageDialog(this, "Username sudah digunakan!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
             return;
         }
         
         if (!Authentication.isEmailAvailable(email)) {
             JOptionPane.showMessageDialog(this, "Email sudah digunakan!", "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
             return;
         }
         
-        // Buat objek user baru dan register ke database
-        User user = new User(username, password, email, nik, alamat, notelp, "user");
-        boolean success = user.register();
+        // Hash password sebelum membuat objek User
+        String hashedPassword;
+        try {
+            hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, 
+                "Gagal mengenkripsi password: " + e.getMessage(), 
+                "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
+            return;
+        }
         
-        if (success) {
-            JOptionPane.showMessageDialog(this, "Registrasi berhasil! Silahkan login.", "Success", JOptionPane.INFORMATION_MESSAGE);
-            LoginUI loginUI = new LoginUI();
-            loginUI.setVisible(true);
-            dispose();
+        // Buat objek user baru dengan password yang sudah di-hash
+        User pendingUser = new User(username, hashedPassword, email, nik, alamat, notelp, "user");
+        
+        // Generate OTP dan kirim ke email
+        String otp = EmailSender.generateOTP();
+        boolean emailSent = EmailSender.sendOTPEmail(email, otp);
+        
+        if (emailSent) {
+            try {
+                // Simpan OTP dan data pengguna sementara
+                OTPManager.getInstance().setOTP(email, otp, pendingUser);
+                
+                // Tampilkan form verifikasi OTP
+                OTPVerificationUI otpUI = new OTPVerificationUI(pendingUser, email);
+                otpUI.setVisible(true);
+                dispose();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Gagal menyimpan OTP ke database: " + e.getMessage(), 
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                btnRegister.setEnabled(true);
+            }
         } else {
-            JOptionPane.showMessageDialog(this, "Registrasi gagal! Silahkan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, 
+                "Gagal mengirim email verifikasi. Periksa koneksi internet atau pengaturan email.", 
+                "Error", JOptionPane.ERROR_MESSAGE);
+            btnRegister.setEnabled(true);
         }
     }
 }

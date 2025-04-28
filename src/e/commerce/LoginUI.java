@@ -1,3 +1,5 @@
+package e.commerce;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -101,7 +103,11 @@ public class LoginUI extends JFrame {
     User user = Authentication.login(username, password);
 
     if (user != null) {
-        JOptionPane.showMessageDialog(this, "Login berhasil sebagai " + user.getRole() + "!", "Success", JOptionPane.INFORMATION_MESSAGE);
+    String message = "Login berhasil!";
+    if (!"user".equalsIgnoreCase(user.getRole())) {
+        message = "Login berhasil sebagai " + user.getRole() + "!";
+    }
+    JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
         
         // Routing berdasarkan role
         switch (user.getRole()) {
