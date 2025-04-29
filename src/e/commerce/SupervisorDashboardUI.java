@@ -34,6 +34,9 @@ public class SupervisorDashboardUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         
+        // Set ikon
+        IconUtil.setIcon(this);
+        
         // Main layout
         setLayout(new BorderLayout());
         

@@ -1,6 +1,5 @@
 package e.commerce;
 
-import e.commerce.OTPVerificationUI;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -18,6 +17,9 @@ public class RegisterUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
+        
+        // Set ikon
+        IconUtil.setIcon(this);
         
         // Main panel
         JPanel mainPanel = new JPanel();

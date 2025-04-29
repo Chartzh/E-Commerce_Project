@@ -12,19 +12,44 @@ public class Authentication {
     // Method untuk login
     public static User login(String username, String password) {
         try (Connection conn = DatabaseConnection.getConnection()) {
+            // Ambil data user dari database
             String sql = "SELECT * FROM users WHERE username = ?";
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
 
             if (rs.next()) {
-                String hashedPassword = rs.getString("password");
-                // Verifikasi password menggunakan BCrypt
-                if (BCrypt.checkpw(password, hashedPassword)) {
+                String storedPassword = rs.getString("password");
+                String hashedPassword = storedPassword; // Default ke storedPassword
+                boolean isPasswordValid = false;
+
+                // Coba verifikasi dengan BCrypt
+                try {
+                    isPasswordValid = BCrypt.checkpw(password, storedPassword);
+                } catch (IllegalArgumentException e) {
+                    // Jika bukan hash BCrypt, cek plain text
+                    System.err.println("Bukan hash BCrypt, mencoba plain text: " + e.getMessage());
+                    if (password.equals(storedPassword)) {
+                        isPasswordValid = true;
+                        // Migrasi ke BCrypt
+                        hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+                        // Update password di database
+                        String updateSql = "UPDATE users SET password = ? WHERE username = ?";
+                        try (PreparedStatement updatePstmt = conn.prepareStatement(updateSql)) {
+                            updatePstmt.setString(1, hashedPassword);
+                            updatePstmt.setString(2, username);
+                            updatePstmt.executeUpdate();
+                            System.out.println("Password untuk " + username + " dimigrasi ke BCrypt.");
+                        }
+                    }
+                }
+
+                // Jika password valid (BCrypt atau plain text)
+                if (isPasswordValid) {
                     User user = new User();
                     user.setId(rs.getInt("id"));
                     user.setUsername(rs.getString("username"));
-                    user.setPassword(hashedPassword); // Simpan hash, bukan plain text
+                    user.setPassword(hashedPassword); // Simpan hash terbaru
                     user.setEmail(rs.getString("email"));
                     user.setNik(rs.getString("nik"));
                     user.setAddress(rs.getString("address"));
@@ -35,6 +60,7 @@ public class Authentication {
                     return user;
                 }
             }
+            System.out.println("Login gagal: Username atau password salah.");
             return null;
         } catch (SQLException e) {
             System.err.println("Error saat login: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());

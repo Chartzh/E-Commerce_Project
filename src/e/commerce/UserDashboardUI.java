@@ -29,6 +29,9 @@ public class UserDashboardUI extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         
+        // Set ikon
+        IconUtil.setIcon(this);
+        
         // Main layout
         setLayout(new BorderLayout());
         
@@ -427,14 +430,5 @@ public class UserDashboardUI extends JFrame {
             super.paintComponent(g2d);
             g2d.dispose();
         }
-    }
-    
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                new UserDashboardUI().setVisible(true);
-            }
-        });
     }
 }

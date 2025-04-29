@@ -16,6 +16,9 @@ public class LoginUI extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
         
+        // Set ikon
+        IconUtil.setIcon(this);
+        
         // Main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout(10, 10));
