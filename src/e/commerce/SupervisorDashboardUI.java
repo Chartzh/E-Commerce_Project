@@ -26,7 +26,7 @@ public class SupervisorDashboardUI extends JFrame {
             return;
         }
 
-        setTitle("PHLOX - Supervisor Dashboard");
+        setTitle("Quantra - Supervisor Dashboard");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -77,7 +77,7 @@ public class SupervisorDashboardUI extends JFrame {
         sidebar.setBorder(new EmptyBorder(20, 10, 20, 10));
 
         // Logo
-        JLabel lblLogo = new JLabel("PHLOX");
+        JLabel lblLogo = new JLabel("Quantra");
         lblLogo.setFont(new Font("Arial", Font.BOLD, 20));
         lblLogo.setForeground(new Color(255, 99, 71));
         lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);

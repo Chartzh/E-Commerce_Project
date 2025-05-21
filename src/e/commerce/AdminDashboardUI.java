@@ -248,6 +248,36 @@ public class AdminDashboardUI extends JFrame {
         return count;
     }
 
+    private int getTotalUserCount() {
+        int count = 0;
+        String query = "SELECT COUNT(*) FROM users";
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            stmt = conn.prepareStatement(query);
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error mengambil total pengguna: " + e.getMessage(),
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, rs);
+        }
+
+        return count;
+    }
+
     private JPanel createAdminDashboardPanel() {
         JPanel dashboardPanel = new JPanel(new BorderLayout());
         dashboardPanel.setBackground(Color.WHITE);
@@ -267,8 +297,8 @@ public class AdminDashboardUI extends JFrame {
         statsPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
 
         // Stat cards
-        int totalUserOnly = getTotalUserCountByRole("user");
-        statsPanel.add(createStatCard("Total Pengguna", String.valueOf(totalUserOnly), new Color(255, 99, 71)));
+        int totalUsers = getTotalUserCount();
+        statsPanel.add(createStatCard("Total Pengguna", String.valueOf(totalUsers), new Color(255, 99, 71)));
         statsPanel.add(createStatCard("Total Produk", "48", new Color(255, 99, 71)));
         statsPanel.add(createStatCard("Total Transaksi", "312", new Color(255, 99, 71)));
 

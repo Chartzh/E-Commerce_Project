@@ -133,7 +133,7 @@ public class User {
 
             if (rs.next()) {
                 // Email sudah ada, update data
-                String sql = "UPDATE users SET username = ?, password = ?, nik = ?, address = ?, phone = ?, role = ?, otp_code = NULL, otp_expires_at = NULL WHERE email = ?";
+                String sql = "UPDATE users SET username = ?, password = ?, nik = ?, address = ?, phone = ?, role = ?, is_verified = 1 WHERE email = ?";
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 stmt.setString(1, username);
                 stmt.setString(2, password);
@@ -143,6 +143,7 @@ public class User {
                 stmt.setString(6, role);
                 stmt.setString(7, email);
                 int affectedRows = stmt.executeUpdate();
+                System.out.println("Register user affected rows: " + affectedRows + " for email: " + email);
                 return affectedRows > 0;
             } else {
                 // Email belum ada (seharusnya tidak terjadi karena data sementara sudah dimasukkan)
@@ -151,7 +152,7 @@ public class User {
             }
         } catch (SQLException e) {
             System.err.println("Error saat registrasi user: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
-            return false;
+            throw new RuntimeException("Gagal menyimpan data pengguna: " + e.getMessage());
         }
     }
     
@@ -167,10 +168,11 @@ public class User {
             pstmt.setString(5, username);
             
             int affectedRows = pstmt.executeUpdate();
+            System.out.println("Update profile affected rows: " + affectedRows + " for username: " + username);
             return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error saat update profil: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
-            return false;
+            throw new RuntimeException("Gagal memperbarui profil: " + e.getMessage());
         }
     }
     
@@ -192,10 +194,11 @@ public class User {
             pstmt.setString(2, username);
             
             int affectedRows = pstmt.executeUpdate();
+            System.out.println("Update profile image affected rows: " + affectedRows + " for username: " + username);
             return affectedRows > 0;
         } catch (IOException | SQLException e) {
             System.err.println("Error saat update foto profil: " + e.getMessage());
-            return false;
+            throw new RuntimeException("Gagal memperbarui foto profil: " + e.getMessage());
         }
     }
     
@@ -221,12 +224,14 @@ public class User {
                 if (blob != null) {
                     this.profileImage = blob.getBytes(1, (int) blob.length());
                 }
+                System.out.println("Loaded user data for username: " + username);
                 return true;
             }
+            System.err.println("User not found for username: " + username);
             return false;
         } catch (SQLException e) {
             System.err.println("Error saat load user: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
-            return false;
+            throw new RuntimeException("Gagal memuat data pengguna: " + e.getMessage());
         }
     }
 }

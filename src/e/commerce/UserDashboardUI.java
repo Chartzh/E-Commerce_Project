@@ -3,6 +3,7 @@ package e.commerce;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
@@ -11,8 +12,7 @@ public class UserDashboardUI extends JFrame {
     private JPanel contentPanel;
     private CardLayout cardLayout;
     private JPanel mainPanel;
-    private JButton btnHamburger; // Reintroduce hamburger button
-    private JPopupMenu hamburgerMenu; // Reintroduce hamburger menu
+    private JLabel profileImageLabel; // New profile image label to replace hamburger button
 
     public UserDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
@@ -45,23 +45,24 @@ public class UserDashboardUI extends JFrame {
         // Create dashboard panel
         JPanel dashboardPanel = createDashboardPanel();
 
-        // Create profile panel (placeholder)
+        // Create profile panel
         ProfileUI profilePanel = new ProfileUI();
 
         // Create orders panel (placeholder)
         JPanel ordersPanel = createOrdersPanel();
+        
+        // Create cart panel
+        JPanel cartPanel = new CartUI();
 
         // Add panels to the card layout
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
         mainPanel.add(ordersPanel, "Order");
+        mainPanel.add(cartPanel, "Cart");
 
         // Add components to frame
         add(headerPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
-
-        // Create hamburger menu
-        createHamburgerMenu();
     }
 
     private JPanel createHeaderPanel(User currentUser) {
@@ -70,13 +71,6 @@ public class UserDashboardUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(getWidth(), 60));
         headerPanel.setBorder(new EmptyBorder(10, 20, 10, 20));
 
-        // Logo
-        /*JLabel lblLogo = new JLabel("Quantra");
-        lblLogo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblLogo.setForeground(new Color(255, 99, 71)); // Tomato color
-        headerPanel.add(lblLogo, BorderLayout.WEST);
-`       */
-        
         // Logo with resized image
         JLabel lblLogo = new JLabel();
         ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png")); // Ensure image is in src/resources
@@ -85,179 +79,128 @@ public class UserDashboardUI extends JFrame {
         lblLogo.setIcon(new ImageIcon(scaledImage));
         headerPanel.add(lblLogo, BorderLayout.WEST);
 
-        // Navigation
-        /*JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
-        navPanel.setBackground(Color.WHITE);
-        String[] navItems = {"Home", "Shop", "About Us", "Blog", "Contact Us"};
-        for (String item : navItems) {
-            JLabel navLabel = new JLabel(item);
-            navLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-            navLabel.setForeground(Color.BLACK);
-            navLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            navPanel.add(navLabel);
-        }
-        headerPanel.add(navPanel, BorderLayout.CENTER);
-        */
-
-        // Right side (Hamburger, Login, and Cart)
+        // Right side (Profile Image and Cart)
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         rightPanel.setBackground(Color.WHITE);
 
-        // Hamburger button
-        btnHamburger = new JButton("☰");
-        btnHamburger.setFont(new Font("Arial", Font.BOLD, 20));
-        btnHamburger.setForeground(Color.BLACK);
-        btnHamburger.setBackground(Color.WHITE);
-        btnHamburger.setBorderPainted(false);
-        btnHamburger.setFocusPainted(false);
-        btnHamburger.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Profile Image (to replace hamburger button)
+        profileImageLabel = new JLabel();
+        
+        // Load user profile image from database
+        // This is a placeholder - you'll need to implement the actual loading from your database
+        ImageIcon profileIcon = loadUserProfileImage(currentUser); 
+        
+        // Set the profile icon to the label
+        profileImageLabel.setIcon(profileIcon);
+        profileImageLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
+        // Add profile click listener to navigate to profile page
+        profileImageLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                cardLayout.show(mainPanel, "Profile");
+            }
+            
+            /*@Override
+            public void mouseEntered(MouseEvent e) {
+                // Optional: Add hover effect
+                profileImageLabel.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 1));
+            }*/
+            
+            /*@Override
+            public void mouseExited(MouseEvent e) {
+                // Remove hover effect
+                profileImageLabel.setBorder(null);
+            }*/
+        });
 
-        JLabel lblLogin = new JLabel("Login");
-        lblLogin.setFont(new Font("Arial", Font.PLAIN, 14));
-        lblLogin.setForeground(Color.BLACK);
-        lblLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Cart Label - keep as is
+        // Load the original icon
+        ImageIcon cartIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/cart_icon.png"));
 
-        JLabel lblCart = new JLabel("🛒 0");
-        lblCart.setFont(new Font("Arial", Font.PLAIN, 14));
-        lblCart.setForeground(Color.BLACK);
+        // Resize the image to 24x24 pixels
+        Image originalImage = cartIcon.getImage();
+        Image resizedImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        ImageIcon resizedCartIcon = new ImageIcon(resizedImage);
+
+        // Create and configure the JLabel with the resized icon
+        JLabel lblCart = new JLabel(resizedCartIcon);
+        lblCart.setText(" " + getCartItemCount()); // Display item count
+        lblCart.setFont(new Font("Arial", Font.BOLD, 14));
+        lblCart.setHorizontalTextPosition(SwingConstants.RIGHT);
         lblCart.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblCart.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                cardLayout.show(mainPanel, "Cart");
+            }
+        });
 
-        rightPanel.add(btnHamburger);
-        rightPanel.add(Box.createRigidArea(new Dimension(20, 0)));
-        rightPanel.add(lblLogin);
-        rightPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        // Add components to the right panel
         rightPanel.add(lblCart);
+        rightPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        rightPanel.add(profileImageLabel);
         headerPanel.add(rightPanel, BorderLayout.EAST);
 
         return headerPanel;
     }
-
-    private void createHamburgerMenu() {
-        // Create custom popup menu with a styled look
-        hamburgerMenu = new JPopupMenu() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(new Color(52, 58, 64));
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-            }
-        };
-
-        // Set menu properties
-        hamburgerMenu.setBorder(new CompoundBorder(
-                new LineBorder(new Color(40, 44, 52), 1, true),
-                new EmptyBorder(5, 0, 5, 0)
-        ));
-
-        // Profile menu item
-        JMenuItem menuProfile = createMenuItem("Profile", "\uf007"); // Unicode for user icon
-        menuProfile.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(mainPanel, "Profile");
-            }
-        });
-
-        // Orders menu item
-        JMenuItem menuOrders = createMenuItem("Orders", "\uf0ae"); // Unicode for tasks icon
-        menuOrders.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(mainPanel, "Order");
-            }
-        });
-
-        // Logout menu item
-        JMenuItem menuLogout = createMenuItem("Logout", "\uf08b"); // Unicode for sign-out icon
-        menuLogout.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                int response = JOptionPane.showConfirmDialog(UserDashboardUI.this,
-                        "Are you sure you want to logout?",
-                        "Confirm",
-                        JOptionPane.YES_NO_OPTION);
-
-                if (response == JOptionPane.YES_OPTION) {
-                    Authentication.logout();
-                    LoginUI loginUI = new LoginUI();
-                    loginUI.setVisible(true);
-                    dispose();
-                }
-            }
-        });
-
-        // Add menu items to popup menu
-        hamburgerMenu.add(menuProfile);
-
-        // Separator
-        JSeparator separator1 = new JSeparator();
-        separator1.setBackground(new Color(60, 65, 72));
-        separator1.setForeground(new Color(70, 75, 82));
-        hamburgerMenu.add(separator1);
-
-        hamburgerMenu.add(menuOrders);
-
-        // Separator for logout
-        JSeparator separator2 = new JSeparator();
-        separator2.setBackground(new Color(60, 65, 72));
-        separator2.setForeground(new Color(70, 75, 82));
-        hamburgerMenu.add(separator2);
-
-        hamburgerMenu.add(menuLogout);
-
-        // Hamburger button action
-        btnHamburger.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                hamburgerMenu.show(btnHamburger, -hamburgerMenu.getPreferredSize().width + btnHamburger.getWidth(), btnHamburger.getHeight());
-            }
-        });
+    
+    /**
+     * Load user profile image from database
+     * You need to implement this method according to your database structure
+     */
+    private ImageIcon loadUserProfileImage(User user) {
+        // TODO: Implement the actual loading from database
+        // This is a placeholder implementation
+        
+        // Default profile icon in case we can't load from DB
+        ImageIcon defaultIcon = new ImageIcon(getClass().getResource("/Resources/Images/default_profile.png"));
+        
+        // If the default image doesn't exist, create a circular avatar with user initials
+        if (defaultIcon.getIconWidth() <= 0) {
+            return createDefaultAvatarIcon(user.getUsername());
+        }
+        
+        // Resize to appropriate size for header
+        Image scaledImage = defaultIcon.getImage().getScaledInstance(35, 35, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaledImage);
+        
+        // For actual implementation, you would:
+        // 1. Query the database for user's profile image path or blob
+        // 2. Load the image from file system or convert blob to ImageIcon
+        // 3. Resize and return the ImageIcon
     }
-
-    private JMenuItem createMenuItem(String text, String iconCode) {
-        // Create panel for menu item layout
-        JPanel itemPanel = new JPanel(new BorderLayout());
-        itemPanel.setBackground(new Color(52, 58, 64));
-        itemPanel.setBorder(new EmptyBorder(8, 15, 8, 30));
-
-        // Icon (using unicode as placeholder; in practice, use a font like FontAwesome)
-        JLabel iconLabel = new JLabel(iconCode);
-        iconLabel.setForeground(Color.WHITE);
-        iconLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        iconLabel.setPreferredSize(new Dimension(20, 16));
-
-        // Text
-        JLabel textLabel = new JLabel(text);
-        textLabel.setForeground(Color.WHITE);
-        textLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        textLabel.setBorder(new EmptyBorder(0, 10, 0, 0));
-
-        itemPanel.add(iconLabel, BorderLayout.WEST);
-        itemPanel.add(textLabel, BorderLayout.CENTER);
-
-        // Create custom menu item
-        JMenuItem menuItem = new JMenuItem("") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                if (getModel().isArmed()) {
-                    g2d.setColor(new Color(75, 83, 91)); // Hover background
-                } else {
-                    g2d.setColor(new Color(52, 58, 64)); // Normal background
-                }
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-
-        menuItem.setLayout(new BorderLayout());
-        menuItem.add(itemPanel);
-        menuItem.setBorderPainted(false);
-        menuItem.setBorder(null);
-        menuItem.setPreferredSize(new Dimension(180, 36));
-
-        return menuItem;
+    
+    /**
+     * Create a default avatar icon with user initials when no profile image is available
+     */
+    private ImageIcon createDefaultAvatarIcon(String username) {
+        // Get user's initials (first letter of username)
+        String initials = username.length() > 0 ? username.substring(0, 1).toUpperCase() : "U";
+        
+        // Create a buffered image for the avatar
+        BufferedImage avatar = new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = avatar.createGraphics();
+        
+        // Enable anti-aliasing
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // Draw a filled circle
+        g2.setColor(new Color(255, 89, 0)); // Tomato color to match app theme
+        g2.fillOval(0, 0, 40, 40);
+        
+        // Draw the initials
+        g2.setColor(Color.WHITE);
+        g2.setFont(new Font("Arial", Font.BOLD, 16));
+        FontMetrics fm = g2.getFontMetrics();
+        int textWidth = fm.stringWidth(initials);
+        int textHeight = fm.getHeight();
+        
+        // Center the text
+        g2.drawString(initials, (40 - textWidth) / 2, (40 + textHeight / 2) / 2);
+        g2.dispose();
+        
+        return new ImageIcon(avatar);
     }
 
     private JPanel createDashboardPanel() {
@@ -305,11 +248,12 @@ public class UserDashboardUI extends JFrame {
         buttonPanel.add(shopButton);
         bannerPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        JLabel bannerDesc = new JLabel("<html>There are many variations passages of lorem ipsum available, but the majority have suffered alteration</html>");
+        /*JLabel bannerDesc = new JLabel("<html>There are many variations passages of lorem ipsum available, but the majority have suffered alteration</html>");
         bannerDesc.setFont(new Font("Arial", Font.PLAIN, 12));
         bannerDesc.setForeground(Color.DARK_GRAY);
         bannerDesc.setBorder(new EmptyBorder(0, 0, 20, 20));
         bannerPanel.add(bannerDesc, BorderLayout.EAST);
+        */
 
         // Product Categories Section
         JPanel categoriesPanel = new JPanel(new GridLayout(2, 3, 15, 15));
@@ -569,6 +513,11 @@ public class UserDashboardUI extends JFrame {
             super.paintComponent(g2d);
             g2d.dispose();
         }
+    }
+    
+    private int getCartItemCount() {
+    // Untuk sementara return dummy value
+    return 4;
     }
 
     public static void main(String[] args) {
