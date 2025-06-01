@@ -11,33 +11,39 @@ public class Authentication {
 
     // Method untuk login
     public static User login(String username, String password) {
-        try (Connection conn = DatabaseConnection.getConnection()) {
-            // Ambil data user dari database
-            String sql = "SELECT * FROM users WHERE username = ?";
-            PreparedStatement pstmt = conn.prepareStatement(sql);
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            
+            // Ambil data user dari database (hanya untuk verifikasi password dan mendapatkan ID)
+            // Query hanya dari tabel users karena password dan username ada di sana
+            String sql = "SELECT id, password FROM users WHERE username = ?";
+            pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
+            rs = pstmt.executeQuery();
 
             if (rs.next()) {
+                int userId = rs.getInt("id");
                 String storedPassword = rs.getString("password");
-                String hashedPassword = storedPassword; // Default ke storedPassword
                 boolean isPasswordValid = false;
 
                 // Coba verifikasi dengan BCrypt
                 try {
                     isPasswordValid = BCrypt.checkpw(password, storedPassword);
                 } catch (IllegalArgumentException e) {
-                    // Jika bukan hash BCrypt, cek plain text
-                    System.err.println("Bukan hash BCrypt, mencoba plain text: " + e.getMessage());
+                    // Jika bukan hash BCrypt, cek plain text (untuk migrasi password lama)
+                    System.err.println("Bukan hash BCrypt, mencoba plain text. Error: " + e.getMessage());
                     if (password.equals(storedPassword)) {
                         isPasswordValid = true;
                         // Migrasi ke BCrypt
-                        hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-                        // Update password di database
-                        String updateSql = "UPDATE users SET password = ? WHERE username = ?";
+                        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+                        String updateSql = "UPDATE users SET password = ? WHERE id = ?"; // Update berdasarkan ID
                         try (PreparedStatement updatePstmt = conn.prepareStatement(updateSql)) {
                             updatePstmt.setString(1, hashedPassword);
-                            updatePstmt.setString(2, username);
+                            updatePstmt.setInt(2, userId); // Gunakan userId yang didapat
                             updatePstmt.executeUpdate();
                             System.out.println("Password untuk " + username + " dimigrasi ke BCrypt.");
                         }
@@ -46,18 +52,16 @@ public class Authentication {
 
                 // Jika password valid (BCrypt atau plain text)
                 if (isPasswordValid) {
+                    // Panggil loadUserById dari objek User untuk memuat semua data, termasuk dari tabel profile
                     User user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setUsername(rs.getString("username"));
-                    user.setPassword(hashedPassword); // Simpan hash terbaru
-                    user.setEmail(rs.getString("email"));
-                    user.setNik(rs.getString("nik"));
-                    user.setAddress(rs.getString("address"));
-                    user.setPhone(rs.getString("phone"));
-                    user.setRole(rs.getString("role"));
-
-                    currentUser = user;
-                    return user;
+                    if (user.loadUserById(userId)) { // Gunakan ID yang didapat dari tabel users
+                        currentUser = user;
+                        System.out.println("Login berhasil untuk user: " + user.getUsername());
+                        return user;
+                    } else {
+                        System.err.println("Login berhasil, tetapi gagal memuat data profil lengkap untuk ID: " + userId);
+                        return null; // Gagal memuat profil lengkap
+                    }
                 }
             }
             System.out.println("Login gagal: Username atau password salah.");
@@ -65,10 +69,13 @@ public class Authentication {
         } catch (SQLException e) {
             System.err.println("Error saat login: " + e.getSQLState() + " - " + e.getErrorCode() + " - " + e.getMessage());
             return null;
+        } finally {
+            // Pastikan resource ditutup
+            DatabaseConnection.closeConnection(conn, pstmt, rs);
         }
     }
 
-    // Method untuk cek username tersedia
+    // Method untuk cek username tersedia (tidak berubah, karena username di tabel users)
     public static boolean isUsernameAvailable(String username) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "SELECT username FROM users WHERE username = ?";
@@ -83,7 +90,7 @@ public class Authentication {
         }
     }
 
-    // Method untuk cek email tersedia
+    // Method untuk cek email tersedia (tidak berubah, karena email di tabel users)
     public static boolean isEmailAvailable(String email) {
         try (Connection conn = DatabaseConnection.getConnection()) {
             String sql = "SELECT email FROM users WHERE email = ?";
@@ -98,12 +105,12 @@ public class Authentication {
         }
     }
 
-    // Method untuk mendapatkan user yang sedang login
+    // Method untuk mendapatkan user yang sedang login (tidak berubah)
     public static User getCurrentUser() {
         return currentUser;
     }
 
-    // Method untuk logout
+    // Method untuk logout (tidak berubah)
     public static void logout() {
         currentUser = null;
     }

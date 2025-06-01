@@ -7,6 +7,9 @@ import java.awt.image.BufferedImage;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.text.JTextComponent;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class UserDashboardUI extends JFrame {
     private JPanel contentPanel;
@@ -53,79 +56,77 @@ public class UserDashboardUI extends JFrame {
         
         // Create cart panel
         JPanel cartPanel = new CartUI();
+        
+        // Create fav panel
+        JPanel favoritesPanel = new FavoritesUI();
+
 
         // Add panels to the card layout
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
         mainPanel.add(ordersPanel, "Order");
         mainPanel.add(cartPanel, "Cart");
+        mainPanel.add(favoritesPanel, "Favorites");
 
         // Add components to frame
         add(headerPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
     }
 
+    // Modifikasi method createHeaderPanel untuk menambahkan search bar
     private JPanel createHeaderPanel(User currentUser) {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
-        headerPanel.setPreferredSize(new Dimension(getWidth(), 60));
-        headerPanel.setBorder(new EmptyBorder(10, 20, 10, 20));
+        headerPanel.setPreferredSize(new Dimension(getWidth(), 70)); // Tingkatkan tinggi sedikit
+        headerPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
-        // Logo with resized image
+        // Logo dengan resized image
         JLabel lblLogo = new JLabel();
-        ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png")); // Ensure image is in src/resources
-        // Resize image to 100x50 pixels (adjust as needed)
-        Image scaledImage = logoIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+        ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png"));
+        Image scaledImage = logoIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
         lblLogo.setIcon(new ImageIcon(scaledImage));
         headerPanel.add(lblLogo, BorderLayout.WEST);
 
-        // Right side (Profile Image and Cart)
-        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // Center panel untuk search bar
+        JPanel centerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        centerPanel.setBackground(Color.WHITE);
+
+        // Custom Search Bar Panel
+        JPanel searchPanel = createModernSearchBar();
+        centerPanel.add(searchPanel);
+
+        headerPanel.add(centerPanel, BorderLayout.CENTER);
+
+        // Right side (Favorites, Cart, Profile Image)
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 0));
         rightPanel.setBackground(Color.WHITE);
 
-        // Profile Image (to replace hamburger button)
-        profileImageLabel = new JLabel();
-        
-        // Load user profile image from database
-        // This is a placeholder - you'll need to implement the actual loading from your database
-        ImageIcon profileIcon = loadUserProfileImage(currentUser); 
-        
-        // Set the profile icon to the label
-        profileImageLabel.setIcon(profileIcon);
-        profileImageLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
-        // Add profile click listener to navigate to profile page
-        profileImageLabel.addMouseListener(new MouseAdapter() {
+        // Favorites Label
+        ImageIcon favIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/fav_icon.png"));
+        Image originalFavImage = favIcon.getImage();
+        Image resizedFavImage = originalFavImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        ImageIcon resizedFavIcon = new ImageIcon(resizedFavImage);
+
+        JLabel lblFav = new JLabel(resizedFavIcon);
+        lblFav.setText(" " + getFavItemCount());
+        lblFav.setFont(new Font("Arial", Font.BOLD, 14));
+        lblFav.setHorizontalTextPosition(SwingConstants.RIGHT);
+        lblFav.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblFav.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                cardLayout.show(mainPanel, "Profile");
+                cardLayout.show(mainPanel, "Favorites");
             }
-            
-            /*@Override
-            public void mouseEntered(MouseEvent e) {
-                // Optional: Add hover effect
-                profileImageLabel.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 1));
-            }*/
-            
-            /*@Override
-            public void mouseExited(MouseEvent e) {
-                // Remove hover effect
-                profileImageLabel.setBorder(null);
-            }*/
         });
 
-        // Cart Label - keep as is
-        // Load the original icon
+        // Cart Label
         ImageIcon cartIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/cart_icon.png"));
+        Image originalCartImage = cartIcon.getImage();
+        Image resizedCartImage = originalCartImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        ImageIcon resizedCartIcon = new ImageIcon(resizedCartImage);
 
-        // Resize the image to 24x24 pixels
-        Image originalImage = cartIcon.getImage();
-        Image resizedImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
-        ImageIcon resizedCartIcon = new ImageIcon(resizedImage);
-
-        // Create and configure the JLabel with the resized icon
         JLabel lblCart = new JLabel(resizedCartIcon);
-        lblCart.setText(" " + getCartItemCount()); // Display item count
+        lblCart.setText(" " + getCartItemCount());
         lblCart.setFont(new Font("Arial", Font.BOLD, 14));
         lblCart.setHorizontalTextPosition(SwingConstants.RIGHT);
         lblCart.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -136,10 +137,23 @@ public class UserDashboardUI extends JFrame {
             }
         });
 
+        // Profile Image
+        profileImageLabel = new JLabel();
+        ImageIcon profileIcon = loadUserProfileImage(currentUser);
+        profileImageLabel.setIcon(profileIcon);
+        profileImageLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        profileImageLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                cardLayout.show(mainPanel, "Profile");
+            }
+        });
+
         // Add components to the right panel
+        rightPanel.add(lblFav);
         rightPanel.add(lblCart);
-        rightPanel.add(Box.createRigidArea(new Dimension(20, 0)));
         rightPanel.add(profileImageLabel);
+
         headerPanel.add(rightPanel, BorderLayout.EAST);
 
         return headerPanel;
@@ -201,6 +215,244 @@ public class UserDashboardUI extends JFrame {
         g2.dispose();
         
         return new ImageIcon(avatar);
+    }
+    
+    // Method untuk membuat modern search bar
+    private JPanel createModernSearchBar() {
+        JPanel searchContainer = new JPanel();
+        searchContainer.setLayout(new BorderLayout());
+        searchContainer.setBackground(Color.WHITE);
+        searchContainer.setPreferredSize(new Dimension(700, 35));
+
+        // Custom rounded border
+        searchContainer.setBorder(new CompoundBorder(
+            new LineBorder(new Color(230, 230, 230), 1) {
+                @Override
+                public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2d.setColor(getLineColor());
+                    g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
+                    g2d.dispose();
+                }
+            },
+            new EmptyBorder(8, 15, 8, 15)
+        ));
+
+        // Search TextField dengan placeholder
+        JTextField searchField = createSearchTextField();
+        searchContainer.add(searchField, BorderLayout.CENTER);
+
+        // Search Icon Button
+        JButton searchButton = createSearchButton();
+        searchContainer.add(searchButton, BorderLayout.EAST);
+
+        // Hover effect untuk search container
+        searchContainer.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!searchField.isFocusOwner()) {
+                    searchContainer.setBorder(new CompoundBorder(
+                        new LineBorder(new Color(180, 180, 180), 1) {
+                            @Override
+                            public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                                Graphics2D g2d = (Graphics2D) g.create();
+                                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                g2d.setColor(getLineColor());
+                                g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
+                                g2d.dispose();
+                            }
+                        },
+                        new EmptyBorder(8, 15, 8, 15)
+                    ));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!searchField.isFocusOwner()) {
+                    searchContainer.setBorder(new CompoundBorder(
+                        new LineBorder(new Color(230, 230, 230), 1) {
+                            @Override
+                            public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                                Graphics2D g2d = (Graphics2D) g.create();
+                                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                                g2d.setColor(getLineColor());
+                                g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
+                                g2d.dispose();
+                            }
+                        },
+                        new EmptyBorder(8, 15, 8, 15)
+                    ));
+                }
+            }
+        });
+
+        return searchContainer;
+    }
+
+    // Method untuk membuat search text field dengan placeholder
+    private JTextField createSearchTextField() {
+        JTextField searchField = new JTextField();
+        searchField.setFont(new Font("Arial", Font.PLAIN, 14));
+        searchField.setBorder(null);
+        searchField.setBackground(Color.WHITE);
+        searchField.setForeground(Color.BLACK);
+
+        // Placeholder text functionality
+        String placeholder = "Search product";
+        searchField.setText(placeholder);
+        searchField.setForeground(new Color(150, 150, 150));
+
+        searchField.addFocusListener(new FocusListener() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (searchField.getText().equals(placeholder)) {
+                    searchField.setText("");
+                    searchField.setForeground(Color.BLACK);
+                }
+                // Update border saat focus
+                JPanel parent = (JPanel) searchField.getParent();
+                parent.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(255, 89, 0), 2) {
+                        @Override
+                        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                            Graphics2D g2d = (Graphics2D) g.create();
+                            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                            g2d.setColor(getLineColor());
+                            g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
+                            g2d.dispose();
+                        }
+                    },
+                    new EmptyBorder(8, 15, 8, 15)
+                ));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (searchField.getText().isEmpty()) {
+                    searchField.setText(placeholder);
+                    searchField.setForeground(new Color(150, 150, 150));
+                }
+                // Reset border saat kehilangan focus
+                JPanel parent = (JPanel) searchField.getParent();
+                parent.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(230, 230, 230), 1) {
+                        @Override
+                        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+                            Graphics2D g2d = (Graphics2D) g.create();
+                            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                            g2d.setColor(getLineColor());
+                            g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
+                            g2d.dispose();
+                        }
+                    },
+                    new EmptyBorder(8, 15, 8, 15)
+                ));
+            }
+        });
+
+        // Search functionality dengan debouncing
+        Timer searchTimer = new Timer();
+        searchField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    performSearch(searchField.getText());
+                } else if (!searchField.getText().equals(placeholder) && !searchField.getText().trim().isEmpty()) {
+                    // Debouncing - tunggu 500ms setelah user berhenti mengetik
+                    searchTimer.cancel();
+                    Timer newTimer = new Timer();
+                    newTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            SwingUtilities.invokeLater(() -> {
+                                performInstantSearch(searchField.getText());
+                            });
+                        }
+                    }, 500);
+                }
+            }
+        });
+
+        return searchField;
+    }
+
+    // Method untuk membuat search button
+    private JButton createSearchButton() {
+        JButton searchButton = new JButton();
+        searchButton.setPreferredSize(new Dimension(30, 24));
+        searchButton.setBorder(null);
+        searchButton.setBackground(Color.WHITE);
+        searchButton.setFocusPainted(false);
+        searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Custom search icon
+        searchButton.setIcon(createSearchIcon());
+
+        searchButton.addActionListener(e -> {
+            // Get the search field from parent container
+            JPanel parent = (JPanel) searchButton.getParent();
+            JTextField searchField = (JTextField) parent.getComponent(0);
+            String searchText = searchField.getText();
+            if (!searchText.equals("Search product") && !searchText.trim().isEmpty()) {
+                performSearch(searchText);
+            }
+        });
+
+        // Hover effect
+        searchButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                searchButton.setBackground(new Color(245, 245, 245));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                searchButton.setBackground(Color.WHITE);
+            }
+        });
+
+        return searchButton;
+    }
+
+    // Method untuk membuat search icon
+    private ImageIcon createSearchIcon() {
+        BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = icon.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.setColor(new Color(120, 120, 120));
+
+        // Draw magnifying glass
+        g2.drawOval(2, 2, 8, 8);
+        g2.drawLine(9, 9, 14, 14);
+
+        g2.dispose();
+        return new ImageIcon(icon);
+    }
+
+    // Method untuk melakukan pencarian
+    private void performSearch(String searchText) {
+        System.out.println("Searching for: " + searchText);
+
+        // TODO: Implement actual search functionality
+        // Ini bisa mengarah ke halaman search results atau filter produk
+
+        // Contoh: Tampilkan dialog dengan hasil pencarian
+        JOptionPane.showMessageDialog(this, 
+            "Searching for: \"" + searchText + "\"\n\nSearch functionality will be implemented here.", 
+            "Search Results", 
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // Method untuk instant search (saat user mengetik)
+    private void performInstantSearch(String searchText) {
+        // TODO: Implement live search suggestions
+        System.out.println("Live search: " + searchText);
+
+        // Bisa digunakan untuk menampilkan suggestions dropdown
+        // atau update search results secara real-time
     }
 
     private JPanel createDashboardPanel() {
@@ -518,6 +770,11 @@ public class UserDashboardUI extends JFrame {
     private int getCartItemCount() {
     // Untuk sementara return dummy value
     return 4;
+    }
+    
+    private int getFavItemCount() {
+    // Untuk sementara return dummy value
+    return 6; // atau ambil dari database/static list
     }
 
     public static void main(String[] args) {

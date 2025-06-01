@@ -91,13 +91,7 @@ public class DatabaseConnection {
                                       "username VARCHAR(50) NOT NULL UNIQUE, " +
                                       "email VARCHAR(255) NOT NULL UNIQUE, " +
                                       "password VARCHAR(60), " + // Allow NULL for temporary data
-                                      "nik VARCHAR(16), " +
-                                      "phone VARCHAR(13), " +
-                                      "address TEXT, " +
-                                      "profile_image BLOB, " +
                                       "role VARCHAR(20) DEFAULT 'user', " +
-                                      "otp_code VARCHAR(6), " +
-                                      "otp_expires_at TIMESTAMP, " +
                                       "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
             stmt.executeUpdate(createUsersTable);
             
