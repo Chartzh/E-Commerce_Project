@@ -1,48 +1,49 @@
 package e.commerce;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import javax.swing.border.EmptyBorder;
-import java.util.ArrayList;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.List;
+import java.util.ArrayList;
 import javax.imageio.ImageIO;
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 public class FavoritesUI extends JPanel {
     private List<FavoriteItem> favoriteItems;
     private JPanel favoriteProductsPanel;
+    private ViewController viewController;
 
-    public FavoritesUI() {
+    public FavoritesUI(ViewController viewController) {
+        this.viewController = viewController;
         initializeDummyData();
         initializeUI();
     }
 
     private void initializeDummyData() {
-        favoriteItems = new ArrayList<>();
-        // Memastikan jalur gambar sesuai dengan struktur proyek Anda
-        // Misalnya, jika gambar Anda ada di 'YourProject/src/Resources/Images/'
-        favoriteItems.add(new FavoriteItem(1, "Wireless Headphone", 249000, 299000, 1, "#FFB6C1", "src/Resources/Images/wireless_headphone.jpg"));
-        favoriteItems.add(new FavoriteItem(2, "Bluetooth Speaker", 189000, 219000, 2, "#ADD8E6", "src/Resources/Images/bluetooth_speaker.jpg"));
-        favoriteItems.add(new FavoriteItem(3, "Gaming Mouse", 329000, 399000, 1, "#90EE90", "src/Resources/Images/gaming_mouse.jpg"));
-        favoriteItems.add(new FavoriteItem(4, "Mechanical Keyboard", 450000, 499000, 1, "#FFFACD", "src/Resources/Images/mechanical_keyboard.jpg"));
-        favoriteItems.add(new FavoriteItem(5, "Smartwatch X200", 1800000, 2100000, 5, "#D8BFD8", "src/Resources/Images/smartwatch.jpg"));
-        favoriteItems.add(new FavoriteItem(6, "Portable SSD 1TB", 950000, 1200000, 3, "#B0E0E6", "src/Resources/Images/ssd.jpg"));
-        favoriteItems.add(new FavoriteItem(7, "USB-C Hub Multiport", 300000, 350000, 10, "#FFDAB9", "src/Resources/Images/usb_hub.jpg"));
-        favoriteItems.add(new FavoriteItem(8, "Webcam Full HD", 400000, 480000, 7, "#C0C0C0", "src/Resources/Images/webcam.jpg"));
+        // Mengambil semua produk dari database melalui ProductRepository
+        // Ini adalah tempat data produk dimuat dari DB saat FavoritesUI diinisialisasi
+        favoriteItems = ProductRepository.getAllProducts();
+
+        // Opsional: Jika Anda ingin hanya beberapa produk yang muncul sebagai "favorit"
+        // Misalnya, hanya ambil 6 produk pertama yang dimuat dari DB
+        // List<FavoriteItem> allDbProducts = ProductRepository.getAllProducts();
+        // favoriteItems = new ArrayList<>();
+        // for (int i = 0; i < Math.min(6, allDbProducts.size()); i++) {
+        //     favoriteItems.add(allDbProducts.get(i));
+        // }
     }
 
     private void initializeUI() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
-        // Header Section
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        // Main Content
         JPanel contentPanel = createContentPanel();
         add(contentPanel, BorderLayout.CENTER);
     }
@@ -52,13 +53,19 @@ public class FavoritesUI extends JPanel {
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(new EmptyBorder(20, 20, 10, 20));
 
-        // Title
-        JLabel titleLabel = new JLabel("My Favorites");
+        JLabel titleLabel = new JLabel("Favorit Saya");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
         titleLabel.setForeground(Color.BLACK);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        JButton continueShoppingBtn = new JButton("Continue Shopping");
+        JLabel countLabel = new JLabel(favoriteItems.size() + " item");
+        countLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        countLabel.setForeground(Color.GRAY);
+
+        JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        rightPanel.setBackground(Color.WHITE);
+
+        JButton continueShoppingBtn = new JButton("Lanjutkan Belanja");
         continueShoppingBtn.setBackground(Color.WHITE);
         continueShoppingBtn.setForeground(new Color(255, 69, 0));
         continueShoppingBtn.setBorderPainted(false);
@@ -66,16 +73,15 @@ public class FavoritesUI extends JPanel {
         continueShoppingBtn.setFont(new Font("Arial", Font.BOLD, 14));
         continueShoppingBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         continueShoppingBtn.addActionListener(e -> {
-            // Logika untuk beralih kembali ke dashboard
-            // Anda mungkin perlu menyesuaikan nama "Dashboard" ini
-            Container parent = getParent();
-            if (parent != null && parent.getLayout() instanceof CardLayout) {
-                CardLayout layout = (CardLayout) parent.getLayout();
-                layout.show(parent, "Dashboard");
+            if (viewController != null) {
+                viewController.showDashboardView();
             }
         });
 
-        headerPanel.add(continueShoppingBtn, BorderLayout.EAST);
+        rightPanel.add(countLabel);
+        rightPanel.add(Box.createRigidArea(new Dimension(20, 0)));
+        rightPanel.add(continueShoppingBtn);
+        headerPanel.add(rightPanel, BorderLayout.EAST);
 
         return headerPanel;
     }
@@ -85,22 +91,20 @@ public class FavoritesUI extends JPanel {
         contentPanel.setBackground(Color.WHITE);
 
         if (favoriteItems.isEmpty()) {
-            // Empty state jika tidak ada item favorit
             JPanel emptyPanel = createEmptyStatePanel();
             contentPanel.add(emptyPanel, BorderLayout.CENTER);
         } else {
-            // Grid untuk menampilkan produk (4 kolom per baris)
-            favoriteProductsPanel = new JPanel(new GridLayout(0, 4, 20, 20)); // 0 baris (otomatis), 4 kolom, gap 20px
+            favoriteProductsPanel = new JPanel(new GridLayout(0, 6, 15, 20));
             favoriteProductsPanel.setBackground(Color.WHITE);
             favoriteProductsPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
 
-            refreshFavoritesList(); // Memuat ulang daftar produk
+            refreshFavoritesList();
 
             JScrollPane scrollPane = new JScrollPane(favoriteProductsPanel);
             scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
             scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            scrollPane.setBorder(null); // Menghilangkan border default scroll pane
-            scrollPane.getVerticalScrollBar().setUnitIncrement(16); // Mempercepat scrolling
+            scrollPane.setBorder(null);
+            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
             contentPanel.add(scrollPane, BorderLayout.CENTER);
         }
@@ -116,172 +120,151 @@ public class FavoritesUI extends JPanel {
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBackground(Color.WHITE);
 
-        // Ikon hati besar
         JLabel heartIcon = new JLabel("♡");
         heartIcon.setFont(new Font("Arial", Font.PLAIN, 80));
         heartIcon.setForeground(Color.LIGHT_GRAY);
         heartIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Judul kosong
-        JLabel emptyTitle = new JLabel("No Favorites Yet");
+        JLabel emptyTitle = new JLabel("Belum Ada Favorit");
         emptyTitle.setFont(new Font("Arial", Font.BOLD, 24));
         emptyTitle.setForeground(Color.GRAY);
         emptyTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Deskripsi kosong
-        JLabel emptyDesc = new JLabel("Start adding products to your favorites!");
+        JLabel emptyDesc = new JLabel("Mulai tambahkan produk ke favorit Anda!");
         emptyDesc.setFont(new Font("Arial", Font.PLAIN, 16));
         emptyDesc.setForeground(Color.LIGHT_GRAY);
         emptyDesc.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Menambahkan komponen ke panel tengah
-        centerPanel.add(Box.createVerticalGlue()); // Untuk menengahkan vertikal
+        centerPanel.add(Box.createVerticalGlue());
         centerPanel.add(heartIcon);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spasi
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         centerPanel.add(emptyTitle);
-        centerPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spasi
+        centerPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         centerPanel.add(emptyDesc);
-        centerPanel.add(Box.createVerticalGlue()); // Untuk menengahkan vertikal
+        centerPanel.add(Box.createVerticalGlue());
 
         emptyPanel.add(centerPanel, BorderLayout.CENTER);
         return emptyPanel;
     }
 
     private void refreshFavoritesList() {
-        favoriteProductsPanel.removeAll(); // Hapus semua produk yang ada
+        favoriteProductsPanel.removeAll();
 
         for (FavoriteItem item : favoriteItems) {
             JPanel productCard = createFavoriteProductCard(item);
             favoriteProductsPanel.add(productCard);
         }
 
-        favoriteProductsPanel.revalidate(); // Validasi ulang layout
-        favoriteProductsPanel.repaint();    // Gambar ulang panel
+        favoriteProductsPanel.revalidate();
+        favoriteProductsPanel.repaint();
     }
 
     private JPanel createFavoriteProductCard(FavoriteItem item) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
         card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
-        // Sesuaikan preferred size card agar proporsional dengan 4 kolom dan area gambar 4:3
-        card.setPreferredSize(new Dimension(240, 300)); // Lebar 240, Tinggi 300 (Contoh: 180 untuk gambar, sisa untuk info)
+        card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
+        card.setPreferredSize(new Dimension(180, 290)); 
 
-        // Product Image Panel
         JPanel imagePanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR); // Perhalus skala gambar
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-                if (item.getImage() == null) {
-                    // Fallback ke background gradient jika gambar null atau gagal dimuat
-                    GradientPaint gradient = new GradientPaint(
-                            0, 0, item.getBgColor(),
-                            getWidth(), getHeight(), item.getBgColor().darker());
-                    g2d.setPaint(gradient);
-                    g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.setColor(item.getBgColor());
+                g2d.fillRect(0, 0, getWidth(), getHeight());
 
-                    g2d.setColor(Color.WHITE);
-                    g2d.setFont(new Font("Arial", Font.BOLD, 14));
+                Image mainImage = null;
+                if (!item.getLoadedImages().isEmpty()) {
+                    mainImage = item.getLoadedImages().get(0);
+                }
+
+                if (mainImage == null) {
+                    g2d.setColor(item.getBgColor().darker());
+                    g2d.setFont(new Font("Arial", Font.BOLD, 12));
                     FontMetrics fm = g2d.getFontMetrics();
-                    String text = "IMG";
+                    String text = "NO IMAGE";
                     int textWidth = fm.stringWidth(text);
                     int textHeight = fm.getHeight();
                     g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2 - fm.getDescent());
                 } else {
-                    // Logika untuk cropping gambar agar mengisi penuh panel sambil mempertahankan rasio asli
-                    double panelAspectRatio = (double) getWidth() / getHeight();
-                    double imageAspectRatio = (double) item.getImage().getWidth(this) / item.getImage().getHeight(this);
+                    int originalWidth = mainImage.getWidth(null);
+                    int originalHeight = mainImage.getHeight(null);
 
-                    int sourceX = 0;
-                    int sourceY = 0;
-                    int sourceWidth = item.getImage().getWidth(this);
-                    int sourceHeight = item.getImage().getHeight(this);
-                    int destX = 0;
-                    int destY = 0;
-                    int destWidth = getWidth();
-                    int destHeight = getHeight();
+                    double scaleX = (double) getWidth() / originalWidth;
+                    double scaleY = (double) getHeight() / originalHeight;
+                    double scale = Math.min(scaleX, scaleY);
 
-                    if (imageAspectRatio > panelAspectRatio) {
-                        // Gambar lebih lebar dari panel, crop bagian samping kiri dan kanan
-                        int scaledHeight = getHeight();
-                        int originalImageWidth = item.getImage().getWidth(this);
-                        int originalImageHeight = item.getImage().getHeight(this);
-                        
-                        // Hitung lebar sumber yang perlu diambil agar proporsional dengan tinggi panel
-                        sourceWidth = (int) (originalImageHeight * panelAspectRatio);
-                        sourceX = (originalImageWidth - sourceWidth) / 2; // Tengahkan crop horizontally
-                        sourceHeight = originalImageHeight; // Ambil tinggi penuh dari gambar asli
+                    int scaledWidth = (int) (originalWidth * scale);
+                    int scaledHeight = (int) (originalHeight * scale);
 
-                    } else if (imageAspectRatio < panelAspectRatio) {
-                        // Gambar lebih tinggi dari panel, crop bagian atas dan bawah
-                        int scaledWidth = getWidth();
-                        int originalImageWidth = item.getImage().getWidth(this);
-                        int originalImageHeight = item.getImage().getHeight(this);
+                    int x = (getWidth() - scaledWidth) / 2;
+                    int y = (getHeight() - scaledHeight) / 2;
 
-                        // Hitung tinggi sumber yang perlu diambil agar proporsional dengan lebar panel
-                        sourceHeight = (int) (originalImageWidth / panelAspectRatio);
-                        sourceY = (originalImageHeight - sourceHeight) / 2; // Tengahkan crop vertically
-                        sourceWidth = originalImageWidth; // Ambil lebar penuh dari gambar asli
-                    }
-                    // Jika rasio sama, sourceX, sourceY, sourceWidth, sourceHeight tetap sama dengan dimensi gambar asli
-                    // dan destX, destY, destWidth, destHeight tetap sama dengan dimensi panel
-
-                    g2d.drawImage(item.getImage(),
-                            destX, destY, destWidth, destHeight, // Area tujuan di panel
-                            sourceX, sourceY, sourceX + sourceWidth, sourceY + sourceHeight, // Area sumber dari gambar asli
-                            this);
+                    g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null);
                 }
             }
-        };
-        // Mengatur preferred size untuk imagePanel agar memiliki rasio 4:3
-        imagePanel.setPreferredSize(new Dimension(240, 180)); // Rasio 4:3
+            
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(180, 180); 
+            }
 
-        // Heart/Remove button overlay
+            @Override
+            public Dimension getMinimumSize() {
+                return new Dimension(50, 50); 
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE); 
+            }
+        };
+        imagePanel.setOpaque(true); 
+
         JPanel overlayPanel = new JPanel();
         overlayPanel.setLayout(new BorderLayout());
-        overlayPanel.setOpaque(false); // Buat panel transparan agar komponen di bawahnya terlihat
+        overlayPanel.setOpaque(false); 
 
         JPanel heartPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        heartPanel.setOpaque(false); // Transparan juga
-        heartPanel.setBorder(new EmptyBorder(10, 10, 10, 10)); // Padding
+        heartPanel.setOpaque(false); 
+        heartPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         JButton heartButton = new JButton("♥");
-        heartButton.setFont(new Font("Arial", Font.BOLD, 18));
-        heartButton.setForeground(new Color(255, 69, 0)); // Warna hati merah oranye
+        heartButton.setFont(new Font("Arial", Font.BOLD, 14));
+        heartButton.setForeground(new Color(255, 69, 0));
         heartButton.setBackground(Color.WHITE);
-        heartButton.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
+        heartButton.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         heartButton.setFocusPainted(false);
-        heartButton.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Ubah kursor saat di hover
-        heartButton.setToolTipText("Remove from favorites");
+        heartButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        heartButton.setToolTipText("Hapus dari favorit");
 
-        // Efek hover dan aksi klik pada tombol hati
         heartButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                heartButton.setBackground(new Color(255, 240, 240)); // Warna latar belakang saat hover
+                heartButton.setBackground(new Color(255, 240, 240));
             }
 
             @Override
-            public void mouseExited(MouseEvent e) {
-                heartButton.setBackground(Color.WHITE); // Kembali ke warna semula
+            public void mouseExited(MouseEvent e) { // Perbaikan: methodExited -> mouseExited
+                heartButton.setBackground(Color.WHITE);
             }
 
             @Override
             public void mouseClicked(MouseEvent e) {
                 int result = JOptionPane.showConfirmDialog(
-                        FavoritesUI.this,
-                        "Remove '" + item.getName() + "' from favorites?",
-                        "Remove Favorite",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
+                                        FavoritesUI.this,
+                                        "Hapus '" + item.getName() + "' dari favorit?",
+                                        "Hapus Favorit",
+                                        JOptionPane.YES_NO_OPTION,
+                                        JOptionPane.QUESTION_MESSAGE
                 );
 
                 if (result == JOptionPane.YES_OPTION) {
-                    removeFavoriteItem(item); // Panggil metode untuk menghapus item
+                    removeFavoriteItem(item);
                 }
             }
         });
@@ -289,101 +272,96 @@ public class FavoritesUI extends JPanel {
         heartPanel.add(heartButton);
         overlayPanel.add(heartPanel, BorderLayout.NORTH);
 
-        // Menggabungkan panel gambar dan panel overlay
         JPanel imageContainer = new JPanel();
         imageContainer.setLayout(new OverlayLayout(imageContainer));
         imageContainer.add(overlayPanel);
-        imageContainer.add(imagePanel);
+        imageContainer.add(imagePanel); 
 
-        // Product Info Panel
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
         infoPanel.setBackground(Color.WHITE);
-        infoPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        infoPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
 
-        // Label Nama Produk
-        JLabel nameLabel = new JLabel(item.getName());
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        JLabel nameLabel = new JLabel("<html><div style='text-align: center;'>" + item.getName() + "</div></html>");
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 13));
         nameLabel.setForeground(Color.BLACK);
-        nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Label Deskripsi Produk (stok dan harga asli)
-        JLabel descLabel = new JLabel("<html>" + item.getDescription() + "</html>");
-        descLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        descLabel.setForeground(Color.GRAY);
-        descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel stockLabel = new JLabel("<html><div style='text-align: center;'>Stok: " + item.getStock() + "</div></html>");
+        stockLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        stockLabel.setForeground(Color.GRAY);
+        stockLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Label Harga Produk
-        JLabel priceLabel = new JLabel(String.format("Rp %,.0f", item.getPrice()));
-        priceLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        priceLabel.setForeground(new Color(255, 89, 0)); // Warna harga
-        priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel priceLabel = new JLabel("<html><div style='text-align: center;'><b>Rp " + String.format("%,.0f", item.getPrice()) + "</b></div></html>");
+        priceLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        priceLabel.setForeground(new Color(255, 89, 0));
+        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Panel Tombol Aksi
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
+        JLabel originalPriceLabel = null;
+        if (item.getOriginalPrice() > item.getPrice()) {
+            originalPriceLabel = new JLabel("<html><div style='text-align: center;'><strike>Rp " + String.format("%,.0f", item.getOriginalPrice()) + "</strike></div></html>");
+            originalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+            originalPriceLabel.setForeground(Color.GRAY);
+            originalPriceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        }
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 5));
         buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Tombol "Add to Cart"
-        JButton addToCartButton = new JButton("Add to Cart");
+        JButton addToCartButton = new JButton("Tambah ke Keranjang");
         addToCartButton.setBackground(new Color(255, 89, 0));
         addToCartButton.setForeground(Color.WHITE);
         addToCartButton.setBorderPainted(false);
         addToCartButton.setFocusPainted(false);
-        addToCartButton.setFont(new Font("Arial", Font.BOLD, 12));
-        addToCartButton.setBorder(new EmptyBorder(8, 16, 8, 16));
+        addToCartButton.setFont(new Font("Arial", Font.BOLD, 10));
+        addToCartButton.setBorder(new EmptyBorder(6, 12, 6, 12));
         addToCartButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         addToCartButton.addActionListener(e -> {
             JOptionPane.showMessageDialog(
-                    FavoritesUI.this,
-                    "'" + item.getName() + "' added to cart!",
-                    "Added to Cart",
-                    JOptionPane.INFORMATION_MESSAGE
+                                FavoritesUI.this,
+                                "'" + item.getName() + "' ditambahkan ke keranjang!",
+                                "Ditambahkan ke Keranjang",
+                                JOptionPane.INFORMATION_MESSAGE
             );
         });
 
-        // Tombol "View Details"
-        JButton viewButton = new JButton("View Details");
-        viewButton.setBackground(Color.WHITE);
-        viewButton.setForeground(new Color(255, 89, 0));
-        viewButton.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 1));
-        viewButton.setFocusPainted(false);
-        viewButton.setFont(new Font("Arial", Font.BOLD, 12));
-        viewButton.setBorder(new EmptyBorder(8, 16, 8, 16));
-        viewButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        viewButton.addActionListener(e -> {
-            showProductDetails(item); // Panggil metode untuk menampilkan detail produk
-        });
-
         buttonPanel.add(addToCartButton);
-        buttonPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi antar tombol
-        buttonPanel.add(viewButton);
 
-        // Menambahkan komponen ke infoPanel
         infoPanel.add(nameLabel);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        infoPanel.add(descLabel);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 2)));
+        infoPanel.add(stockLabel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
         infoPanel.add(priceLabel);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        if (originalPriceLabel != null) {
+            infoPanel.add(Box.createRigidArea(new Dimension(0, 2)));
+            infoPanel.add(originalPriceLabel);
+        }
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 6)));
         infoPanel.add(buttonPanel);
 
-        // Menambahkan imageContainer dan infoPanel ke card
-        card.add(imageContainer, BorderLayout.CENTER);
-        card.add(infoPanel, BorderLayout.SOUTH);
+        card.add(imageContainer, BorderLayout.NORTH);
+        card.add(infoPanel, BorderLayout.CENTER);
 
-        // Efek hover pada card
         card.addMouseListener(new MouseAdapter() {
             @Override
+            public void mouseClicked(MouseEvent e) {
+                if (!SwingUtilities.isDescendingFrom(e.getComponent(), heartButton) && 
+                    !SwingUtilities.isDescendingFrom(e.getComponent(), addToCartButton)) {
+                    
+                    showProductDetails(item);
+                }
+            }
+
+            @Override
             public void mouseEntered(MouseEvent e) {
-                card.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2)); // Border saat di hover
+                card.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2));
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                card.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1)); // Border normal
+                card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
             }
         });
 
@@ -392,136 +370,92 @@ public class FavoritesUI extends JPanel {
 
     private void removeFavoriteItem(FavoriteItem item) {
         favoriteItems.remove(item);
-
-        // Jika daftar favorit kosong, tampilkan kembali panel empty state
-        if (favoriteItems.isEmpty()) {
-            removeAll(); // Hapus semua komponen
-            add(createHeaderPanel(), BorderLayout.NORTH);
-            add(createContentPanel(), BorderLayout.CENTER); // Buat ulang content panel (akan menampilkan empty state)
-            revalidate();
-            repaint();
-        } else {
-            // Jika tidak kosong, cukup refresh daftar produk
-            refreshFavoritesList();
-            // Re-render seluruh UI untuk memastikan panel atas dan bawah terupdate
-            removeAll();
-            add(createHeaderPanel(), BorderLayout.NORTH);
-            add(createContentPanel(), BorderLayout.CENTER);
-            revalidate();
-            repaint();
-        }
+        initializeUI();
+        revalidate();
+        repaint();
     }
 
     private void showProductDetails(FavoriteItem item) {
-        // Membuat dialog modal untuk detail produk
-        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Product Details", true);
-        dialog.setSize(400, 300);
-        dialog.setLocationRelativeTo(this); // Tengahkan dialog relatif terhadap FavoritesUI
-
-        JPanel dialogPanel = new JPanel();
-        dialogPanel.setLayout(new BoxLayout(dialogPanel, BoxLayout.Y_AXIS));
-        dialogPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        dialogPanel.setBackground(Color.WHITE);
-
-        // Informasi produk di dalam dialog
-        JLabel nameLabel = new JLabel(item.getName());
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel descLabel = new JLabel("<html><center>" + item.getDescription() + "</center></html>");
-        descLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JLabel priceLabel = new JLabel(String.format("Rp %,.0f", item.getPrice()));
-        priceLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        priceLabel.setForeground(new Color(255, 89, 0));
-        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        JButton closeButton = new JButton("Close");
-        closeButton.setBackground(new Color(255, 89, 0));
-        closeButton.setForeground(Color.WHITE);
-        closeButton.setBorderPainted(false);
-        closeButton.setFocusPainted(false);
-        closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        closeButton.addActionListener(e -> dialog.dispose()); // Menutup dialog saat tombol ditekan
-
-        dialogPanel.add(nameLabel);
-        dialogPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        dialogPanel.add(descLabel);
-        dialogPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        dialogPanel.add(priceLabel);
-        dialogPanel.add(Box.createRigidArea(new Dimension(0, 20)));
-        dialogPanel.add(closeButton);
-
-        dialog.add(dialogPanel);
-        dialog.setVisible(true);
+        if (viewController != null) {
+            viewController.showProductDetail(item);
+        }
     }
 
-    // Inner class untuk merepresentasikan item favorit
-    private static class FavoriteItem {
+    // *** INNER CLASS FavoriteItem ***
+    public static class FavoriteItem {
         private int id;
         private String name;
+        private String description;
         private double price;
         private double originalPrice;
         private int stock;
+        private String condition;
+        private String minOrder;
+        private String brand;
         private Color bgColor;
-        private String imagePath; // Jalur gambar sebagai String
-        private Image image; // Objek Image yang akan dimuat
+        
+        private List<byte[]> rawImageDataList; 
+        private List<String> rawFileExtensionList;
 
-        // Constructor untuk FavoriteItem
-        public FavoriteItem(int id, String name, double price, double originalPrice, int stock, String hexColor, String imagePath) {
+        protected List<Image> loadedImages; 
+
+        public FavoriteItem(int id, String name, String description, double price, double originalPrice,
+                            int stock, String condition, String minOrder, String brand,
+                            String hexColor, List<String> imagePaths) { 
             this.id = id;
             this.name = name;
+            this.description = description;
             this.price = price;
             this.originalPrice = originalPrice;
             this.stock = stock;
-            this.bgColor = Color.decode(hexColor); // Mengubah hex string ke Color
-            this.imagePath = imagePath;
-            loadImage(); // Panggil metode untuk memuat gambar saat objek dibuat
+            this.condition = condition;
+            this.minOrder = minOrder;
+            this.brand = brand;
+            this.bgColor = Color.decode(hexColor);
+            this.loadedImages = new ArrayList<>();
+        }
+        
+        public void setImageDataLists(List<byte[]> imageDataList, List<String> fileExtensionList) {
+            this.rawImageDataList = imageDataList;
+            this.rawFileExtensionList = fileExtensionList;
+            loadImageFromBytes(); // Panggil untuk memuat gambar setelah data diterima
         }
 
-        // Metode untuk memuat gambar dari jalur yang diberikan
-        private void loadImage() {
-            try {
-                // Mencoba memuat gambar sebagai resource dari classpath (cocok untuk JAR)
-                java.net.URL imgURL = getClass().getClassLoader().getResource(imagePath);
-                if (imgURL != null) {
-                    this.image = ImageIO.read(imgURL);
-                    System.out.println("Gambar berhasil dimuat dari classpath: " + imagePath);
-                } else {
-                    // Jika tidak ditemukan di classpath, coba muat sebagai file dari sistem file
-                    File imgFile = new File(imagePath);
-                    if (imgFile.exists()) {
-                        this.image = ImageIO.read(imgFile);
-                        System.out.println("Gambar berhasil dimuat dari file sistem: " + imagePath);
+        private void loadImageFromBytes() {
+            loadedImages.clear(); 
+            if (rawImageDataList != null && !rawImageDataList.isEmpty()) {
+                for (int i = 0; i < rawImageDataList.size(); i++) {
+                    byte[] imageData = rawImageDataList.get(i);
+                    if (imageData != null) {
+                        try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData)) {
+                            Image img = ImageIO.read(bis);
+                            if (img != null) {
+                                loadedImages.add(img);
+                            } else {
+                                System.err.println("ImageIO.read kembali null untuk gambar ID produk " + this.id);
+                                loadedImages.add(null);
+                            }
+                        } catch (IOException e) {
+                            System.err.println("Gagal mengkonversi byte[] ke Image untuk ID produk " + this.id + ": " + e.getMessage());
+                            loadedImages.add(null);
+                        }
                     } else {
-                        System.err.println("Gambar tidak ditemukan di: " + imagePath);
+                        loadedImages.add(null);
                     }
                 }
-            } catch (IOException e) {
-                System.err.println("Gagal memuat gambar dari " + imagePath + ": " + e.getMessage());
-                this.image = null; // Pastikan gambar null jika gagal dimuat
             }
         }
 
-        // Getters untuk properti FavoriteItem
         public int getId() { return id; }
         public String getName() { return name; }
+        public String getDescription() { return description; }
         public double getPrice() { return price; }
         public double getOriginalPrice() { return originalPrice; }
         public int getStock() { return stock; }
+        public String getCondition() { return condition; }
+        public String getMinOrder() { return minOrder; }
+        public String getBrand() { return brand; }
         public Color getBgColor() { return bgColor; }
-        public String getImagePath() { return imagePath; }
-        public Image getImage() { return image; }
-
-        // Menggabungkan deskripsi produk (stok dan harga asli jika ada)
-        public String getDescription() {
-            StringBuilder description = new StringBuilder();
-            description.append("Stok: ").append(stock);
-            if (originalPrice > price) {
-                description.append(" (Harga Normal: Rp ").append(String.format("%,.0f", originalPrice)).append(")");
-            }
-            return description.toString();
-        }
+        public List<Image> getLoadedImages() { return loadedImages; }
     }
 }

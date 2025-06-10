@@ -7,6 +7,14 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+import java.util.ArrayList;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 public class SupervisorDashboardUI extends JFrame {
     private JPanel mainPanel;
@@ -15,11 +23,12 @@ public class SupervisorDashboardUI extends JFrame {
     private JTable productTable;
     private DefaultTableModel orderTableModel;
     private JTable orderTable;
-    private JButton[] navButtons; // To track sidebar buttons
+    private JButton[] navButtons;
+    private User currentUser;
 
     public SupervisorDashboardUI() {
-        User currentUser = Authentication.getCurrentUser();
-        if (currentUser == null) {
+        currentUser = Authentication.getCurrentUser();
+        if (currentUser == null || (!currentUser.getRole().equals("supervisor") && !currentUser.getRole().equals("admin"))) {
             LoginUI loginUI = new LoginUI();
             loginUI.setVisible(true);
             dispose();
@@ -30,43 +39,32 @@ public class SupervisorDashboardUI extends JFrame {
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
-        setLayout(new BorderLayout());
         
-        // Set ikon
         IconUtil.setIcon(this);
+        setLayout(new BorderLayout());
 
-        // Sidebar
         JPanel sidebar = createSidebar();
-
-        // Main content area
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
 
-        // Header
         JPanel headerPanel = createHeaderPanel(currentUser);
-
-        // Product management panel
         JPanel productPanel = createProductManagementPanel();
-
-        // Orders panel
         JPanel ordersPanel = createOrdersPanel();
-
-        // Profile panel (placeholder)
         ProfileUI profilePanel = new ProfileUI();
 
         mainPanel.add(productPanel, "Products");
         mainPanel.add(ordersPanel, "Orders");
         mainPanel.add(profilePanel, "Profile");
 
-        // Content wrapper with header and main panel
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.add(headerPanel, BorderLayout.NORTH);
         contentWrapper.add(mainPanel, BorderLayout.CENTER);
 
         add(sidebar, BorderLayout.WEST);
         add(contentWrapper, BorderLayout.CENTER);
+        
+        cardLayout.show(mainPanel, "Products");
     }
 
     private JPanel createSidebar() {
@@ -76,7 +74,6 @@ public class SupervisorDashboardUI extends JFrame {
         sidebar.setPreferredSize(new Dimension(200, 0));
         sidebar.setBorder(new EmptyBorder(20, 10, 20, 10));
 
-        // Logo
         JLabel lblLogo = new JLabel("Quantra");
         lblLogo.setFont(new Font("Arial", Font.BOLD, 20));
         lblLogo.setForeground(new Color(255, 99, 71));
@@ -84,10 +81,9 @@ public class SupervisorDashboardUI extends JFrame {
         sidebar.add(lblLogo);
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Navigation items
-        String[] navItems = {"Dashboard", "Orders", "Products", "Analytics", "Settings"};
-        String[] panelNames = {"Products", "Orders", "Products", "Products", "Profile"};
-        navButtons = new JButton[navItems.length]; // Initialize array to store buttons
+        String[] navItems = {"Products", "Orders", "Analytics", "Settings"};
+        String[] panelNames = {"Products", "Orders", "Products", "Profile"};
+        navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
             JButton navButton = new JButton(navItems[i]);
@@ -100,18 +96,16 @@ public class SupervisorDashboardUI extends JFrame {
             navButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
             navButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            // Initially highlight "Products"
             if (navItems[i].equals("Products")) {
                 navButton.setBackground(new Color(255, 99, 71));
                 navButton.setForeground(Color.WHITE);
             }
 
-            navButtons[i] = navButton; // Store button in array
+            navButtons[i] = navButton;
 
             final String panelName = panelNames[i];
             final int index = i;
             navButton.addActionListener(e -> {
-                // Update button colors
                 for (JButton btn : navButtons) {
                     btn.setBackground(new Color(245, 245, 245));
                     btn.setForeground(Color.BLACK);
@@ -119,7 +113,6 @@ public class SupervisorDashboardUI extends JFrame {
                 navButtons[index].setBackground(new Color(255, 99, 71));
                 navButtons[index].setForeground(Color.WHITE);
 
-                // Switch panel
                 cardLayout.show(mainPanel, panelName);
             });
 
@@ -127,10 +120,8 @@ public class SupervisorDashboardUI extends JFrame {
             sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         }
 
-        // Spacer to push Help to bottom
         sidebar.add(Box.createVerticalGlue());
 
-        // Help button
         JButton helpButton = new JButton("Help");
         helpButton.setFont(new Font("Arial", Font.PLAIN, 14));
         helpButton.setForeground(Color.BLACK);
@@ -151,7 +142,6 @@ public class SupervisorDashboardUI extends JFrame {
         headerPanel.setPreferredSize(new Dimension(0, 60));
         headerPanel.setBorder(new EmptyBorder(10, 20, 10, 20));
 
-        // Search bar
         JTextField searchField = new JTextField("Search products...");
         searchField.setForeground(Color.GRAY);
         searchField.setPreferredSize(new Dimension(300, 30));
@@ -175,7 +165,6 @@ public class SupervisorDashboardUI extends JFrame {
         });
         headerPanel.add(searchField, BorderLayout.WEST);
 
-        // Right side (user profile)
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         rightPanel.setBackground(Color.WHITE);
 
@@ -192,9 +181,9 @@ public class SupervisorDashboardUI extends JFrame {
         btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnLogout.addActionListener(e -> {
             int response = JOptionPane.showConfirmDialog(SupervisorDashboardUI.this,
-                    "Are you sure you want to logout?",
-                    "Confirm",
-                    JOptionPane.YES_NO_OPTION);
+                            "Are you sure you want to logout?",
+                            "Confirm",
+                            JOptionPane.YES_NO_OPTION);
             if (response == JOptionPane.YES_OPTION) {
                 Authentication.logout();
                 LoginUI loginUI = new LoginUI();
@@ -216,25 +205,21 @@ public class SupervisorDashboardUI extends JFrame {
         productPanel.setBackground(Color.WHITE);
         productPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Filter panel
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         filterPanel.setBackground(Color.WHITE);
 
-        JComboBox<String> categoryCombo = new JComboBox<>(new String[]{"All Categories", "Jackets", "Shirts", "Accessories"});
+        JComboBox<String> categoryCombo = new JComboBox<>(new String[]{"All Categories", "Laptop", "Headphone", "Speaker", "Mouse", "Keyboard", "Smartwatch", "SSD", "USB-C Hub", "Webcam", "Phone Case", "Laptop Stand", "Power Bank", "Wireless Charger"});
         categoryCombo.setPreferredSize(new Dimension(150, 30));
 
         JComboBox<String> statusCombo = new JComboBox<>(new String[]{"All Status", "Active", "Inactive"});
         statusCombo.setPreferredSize(new Dimension(120, 30));
 
-        JTextField priceRangeField = new JTextField("$50 - $1000");
+        JTextField priceRangeField = new JTextField("Min - Max");
         priceRangeField.setPreferredSize(new Dimension(100, 30));
         priceRangeField.setForeground(Color.GRAY);
         priceRangeField.setBorder(new LineBorder(Color.LIGHT_GRAY, 1, true));
 
-        JComboBox<String> storeCombo = new JComboBox<>(new String[]{"All Stores", "Store 1", "Store 2"});
-        storeCombo.setPreferredSize(new Dimension(120, 30));
-
-        JButton addProductButton = new JButton("Add Product");
+        JButton addProductButton = new JButton("Add New Product");
         addProductButton.setBackground(new Color(255, 69, 0));
         addProductButton.setForeground(Color.WHITE);
         addProductButton.setBorderPainted(false);
@@ -248,22 +233,14 @@ public class SupervisorDashboardUI extends JFrame {
         filterPanel.add(statusCombo);
         filterPanel.add(new JLabel("Price:"));
         filterPanel.add(priceRangeField);
-        filterPanel.add(new JLabel("Store:"));
-        filterPanel.add(storeCombo);
         filterPanel.add(Box.createHorizontalGlue());
         filterPanel.add(addProductButton);
 
-        // Table of products
-        String[] columns = {"", "Product Name", "Purchase Unit Price", "Views", "Status", "Action"};
+        String[] columns = {"ID", "Product Name", "Price", "Stock", "Brand", "Condition", "Action"};
         productTableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 0 || column == 5;
-            }
-
-            @Override
-            public Class<?> getColumnClass(int columnIndex) {
-                return columnIndex == 0 ? Boolean.class : super.getColumnClass(columnIndex);
+                return column == 6;
             }
         };
 
@@ -274,22 +251,22 @@ public class SupervisorDashboardUI extends JFrame {
         productTable.getTableHeader().setBackground(new Color(255, 99, 71));
         productTable.getTableHeader().setForeground(Color.WHITE);
 
-        addDummyProducts();
+        loadProductsForSupervisor();
 
-        productTable.getColumnModel().getColumn(0).setPreferredWidth(30);
-        productTable.getColumnModel().getColumn(1).setPreferredWidth(300);
-        productTable.getColumnModel().getColumn(2).setPreferredWidth(150);
+        productTable.getColumnModel().getColumn(0).setPreferredWidth(50);
+        productTable.getColumnModel().getColumn(1).setPreferredWidth(250);
+        productTable.getColumnModel().getColumn(2).setPreferredWidth(120);
         productTable.getColumnModel().getColumn(3).setPreferredWidth(80);
         productTable.getColumnModel().getColumn(4).setPreferredWidth(100);
-        productTable.getColumnModel().getColumn(5).setPreferredWidth(150);
+        productTable.getColumnModel().getColumn(5).setPreferredWidth(100);
+        productTable.getColumnModel().getColumn(6).setPreferredWidth(150);
 
-        productTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer());
-        productTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox(), this));
+        productTable.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+        productTable.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox(), this));
 
         JScrollPane scrollPane = new JScrollPane(productTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
-        // Pagination
         JPanel paginationPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         paginationPanel.setBackground(Color.WHITE);
         paginationPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
@@ -297,7 +274,7 @@ public class SupervisorDashboardUI extends JFrame {
         JButton prevButton = new JButton("<");
         prevButton.setEnabled(false);
         JButton nextButton = new JButton(">");
-        JLabel pageLabel = new JLabel("1 of 24");
+        JLabel pageLabel = new JLabel("1 of 1");
         for (JButton btn : new JButton[]{prevButton, nextButton}) {
             btn.setBackground(Color.WHITE);
             btn.setForeground(Color.BLACK);
@@ -305,14 +282,7 @@ public class SupervisorDashboardUI extends JFrame {
             btn.setFocusPainted(false);
         }
         paginationPanel.add(prevButton);
-        for (int i = 1; i <= 5; i++) {
-            JButton pageButton = new JButton(String.valueOf(i));
-            pageButton.setBackground(i == 1 ? new Color(255, 99, 71) : Color.WHITE);
-            pageButton.setForeground(i == 1 ? Color.WHITE : Color.BLACK);
-            pageButton.setBorder(new LineBorder(Color.LIGHT_GRAY, 1));
-            pageButton.setFocusPainted(false);
-            paginationPanel.add(pageButton);
-        }
+        paginationPanel.add(new JButton("1"));
         paginationPanel.add(nextButton);
         paginationPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         paginationPanel.add(pageLabel);
@@ -323,20 +293,292 @@ public class SupervisorDashboardUI extends JFrame {
 
         return productPanel;
     }
-
-    private void addDummyProducts() {
-        Object[][] dummyData = {
-                {false, "Gabriela Cashmere Blazer", "$139.99", 1113, "Active", ""},
-                {false, "Loewe Blend Jacket - Blue", "$139.99", 721, "Active", ""},
-                {false, "Sandro - Jacket - Black", "$139.99", 407, "Active", ""},
-                {false, "Adidas By Stella McCartney", "$139.99", 1203, "Active", ""},
-                {false, "Meteo Hooded Wool Jacket", "$139.99", 306, "Active", ""},
-                {false, "Hida Down Ski Jacket - Red", "$139.99", 201, "Active", ""}
-        };
-
-        for (Object[] row : dummyData) {
-            productTableModel.addRow(row);
+    
+    // --- Metode untuk memuat produk sesuai role supervisor (seller atau admin) ---
+    // MENGUBAHNYA MENJADI PUBLIC
+    public void loadProductsForSupervisor() { // <-- UBAH KE PUBLIC
+        productTableModel.setRowCount(0);
+        List<FavoritesUI.FavoriteItem> productsToDisplay;
+        if (currentUser.getRole().equals("supervisor")) {
+            productsToDisplay = ProductRepository.getProductsBySeller(currentUser.getId());
+        } else if (currentUser.getRole().equals("admin")) {
+            productsToDisplay = ProductRepository.getAllProducts();
+        } else {
+            productsToDisplay = new ArrayList<>();
+            JOptionPane.showMessageDialog(this, "Anda tidak memiliki hak akses untuk melihat produk.", "Akses Ditolak", JOptionPane.WARNING_MESSAGE);
         }
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("in", "ID"));
+        currencyFormat.setMinimumFractionDigits(0);
+        for (FavoritesUI.FavoriteItem product : productsToDisplay) {
+            String formattedPrice = currencyFormat.format(product.getPrice());
+            String views = "N/A";
+            
+            productTableModel.addRow(new Object[]{
+                product.getId(),
+                product.getName(),
+                formattedPrice,
+                product.getStock(),
+                product.getBrand(),
+                product.getCondition(),
+                ""
+            });
+        }
+    }
+
+    public void showProductDialog(Integer productId) {
+        String title = (productId == null) ? "Add New Product" : "Edit Product";
+        JDialog dialog = new JDialog(this, title, true);
+        dialog.setSize(450, 600);
+        dialog.setLocationRelativeTo(this);
+        dialog.setLayout(new BorderLayout());
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        JLabel lblName = new JLabel("Product Name:");
+        JTextField txtName = new JTextField(20);
+        txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblPrice = new JLabel("Price:");
+        JTextField txtPrice = new JTextField(20);
+        txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblOriginalPrice = new JLabel("Original Price (optional):");
+        JTextField txtOriginalPrice = new JTextField(20);
+        txtOriginalPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblStock = new JLabel("Stock:");
+        JTextField txtStock = new JTextField(20);
+        txtStock.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblCondition = new JLabel("Condition:");
+        JComboBox<String> comboCondition = new JComboBox<>(new String[]{"Baru", "Bekas"});
+        comboCondition.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblMinOrder = new JLabel("Min. Order:");
+        JTextField txtMinOrder = new JTextField(20);
+        txtMinOrder.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblBrand = new JLabel("Brand:");
+        JTextField txtBrand = new JTextField(20);
+        txtBrand.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+
+        JLabel lblDescription = new JLabel("Description:");
+        JTextArea txtDescription = new JTextArea(5, 20);
+        txtDescription.setLineWrap(true);
+        txtDescription.setWrapStyleWord(true);
+        JScrollPane descScrollPane = new JScrollPane(txtDescription);
+        descScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
+
+        JLabel lblImage = new JLabel("Product Images:");
+        JPanel imageControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JTextField txtImagePath = new JTextField(20);
+        txtImagePath.setEditable(false);
+        JButton btnBrowseImage = new JButton("Browse");
+        JButton btnManageImages = new JButton("Manage Images");
+        
+        imageControlPanel.add(txtImagePath);
+        imageControlPanel.add(btnBrowseImage);
+
+        List<byte[]> imagesToUpload = new ArrayList<>();
+        List<String> imageExtensions = new ArrayList<>();
+        
+        if (productId != null) { // Mode Edit
+            btnBrowseImage.setVisible(false);
+            txtImagePath.setVisible(false);
+            imageControlPanel.add(btnManageImages);
+            FavoritesUI.FavoriteItem productToEdit = ProductRepository.getProductById(productId);
+            if (productToEdit != null) {
+                txtName.setText(productToEdit.getName());
+                txtPrice.setText(String.valueOf(productToEdit.getPrice()));
+                if (productToEdit.getOriginalPrice() > 0) {
+                    txtOriginalPrice.setText(String.valueOf(productToEdit.getOriginalPrice()));
+                }
+                txtStock.setText(String.valueOf(productToEdit.getStock()));
+                comboCondition.setSelectedItem(productToEdit.getCondition());
+                txtMinOrder.setText(productToEdit.getMinOrder());
+                txtBrand.setText(productToEdit.getBrand());
+                txtDescription.setText(productToEdit.getDescription());
+            } else {
+                JOptionPane.showMessageDialog(dialog, "Product with ID " + productId + " not found.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else { // Mode Add New Product
+            btnManageImages.setVisible(false);
+        }
+
+
+        btnBrowseImage.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setMultiSelectionEnabled(true);
+            fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image Files", "jpg", "jpeg", "png", "gif"));
+            int result = fileChooser.showOpenDialog(dialog);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File[] selectedFiles = fileChooser.getSelectedFiles();
+                imagesToUpload.clear();
+                imageExtensions.clear();
+                StringBuilder paths = new StringBuilder();
+                for (File file : selectedFiles) {
+                    try (FileInputStream fis = new FileInputStream(file)) {
+                        byte[] imageData = new byte[(int) file.length()];
+                        fis.read(imageData);
+                        imagesToUpload.add(imageData);
+                        String fileName = file.getName();
+                        String extension = "";
+                        int i = fileName.lastIndexOf('.');
+                        if (i > 0) {
+                            extension = fileName.substring(i + 1);
+                        }
+                        imageExtensions.add(extension);
+                        
+                        paths.append(file.getName()).append("; ");
+                    } catch (IOException ex) {
+                        JOptionPane.showMessageDialog(dialog, "Error reading image file: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        imagesToUpload.clear(); 
+                        imageExtensions.clear();
+                        txtImagePath.setText("");
+                        return;
+                    }
+                }
+                txtImagePath.setText(paths.toString().trim());
+            }
+        });
+
+        btnManageImages.addActionListener(e -> {
+            if (productId != null) {
+                ProductImageManagerUI imageManagerDialog = new ProductImageManagerUI(this, productId);
+                imageManagerDialog.setVisible(true);
+            }
+        });
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton btnCancel = new JButton("Cancel");
+        JButton btnSave = new JButton("Save");
+
+        btnSave.setBackground(new Color(255, 69, 0));
+        btnSave.setForeground(Color.WHITE);
+        btnSave.setFocusPainted(false);
+
+        btnCancel.setBackground(new Color(108, 117, 125));
+        btnCancel.setForeground(Color.WHITE);
+        btnCancel.setFocusPainted(false);
+
+        btnCancel.addActionListener(e -> dialog.dispose());
+
+        btnSave.addActionListener(e -> {
+            String name = txtName.getText().trim();
+            String priceText = txtPrice.getText().trim();
+            String originalPriceText = txtOriginalPrice.getText().trim();
+            String stockText = txtStock.getText().trim();
+            String condition = (String) comboCondition.getSelectedItem();
+            String minOrder = txtMinOrder.getText().trim();
+            String brand = txtBrand.getText().trim();
+            String description = txtDescription.getText().trim();
+
+            if (name.isEmpty() || priceText.isEmpty() || stockText.isEmpty() || minOrder.isEmpty() || brand.isEmpty() || description.isEmpty()) {
+                JOptionPane.showMessageDialog(dialog, "All fields except Original Price must be filled!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            try {
+                double price = Double.parseDouble(priceText);
+                double originalPrice = originalPriceText.isEmpty() ? 0.0 : Double.parseDouble(originalPriceText);
+                int stock = Integer.parseInt(stockText);
+
+                if (price <= 0 || stock < 0) {
+                    JOptionPane.showMessageDialog(dialog, "Price must be greater than 0 and stock cannot be negative!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                
+                if (productId == null && imagesToUpload.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "Please select at least one image for a new product!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                try {
+                    if (productId == null) { // Add New Product
+                        Integer userIdForProduct = currentUser.getId();
+                        if (userIdForProduct == null) {
+                            JOptionPane.showMessageDialog(dialog, "User ID not found. Please login as a seller.", "Error", JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
+
+                        int newProductId = ProductRepository.saveProduct(name, description, price, originalPrice, stock, condition, minOrder, brand, userIdForProduct);
+                        
+                        if (newProductId != -1 && !imagesToUpload.isEmpty()) {
+                            for (int i = 0; i < imagesToUpload.size(); i++) {
+                                ProductRepository.saveProductImage(newProductId, imagesToUpload.get(i), imageExtensions.get(i), i == 0, i + 1);
+                            }
+                        }
+                        JOptionPane.showMessageDialog(dialog, "Product added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else { // Edit Product
+                        boolean updateProductSuccess = ProductRepository.updateProduct(productId, name, description, price, originalPrice, stock, condition, minOrder, brand);
+                        
+                        if (updateProductSuccess) {
+                            // Gambar diupdate via ProductImageManagerUI. Disini hanya update detail teksnya.
+                            // Jika ada gambar baru yang dipilih di dialog ini, abaikan.
+                            // User harus menggunakan "Manage Images" untuk update gambar.
+                            JOptionPane.showMessageDialog(dialog, "Product updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(dialog, "Failed to update product.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                    loadProductsForSupervisor();
+                    dialog.dispose();
+
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(dialog, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(dialog, "Price, Original Price, and Stock must be numeric!", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        buttonPanel.add(btnCancel);
+        buttonPanel.add(btnSave);
+
+        panel.add(lblName);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtName);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblPrice);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtPrice);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblOriginalPrice);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtOriginalPrice);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblStock);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtStock);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblCondition);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(comboCondition);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblMinOrder);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtMinOrder);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblBrand);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(txtBrand);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblDescription);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(descScrollPane);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblImage);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(imageControlPanel);
+
+
+        dialog.add(panel, BorderLayout.CENTER);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+        dialog.setVisible(true);
     }
 
     private JPanel createOrdersPanel() {
@@ -344,7 +586,6 @@ public class SupervisorDashboardUI extends JFrame {
         ordersPanel.setBackground(Color.WHITE);
         ordersPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Filter panel
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
         filterPanel.setBackground(Color.WHITE);
 
@@ -354,7 +595,6 @@ public class SupervisorDashboardUI extends JFrame {
         filterPanel.add(new JLabel("Status:"));
         filterPanel.add(statusCombo);
 
-        // Table of orders
         String[] columns = {"", "ID", "Customer", "Date", "Total", "Status", "Action"};
         orderTableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -411,132 +651,6 @@ public class SupervisorDashboardUI extends JFrame {
         }
     }
 
-    public void showProductDialog(Integer productId) {
-        String title = (productId == null) ? "Add New Product" : "Edit Product";
-        JDialog dialog = new JDialog(this, title, true);
-        dialog.setSize(400, 350);
-        dialog.setLocationRelativeTo(this);
-        dialog.setLayout(new BorderLayout());
-
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        JLabel lblName = new JLabel("Product Name:");
-        JTextField txtName = new JTextField(20);
-        txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
-        JLabel lblPrice = new JLabel("Price:");
-        JTextField txtPrice = new JTextField(20);
-        txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
-        JLabel lblStock = new JLabel("Stock:");
-        JTextField txtStock = new JTextField(20);
-        txtStock.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-
-        JLabel lblDescription = new JLabel("Description:");
-        JTextArea txtDescription = new JTextArea(5, 20);
-        JScrollPane descScrollPane = new JScrollPane(txtDescription);
-        descScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-
-        if (productId != null) {
-            int row = findProductRowById(productId);
-            if (row != -1) {
-                txtName.setText((String) productTableModel.getValueAt(row, 1));
-                String priceStr = ((String) productTableModel.getValueAt(row, 2))
-                        .replace("$", "")
-                        .replace(".", "");
-                txtPrice.setText(priceStr);
-                txtStock.setText("20");
-                txtDescription.setText("Description of " + productTableModel.getValueAt(row, 1));
-            }
-        }
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton btnCancel = new JButton("Cancel");
-        JButton btnSave = new JButton("Save");
-
-        btnSave.setBackground(new Color(255, 69, 0));
-        btnSave.setForeground(Color.WHITE);
-        btnSave.setFocusPainted(false);
-
-        btnCancel.setBackground(new Color(108, 117, 125));
-        btnCancel.setForeground(Color.WHITE);
-        btnCancel.setFocusPainted(false);
-
-        btnCancel.addActionListener(e -> dialog.dispose());
-
-        btnSave.addActionListener(e -> {
-            String name = txtName.getText().trim();
-            String priceText = txtPrice.getText().trim();
-            String stockText = txtStock.getText().trim();
-
-            if (name.isEmpty() || priceText.isEmpty() || stockText.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "All fields must be filled!", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            try {
-                double price = Double.parseDouble(priceText);
-                int stock = Integer.parseInt(stockText);
-
-                if (price <= 0 || stock < 0) {
-                    JOptionPane.showMessageDialog(dialog, "Price must be greater than 0 and stock cannot be negative!", "Validation Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                String formattedPrice = "$" + String.format("%.2f", price);
-
-                if (productId == null) {
-                    int newId = productTableModel.getRowCount() + 1;
-                    productTableModel.addRow(new Object[]{false, name, formattedPrice, 0, "Active", ""});
-                } else {
-                    int row = findProductRowById(productId);
-                    if (row != -1) {
-                        productTableModel.setValueAt(name, row, 1);
-                        productTableModel.setValueAt(formattedPrice, row, 2);
-                    }
-                }
-
-                dialog.dispose();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog, "Price and stock must be numeric!", "Validation Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
-        buttonPanel.add(btnCancel);
-        buttonPanel.add(btnSave);
-
-        panel.add(lblName);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtName);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblPrice);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtPrice);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblStock);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(txtStock);
-        panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblDescription);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
-        panel.add(descScrollPane);
-
-        dialog.add(panel, BorderLayout.CENTER);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-        dialog.setVisible(true);
-    }
-
-    private int findProductRowById(int id) {
-        for (int i = 0; i < productTableModel.getRowCount(); i++) {
-            if (i + 1 == id) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
     public void showOrderDetailsWithStatusUpdate(int orderId) {
         int row = -1;
         for (int i = 0; i < orderTableModel.getRowCount(); i++) {
@@ -547,7 +661,6 @@ public class SupervisorDashboardUI extends JFrame {
         }
 
         if (row != -1) {
-            //String customer dua= (String) orderTableModel.getValueAt(row, 2);
             String date = (String) orderTableModel.getValueAt(row, 3);
             String total = (String) orderTableModel.getValueAt(row, 4);
             String status = (String) orderTableModel.getValueAt(row, 5);
@@ -560,7 +673,6 @@ public class SupervisorDashboardUI extends JFrame {
             JPanel headerPanel = new JPanel(new GridLayout(5, 1, 5, 5));
             headerPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
             headerPanel.add(new JLabel("Order ID: " + orderId));
-            //headerPanel.add(new JLabel("Customer: " + customer));
             headerPanel.add(new JLabel("Date: " + date));
             headerPanel.add(new JLabel("Total: " + total));
 
@@ -659,12 +771,15 @@ public class SupervisorDashboardUI extends JFrame {
     }
 
     public void deleteProduct(int productId) {
-        int row = findProductRowById(productId);
-        if (row != -1) {
-            int confirmation = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this product?", "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-            if (confirmation == JOptionPane.YES_OPTION) {
-                productTableModel.removeRow(row);
-                JOptionPane.showMessageDialog(this, "Product deleted successfully", "Success", JOptionPane.INFORMATION_MESSAGE);
+        int confirmation = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this product from the database?", "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirmation == JOptionPane.YES_OPTION) {
+            try {
+                ProductRepository.deleteProduct(productId);
+                loadProductsForSupervisor();
+                JOptionPane.showMessageDialog(this, "Product deleted successfully from database", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } catch (SQLException e) {
+                JOptionPane.showMessageDialog(this, "Error deleting product: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
             }
         }
     }
@@ -726,7 +841,6 @@ public class SupervisorDashboardUI extends JFrame {
         protected String buttonType;
         protected int currentId;
         protected SupervisorDashboardUI parent;
-        protected boolean isPushed;
 
         public ButtonEditor(JCheckBox checkBox, SupervisorDashboardUI parent) {
             this(checkBox, parent, "edit-delete");
@@ -743,10 +857,8 @@ public class SupervisorDashboardUI extends JFrame {
 
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            isPushed = true;
-
             if (table == productTable) {
-                currentId = row + 1;
+                currentId = (int) productTableModel.getValueAt(row, 0); 
                 JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
                 panel.setBackground(table.getBackground());
 
@@ -754,13 +866,17 @@ public class SupervisorDashboardUI extends JFrame {
                 editBtn.setBackground(new Color(255, 99, 71));
                 editBtn.setForeground(Color.WHITE);
                 editBtn.setFocusPainted(false);
-                editBtn.addActionListener(e -> parent.showProductDialog(currentId));
+                editBtn.addActionListener(e -> {
+                    parent.showProductDialog(currentId);
+                });
 
                 JButton deleteBtn = new JButton("Delete");
                 deleteBtn.setBackground(new Color(220, 53, 69));
                 deleteBtn.setForeground(Color.WHITE);
                 deleteBtn.setFocusPainted(false);
-                deleteBtn.addActionListener(e -> parent.deleteProduct(currentId));
+                deleteBtn.addActionListener(e -> {
+                    parent.deleteProduct(currentId);
+                });
 
                 panel.add(editBtn);
                 panel.add(deleteBtn);
@@ -770,6 +886,7 @@ public class SupervisorDashboardUI extends JFrame {
                 button.setText("View Details");
                 button.setBackground(new Color(255, 99, 71));
                 button.setForeground(Color.WHITE);
+                button.addActionListener(e -> parent.showOrderDetailsWithStatusUpdate(currentId));
                 return button;
             }
 
@@ -778,22 +895,12 @@ public class SupervisorDashboardUI extends JFrame {
 
         @Override
         public Object getCellEditorValue() {
-            isPushed = false;
             return "";
         }
 
         @Override
         public boolean stopCellEditing() {
-            isPushed = false;
             return super.stopCellEditing();
-        }
-
-        @Override
-        protected void fireEditingStopped() {
-            super.fireEditingStopped();
-            if (isPushed && buttonType.equals("view")) {
-                parent.showOrderDetailsWithStatusUpdate(currentId);
-            }
         }
     }
 

@@ -16,21 +16,17 @@ public class LoginUI extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        // Set ikon
         IconUtil.setIcon(this);
 
-        // Main panel
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Header panel
         JPanel headerPanel = new JPanel();
         JLabel lblTitle = new JLabel("LOGIN");
         lblTitle.setFont(new Font("Arial", Font.BOLD, 24));
         headerPanel.add(lblTitle);
 
-        // Form panel
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new GridLayout(3, 2, 10, 10));
 
@@ -48,7 +44,6 @@ public class LoginUI extends JFrame {
         formPanel.add(lblPassword);
         formPanel.add(txtPassword);
 
-        // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 10));
 
@@ -68,15 +63,12 @@ public class LoginUI extends JFrame {
         buttonPanel.add(btnLogin);
         buttonPanel.add(btnRegister);
 
-        // Add all panels to main panel
         mainPanel.add(headerPanel, BorderLayout.NORTH);
         mainPanel.add(formPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        // Add main panel to frame
         add(mainPanel);
 
-        // Button event listeners
         btnLogin.addActionListener(e -> login());
 
         btnRegister.addActionListener(e -> {
@@ -103,15 +95,8 @@ public class LoginUI extends JFrame {
         User user = Authentication.login(username, password);
 
         if (user != null) {
-            // Cek status verifikasi
-            if (OTPManager.getInstance().isVerified(user.getEmail())) {
-                String message = "Login berhasil!";
-                if (!"user".equalsIgnoreCase(user.getRole())) {
-                    message = "Login berhasil sebagai " + user.getRole() + "!";
-                }
-                JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
-
-                // Routing berdasarkan role
+            // Karena User.java sekarang memiliki isVerified, ini akan berfungsi
+            if (user.isVerified()) {
                 switch (user.getRole().toLowerCase()) {
                     case "admin":
                         AdminDashboardUI adminDashboard = new AdminDashboardUI();
@@ -137,6 +122,15 @@ public class LoginUI extends JFrame {
     }
 
     public static void main(String[] args) {
+        try {
+            DatabaseConnection.initializeDatabase();
+        } catch (Exception e) {
+            System.err.println("Failed to initialize database: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Failed to connect or initialize database. Check console for details.", "Database Error", JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
+
         SwingUtilities.invokeLater(() -> new LoginUI().setVisible(true));
     }
 }
