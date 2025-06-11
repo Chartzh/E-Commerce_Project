@@ -9,4 +9,7 @@ public interface ViewController {
     void showCartView();
     void showProfileView();
     void showOrdersView();
+    void showCheckoutView();
+    void showAddressView();
+    void showPaymentView();
 }

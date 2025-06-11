@@ -13,22 +13,110 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
+/**
+ * Kelas repositori untuk mengelola interaksi database terkait produk dan item keranjang.
+ * Menyediakan metode untuk mengambil, menyimpan, memperbarui, dan menghapus data produk dan keranjang.
+ */
 public class ProductRepository {
 
     /**
-     * Fetches all products from the database.
-     * Images (BLOB data) are not fetched here for efficiency; they are fetched
-     * on demand by getProductById or getProductsBySeller/Brand for main image.
-     * @return A list of FavoriteItem objects representing all products.
+     * Inner class publik dan statis untuk merepresentasikan item produk di keranjang.
+     * Termasuk detail produk, data gambar BLOB, dan status pilihan dalam UI.
+     * Ini dapat diakses langsung melalui `ProductRepository.CartItem`.
+     */
+    public static class CartItem {
+        private int id;
+        private String name;
+        private double price;
+        private double originalPrice;
+        private int quantity;
+        private String imageColor; // Warna hex untuk fallback/placeholder
+        private byte[] imageData;    // Data gambar BLOB
+        private String fileExtension; // Ekstensi file untuk BLOB
+        private boolean isSelected;  // Properti untuk mengelola pilihan di CartUI
+
+        /**
+         * Konstruktor untuk item keranjang dengan data gambar BLOB.
+         * @param id ID produk.
+         * @param name Nama produk.
+         * @param price Harga produk saat ini.
+         * @param originalPrice Harga asli produk (untuk diskon).
+         * @param quantity Kuantitas item di keranjang.
+         * @param imageColor Warna fallback/placeholder (hex string).
+         * @param imageData Data gambar BLOB sebagai array byte.
+         * @param fileExtension Ekstensi file gambar (misal: "jpg", "png").
+         */
+        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor, byte[] imageData, String fileExtension) {
+            this.id = id;
+            this.name = name;
+            this.price = price;
+            this.originalPrice = originalPrice;
+            this.quantity = quantity;
+            this.imageColor = imageColor;
+            this.imageData = imageData;
+            this.fileExtension = fileExtension;
+            this.isSelected = true; // Secara default terpilih saat dimuat ke UI keranjang
+        }
+
+        /**
+         * Konstruktor overload untuk item keranjang tanpa data gambar BLOB eksplisit,
+         * hanya menggunakan warna sebagai fallback.
+         * @param id ID produk.
+         * @param name Nama produk.
+         * @param price Harga produk saat ini.
+         * @param originalPrice Harga asli produk.
+         * @param quantity Kuantitas item di keranjang.
+         * @param imageColor Warna fallback/placeholder (hex string).
+         */
+        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor) {
+            this(id, name, price, originalPrice, quantity, imageColor, null, null);
+        }
+
+        // --- Getters ---
+        public int getId() { return id; }
+        public String getName() { return name; }
+        public double getPrice() { return price; }
+        public double getOriginalPrice() { return originalPrice; }
+        public int getQuantity() { return quantity; }
+        public String getImageColor() { return imageColor; }
+        public byte[] getImageData() { return imageData; }
+        public String getFileExtension() { return fileExtension; }
+        public boolean isSelected() { return isSelected; }
+        
+        // --- Setters ---
+        public void setQuantity(int quantity) {
+            this.quantity = quantity;
+        }
+
+        public void setSelected(boolean selected) {
+            this.isSelected = selected;
+        }
+        
+        // --- Properti yang Dihitung ---
+        public double getTotal() {
+            return price * quantity;
+        }
+        
+        public double getSavings() {
+            return (originalPrice - price) * quantity;
+        }
+    }
+
+
+    /**
+     * Mengambil semua produk dari database.
+     * Data gambar (BLOB) hanya diambil untuk gambar utama (`is_main_image = TRUE`)
+     * untuk efisiensi.
+     * @return Sebuah daftar objek FavoriteItem yang merepresentasikan semua produk.
      */
     public static List<FavoritesUI.FavoriteItem> getAllProducts() {
-        // SQL query to select all product details from the 'products' table.
-        // Backticks are used for 'condition' and 'brand' as they are reserved keywords.
-        String sql = "SELECT product_id, name, description, price, original_price, stock, `condition`, min_order, `brand` FROM products";
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, " +
+                     "pi.image_data, pi.file_extension FROM products p " +
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE"; // Hanya ambil gambar utama
 
         List<FavoritesUI.FavoriteItem> products = new ArrayList<>(); 
         
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
@@ -43,37 +131,51 @@ public class ProductRepository {
                 String minOrder = rs.getString("min_order");
                 String brand = rs.getString("brand");
                 
-                String hexColor = "#FDF8E8"; // Dummy background color for product card
+                // Ambil data gambar BLOB dan ekstensi dari ResultSet
+                byte[] imageData = rs.getBytes("image_data"); // Dari tabel product_images
+                String fileExtension = rs.getString("file_extension"); // Dari tabel product_images
                 
-                // Construct FavoriteItem. rawImageDataList and rawFileExtensionList are null here.
-                // Images will be loaded when getProductById is called.
-                products.add(new FavoritesUI.FavoriteItem(
+                // Gunakan warna dummy. Jika Anda ingin warna spesifik produk,
+                // tambahkan kolom 'color_hex' ke tabel produk dan ambil di sini.
+                String hexColor = "#FDF8E8"; 
+                
+                FavoritesUI.FavoriteItem product = new FavoritesUI.FavoriteItem(
                     id, name, description, price, originalPrice,
                     stock, condition, minOrder, brand,
-                    hexColor, null 
-                ));
+                    hexColor, null // List<String> imagePaths sekarang tidak digunakan
+                );
+
+                // Set data BLOB gambar ke objek FavoriteItem
+                if (imageData != null) {
+                    List<byte[]> singleImageList = new ArrayList<>();
+                    singleImageList.add(imageData);
+                    List<String> singleExtensionList = new ArrayList<>();
+                    singleExtensionList.add(fileExtension != null ? fileExtension : "jpg"); // Gunakan ekstensi asli atau default
+                    product.setImageDataLists(singleImageList, singleExtensionList);
+                }
+                products.add(product);
             }
         } catch (SQLException e) {
-            System.err.println("Error fetching all products: " + e.getMessage());
+            System.err.println("Error fetching all products (with main image): " + e.getMessage());
             e.printStackTrace();
         }
-        return products; 
+        return products;
     }
 
     /**
-     * Fetches a single product by its ID, including all associated image BLOBs.
-     * This is used for displaying product details where all images are needed.
-     * @param productId The ID of the product to fetch.
-     * @return A FavoriteItem object with complete details and loaded images, or null if not found.
+     * Mengambil satu produk berdasarkan ID-nya, termasuk semua BLOB gambar terkait.
+     * Ini digunakan untuk menampilkan detail produk di mana semua gambar diperlukan.
+     * @param productId ID produk yang akan diambil.
+     * @return Objek FavoriteItem dengan detail lengkap dan gambar yang dimuat, atau null jika tidak ditemukan.
      */
     public static FavoritesUI.FavoriteItem getProductById(int productId) {
-        // SQL query to join 'products' and 'product_images' to get product details and all image BLOBs.
+        // Query SQL untuk menggabungkan tabel 'products' dan 'product_images'
         String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, " +
                      "pi.image_data, pi.file_extension FROM products p LEFT JOIN product_images pi ON p.product_id = pi.product_id WHERE p.product_id = ?";
 
         FavoritesUI.FavoriteItem product = null; 
 
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, productId);
@@ -81,7 +183,7 @@ public class ProductRepository {
                 List<byte[]> imageDataList = new ArrayList<>();
                 List<String> fileExtensionList = new ArrayList<>();
                 
-                // Process the first row to get product details
+                // Proses baris pertama untuk mendapatkan detail produk
                 if (rs.next()) {
                     int id = rs.getInt("product_id");
                     String name = rs.getString("name");
@@ -92,15 +194,15 @@ public class ProductRepository {
                     String condition = rs.getString("condition");
                     String minOrder = rs.getString("min_order");
                     String brand = rs.getString("brand");
-                    String hexColor = "#FDF8E8";
-                    
+                    String hexColor = "#FDF8E8"; // Warna dummy
+
                     product = new FavoritesUI.FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, brand,
                         hexColor, null 
                     );
 
-                    // Add the first image found
+                    // Tambahkan gambar pertama yang ditemukan
                     byte[] imageData = rs.getBytes("image_data");
                     String fileExtension = rs.getString("file_extension");
                     if (imageData != null) {
@@ -108,7 +210,7 @@ public class ProductRepository {
                         fileExtensionList.add(fileExtension);
                     }
                     
-                    // Add any remaining images for the same product
+                    // Tambahkan gambar-gambar lainnya untuk produk yang sama (jika ada)
                     while (rs.next()) {
                         imageData = rs.getBytes("image_data");
                         fileExtension = rs.getString("file_extension");
@@ -117,7 +219,7 @@ public class ProductRepository {
                             fileExtensionList.add(fileExtension);
                         }
                     }
-                    product.setImageDataLists(imageDataList, fileExtensionList); // Set all collected image data
+                    product.setImageDataLists(imageDataList, fileExtensionList); // Set semua data gambar yang terkumpul
                 }
             }
             return product; 
@@ -130,19 +232,19 @@ public class ProductRepository {
     }
 
     /**
-     * Fetches products uploaded by a specific seller (supervisor/admin).
-     * Only fetches the main image (is_main_image = TRUE) for each product for efficiency.
-     * @param sellerId The ID of the seller (user).
-     * @return A list of FavoriteItem objects representing the seller's products.
+     * Mengambil produk yang diunggah oleh penjual tertentu (supervisor/admin).
+     * Hanya mengambil gambar utama (`is_main_image = TRUE`) untuk setiap produk untuk efisiensi.
+     * @param sellerId ID penjual (pengguna).
+     * @return Sebuah daftar objek FavoriteItem yang merepresentasikan produk-produk penjual.
      */
     public static List<FavoritesUI.FavoriteItem> getProductsBySeller(int sellerId) {
         String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, " +
                      "pi.image_data, pi.file_extension FROM products p " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + // Only fetch main image
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + // Hanya ambil gambar utama
                      "WHERE p.seller_id = ?";
 
         List<FavoritesUI.FavoriteItem> products = new ArrayList<>();
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, sellerId);
@@ -186,11 +288,11 @@ public class ProductRepository {
     }
 
     /**
-     * Fetches recommended products based on brand, excluding a specific product.
-     * Only fetches the main image for each recommended product for efficiency.
-     * @param brand The brand to match.
-     * @param excludeProductId The ID of the product to exclude from recommendations.
-     * @return A list of recommended FavoriteItem objects.
+     * Mengambil produk yang direkomendasikan berdasarkan merek, tidak termasuk produk tertentu.
+     * Hanya mengambil gambar utama untuk setiap produk yang direkomendasikan untuk efisiensi.
+     * @param brand Merek yang akan dicocokkan.
+     * @param excludeProductId ID produk yang akan dikecualikan dari rekomendasi.
+     * @return Sebuah daftar objek FavoriteItem yang direkomendasikan.
      */
     public static List<FavoritesUI.FavoriteItem> getProductsByBrand(String brand, int excludeProductId) {
         String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, " +
@@ -244,20 +346,20 @@ public class ProductRepository {
     }
 
     /**
-     * Saves a product image BLOB to the 'product_images' table.
-     * This method is called from the UI when a seller uploads images.
-     * @param productId The ID of the product this image belongs to.
-     * @param imageData The byte array of the image.
-     * @param fileExtension The file extension (e.g., "jpg", "png").
-     * @param isMainImage True if this is the main image for the product.
-     * @param orderIndex The display order of the image.
-     * @return The generated ID of the image, or -1 if insertion fails.
-     * @throws SQLException If a database error occurs.
+     * Menyimpan BLOB gambar produk ke tabel 'product_images'.
+     * Metode ini dipanggil dari UI ketika penjual mengunggah gambar.
+     * @param productId ID produk tempat gambar ini berada.
+     * @param imageData Array byte dari gambar.
+     * @param fileExtension Ekstensi file (misal: "jpg", "png").
+     * @param isMainImage True jika ini adalah gambar utama untuk produk.
+     * @param orderIndex Urutan tampilan gambar.
+     * @return ID yang dihasilkan dari gambar, atau -1 jika penyisipan gagal.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static int saveProductImage(int productId, byte[] imageData, String fileExtension, boolean isMainImage, int orderIndex) throws SQLException {
         String sql = "INSERT INTO product_images (product_id, image_data, file_extension, is_main_image, order_index) VALUES (?, ?, ?, ?, ?)";
         int generatedId = -1;
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
             pstmt.setInt(1, productId);
@@ -281,24 +383,24 @@ public class ProductRepository {
     }
 
     /**
-     * Saves a new product's details to the 'products' table.
-     * This method is called from the UI when a seller adds a new product.
-     * @param name Product name.
-     * @param description Product description.
-     * @param price Product price.
-     * @param originalPrice Original price (can be 0.0 if not applicable).
-     * @param stock Product stock quantity.
-     * @param condition Product condition (e.g., "Baru", "Bekas").
-     * @param minOrder Minimum order quantity (e.g., "1 Buah").
-     * @param brand Product brand.
-     * @param sellerId The ID of the user who is selling this product.
-     * @return The generated ID of the new product, or -1 if insertion fails.
-     * @throws SQLException If a database error occurs.
+     * Menyimpan detail produk baru ke tabel 'products'.
+     * Metode ini dipanggil dari UI ketika penjual menambahkan produk baru.
+     * @param name Nama produk.
+     * @param description Deskripsi produk.
+     * @param price Harga produk.
+     * @param originalPrice Harga asli (bisa 0.0 jika tidak berlaku).
+     * @param stock Kuantitas stok produk.
+     * @param condition Kondisi produk (misal: "Baru", "Bekas").
+     * @param minOrder Kuantitas pesanan minimum (misal: "1 Buah").
+     * @param brand Merek produk.
+     * @param sellerId ID pengguna yang menjual produk ini.
+     * @return ID yang dihasilkan dari produk baru, atau -1 jika penyisipan gagal.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static int saveProduct(String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand, Integer sellerId) throws SQLException {
         String sql = "INSERT INTO products (name, description, price, original_price, stock, `condition`, min_order, `brand`, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         int generatedProductId = -1;
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             
             pstmt.setString(1, name);
@@ -330,10 +432,10 @@ public class ProductRepository {
     }
     
     /**
-     * Deletes a product and its associated images from the database.
-     * This operation is transactional (all or nothing).
-     * @param productId The ID of the product to delete.
-     * @throws SQLException If a database error occurs during deletion or transaction management.
+     * Menghapus produk dan gambar terkaitnya dari database.
+     * Operasi ini bersifat transaksional (semua atau tidak sama sekali).
+     * @param productId ID produk yang akan dihapus.
+     * @throws SQLException Jika terjadi kesalahan database selama penghapusan atau manajemen transaksi.
      */
     public static void deleteProduct(int productId) throws SQLException {
         String sqlDeleteImages = "DELETE FROM product_images WHERE product_id = ?";
@@ -342,7 +444,7 @@ public class ProductRepository {
         Connection conn = null;
         try { 
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false);
+            conn.setAutoCommit(false); // Mulai transaksi
             
             try (PreparedStatement pstmtImages = conn.prepareStatement(sqlDeleteImages)) {
                 pstmtImages.setInt(1, productId);
@@ -354,7 +456,7 @@ public class ProductRepository {
                 pstmtProduct.executeUpdate();
             }
 
-            conn.commit();
+            conn.commit(); // Commit transaksi
             System.out.println("Product and its images deleted for product ID: " + productId);
         } catch (SQLException e) {
             if (e != null && e.getMessage() != null && e.getMessage().contains("Cannot delete or update a parent row: a foreign key constraint fails")) {
@@ -362,19 +464,18 @@ public class ProductRepository {
             }
             if (conn != null) {
                 try {
-                    conn.rollback();
+                    conn.rollback(); // Rollback saat error
                     System.err.println("Transaction rolled back for product deletion.");
                 } catch (SQLException rbex) {
                     System.err.println("Error rolling back transaction: " + rbex.getMessage());
                 }
             }
-            throw e; 
+            throw e; // Lemparkan kembali untuk penanganan pemanggil
         } finally {
             if (conn != null) {
                 try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                    System.out.println("Connection for deleteProduct closed.");
+                    conn.setAutoCommit(true); // Reset auto-commit
+                    conn.close(); // Tutup koneksi
                 } catch (SQLException fe) {
                     System.err.println("Error setting auto commit or closing connection: " + fe.getMessage());
                 }
@@ -383,23 +484,23 @@ public class ProductRepository {
     }
     
     /**
-     * Updates an existing product's details in the 'products' table.
-     * Image updates are handled separately (by deleting old and inserting new images).
-     * @param productId The ID of the product to update.
-     * @param name New product name.
-     * @param description New product description.
-     * @param price New product price.
-     * @param originalPrice New original price.
-     * @param stock New stock quantity.
-     * @param condition New product condition.
-     * @param minOrder New minimum order quantity.
-     * @param brand New product brand.
-     * @return True if the product was updated successfully, false otherwise.
-     * @throws SQLException If a database error occurs.
+     * Memperbarui detail produk yang ada di tabel 'products'.
+     * Pembaruan gambar ditangani secara terpisah (dengan menghapus yang lama dan menyisipkan yang baru).
+     * @param productId ID produk yang akan diperbarui.
+     * @param name Nama produk baru.
+     * @param description Deskripsi produk baru.
+     * @param price Harga produk baru.
+     * @param originalPrice Harga asli baru.
+     * @param stock Kuantitas stok baru.
+     * @param condition Kondisi produk baru.
+     * @param minOrder Kuantitas pesanan minimum baru.
+     * @param brand Merek produk baru.
+     * @return True jika produk berhasil diperbarui, false jika tidak.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static boolean updateProduct(int productId, String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand) throws SQLException {
         String sql = "UPDATE products SET name = ?, description = ?, price = ?, original_price = ?, stock = ?, `condition` = ?, min_order = ?, `brand` = ? WHERE product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, name);
@@ -415,23 +516,23 @@ public class ProductRepository {
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
                 System.out.println("Product updated: " + name + ", Product ID: " + productId);
-                return true; // Update successful
+                return true; // Update berhasil
             } else {
                 System.out.println("No product found with ID: " + productId + " to update.");
-                return false; // No rows affected
+                return false; // Tidak ada baris yang terpengaruh
             }
         }
     }
 
     /**
-     * Deletes all images associated with a specific product from 'product_images' table.
-     * This is typically used before re-uploading new images for an edited product.
-     * @param productId The ID of the product whose images are to be deleted.
-     * @throws SQLException If a database error occurs.
+     * Menghapus semua gambar yang terkait dengan produk tertentu dari tabel 'product_images'.
+     * Ini biasanya digunakan sebelum mengunggah ulang gambar baru untuk produk yang diedit.
+     * @param productId ID produk yang gambarnya akan dihapus.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void deleteProductImagesForProduct(int productId) throws SQLException {
         String sql = "DELETE FROM product_images WHERE product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection(); // Use DatabaseConnection
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, productId);
             int affectedRows = pstmt.executeUpdate();
@@ -440,9 +541,9 @@ public class ProductRepository {
     }
 
     /**
-     * Deletes a single image from the 'product_images' table by its image ID.
-     * @param imageId The ID of the image to delete.
-     * @throws SQLException If a database error occurs.
+     * Menghapus satu gambar dari tabel 'product_images' berdasarkan ID gambarnya.
+     * @param imageId ID gambar yang akan dihapus.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void deleteProductImageById(int imageId) throws SQLException {
         String sql = "DELETE FROM product_images WHERE image_id = ?";
@@ -459,52 +560,51 @@ public class ProductRepository {
     }
 
     /**
-     * Sets a specific image as the main image for a product.
-     * This involves setting is_main_image to FALSE for all other images of the product,
-     * then setting it to TRUE for the specified image. This is a transactional operation.
-     * @param productId The ID of the product.
-     * @param imageId The ID of the image to set as main.
-     * @throws SQLException If a database error occurs.
+     * Mengatur gambar tertentu sebagai gambar utama untuk suatu produk.
+     * Ini melibatkan pengaturan `is_main_image` menjadi `FALSE` untuk semua gambar lain dari produk,
+     * lalu mengaturnya menjadi `TRUE` untuk gambar yang ditentukan. Ini adalah operasi transaksional.
+     * @param productId ID produk.
+     * @param imageId ID gambar yang akan diatur sebagai utama.
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void setMainProductImage(int productId, int imageId) throws SQLException {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); // Start transaction
+            conn.setAutoCommit(false); // Mulai transaksi
 
-            // 1. Set all images for this product to not main
+            // 1. Atur semua gambar untuk produk ini menjadi bukan utama
             String sqlResetMain = "UPDATE product_images SET is_main_image = FALSE WHERE product_id = ?";
             try (PreparedStatement pstmtReset = conn.prepareStatement(sqlResetMain)) {
                 pstmtReset.setInt(1, productId);
                 pstmtReset.executeUpdate();
             }
 
-            // 2. Set the specified image as main
+            // 2. Atur gambar yang ditentukan sebagai utama
             String sqlSetMain = "UPDATE product_images SET is_main_image = TRUE WHERE image_id = ? AND product_id = ?";
             try (PreparedStatement pstmtSet = conn.prepareStatement(sqlSetMain)) {
-                pstmtSet.setBoolean(1, true); // Set is_main_image ke TRUE
-                pstmtSet.setInt(2, imageId);
-                pstmtSet.setInt(3, productId); // Parameter ke-3
+                pstmtSet.setInt(1, imageId); 
+                pstmtSet.setInt(2, productId); 
                 pstmtSet.executeUpdate();
             }
 
-            conn.commit(); // Commit transaction
+            conn.commit(); // Commit transaksi
             System.out.println("Image ID " + imageId + " set as main for Product ID " + productId);
         } catch (SQLException e) {
             if (conn != null) {
                 try {
-                    conn.rollback(); // Rollback on error
+                    conn.rollback(); // Rollback saat error
                     System.err.println("Transaction rolled back for setMainProductImage: " + e.getMessage());
                 } catch (SQLException rbex) {
                     System.err.println("Error rolling back transaction: " + rbex.getMessage());
                 }
             }
-            throw e; // Re-throw for caller handling
+            throw e; // Lemparkan kembali untuk penanganan pemanggil
         } finally {
             if (conn != null) {
                 try {
                     conn.setAutoCommit(true); // Reset auto-commit
-                    conn.close(); // Close connection
+                    conn.close(); // Tutup koneksi
                 } catch (SQLException fe) {
                     System.err.println("Error setting auto commit or closing connection: " + fe.getMessage());
                 }
@@ -513,11 +613,11 @@ public class ProductRepository {
     }
 
     /**
-     * Fetches details of all images for a specific product from the database.
-     * This is used by ProductImageManagerUI to display all images for editing.
-     * @param productId The ID of the product.
-     * @return A list of Object arrays, each containing (image_id, image_data, file_extension, is_main_image, order_index).
-     * @throws SQLException If a database error occurs.
+     * Mengambil detail semua gambar untuk produk tertentu dari database.
+     * Ini digunakan oleh ProductImageManagerUI untuk menampilkan semua gambar untuk diedit.
+     * @param productId ID produk.
+     * @return Sebuah daftar array Object, masing-masing berisi (image_id, image_data, file_extension, is_main_image, order_index).
+     * @throws SQLException Jika terjadi kesalahan database.
      */
     public static List<Object[]> getAllProductImagesDetails(int productId) throws SQLException {
         List<Object[]> images = new ArrayList<>();
@@ -538,5 +638,160 @@ public class ProductRepository {
             }
         }
         return images;
+    }
+
+    /**
+     * Mengambil item keranjang untuk pengguna tertentu dari database.
+     * Menggabungkan dengan tabel produk dan gambar produk untuk mendapatkan detail item lengkap
+     * dan gambar utama.
+     * @param userId ID pengguna yang sedang login.
+     * @return Sebuah daftar objek CartItem.
+     */
+    public static List<CartItem> getCartItemsForUser(int userId) {
+        List<CartItem> cartItems = new ArrayList<>();
+        String sql = "SELECT ci.product_id, ci.quantity, " +
+                     "p.name, p.price, p.original_price, " +
+                     "pi.image_data, pi.file_extension " +
+                     "FROM cart_items ci " +
+                     "JOIN products p ON ci.product_id = p.product_id " +
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
+                     "WHERE ci.user_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int productId = rs.getInt("product_id");
+                    int quantity = rs.getInt("quantity");
+                    String name = rs.getString("name");
+                    double price = rs.getDouble("price");
+                    double originalPrice = rs.getDouble("original_price");
+                    byte[] imageData = rs.getBytes("image_data");
+                    String fileExtension = rs.getString("file_extension");
+
+                    // Menggunakan warna dummy untuk saat ini, karena tidak ada di skema DB Anda untuk produk
+                    // Jika Anda ingin warna spesifik produk, tambahkan kolom 'color_hex' ke tabel 'products' dan ambil di sini.
+                    String imageColor = "#CCCCCC"; // Warna abu-abu default
+
+                    CartItem item = new CartItem(
+                        productId, name, price, originalPrice, quantity,
+                        imageColor, imageData, fileExtension
+                    );
+                    cartItems.add(item);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching cart items for user " + userId + ": " + e.getMessage());
+            e.printStackTrace();
+        }
+        return cartItems;
+    }
+
+    /**
+     * Menambahkan produk ke keranjang belanja pengguna.
+     * Jika produk sudah ada, kuantitasnya akan diperbarui. Jika tidak, item baru akan disisipkan.
+     * @param userId ID pengguna.
+     * @param productId ID produk.
+     * @param quantity Kuantitas yang akan ditambahkan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static void addProductToCart(int userId, int productId, int quantity) throws SQLException {
+        // Cek apakah produk sudah ada di keranjang
+        String checkSql = "SELECT quantity FROM cart_items WHERE user_id = ? AND product_id = ?";
+        String updateSql = "UPDATE cart_items SET quantity = quantity + ? WHERE user_id = ? AND product_id = ?";
+        String insertSql = "INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+
+            checkStmt.setInt(1, userId);
+            checkStmt.setInt(2, productId);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                // Produk sudah ada, perbarui kuantitas
+                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                    updateStmt.setInt(1, quantity);
+                    updateStmt.setInt(2, userId);
+                    updateStmt.setInt(3, productId);
+                    updateStmt.executeUpdate();
+                }
+                System.out.println("Updated quantity of product " + productId + " for user " + userId + " in cart.");
+            } else {
+                // Produk belum ada, sisipkan item baru
+                try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+                    insertStmt.setInt(1, userId);
+                    insertStmt.setInt(2, productId);
+                    insertStmt.setInt(3, quantity);
+                    insertStmt.executeUpdate();
+                }
+                System.out.println("Added product " + productId + " to cart for user " + userId + " with quantity " + quantity + ".");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error adding product to cart: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Memperbarui kuantitas item di keranjang belanja pengguna.
+     * @param userId ID pengguna.
+     * @param productId ID produk.
+     * @param newQuantity Kuantitas baru untuk produk.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static void updateCartItemQuantity(int userId, int productId, int newQuantity) throws SQLException {
+        String sql = "UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, newQuantity);
+            pstmt.setInt(2, userId);
+            pstmt.setInt(3, productId);
+            pstmt.executeUpdate();
+            System.out.println("Updated quantity for product " + productId + " to " + newQuantity + " for user " + userId + ".");
+        } catch (SQLException e) {
+            System.err.println("Error updating cart item quantity: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Menghapus produk dari keranjang belanja pengguna.
+     * @param userId ID pengguna.
+     * @param productId ID produk yang akan dihapus.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static void removeProductFromCart(int userId, int productId) throws SQLException {
+        String sql = "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            pstmt.executeUpdate();
+            System.out.println("Removed product " + productId + " from cart for user " + userId + ".");
+        } catch (SQLException e) {
+            System.err.println("Error removing product from cart: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Mengosongkan seluruh keranjang belanja untuk pengguna tertentu.
+     * @param userId ID pengguna.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static void clearCart(int userId) throws SQLException {
+        String sql = "DELETE FROM cart_items WHERE user_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.executeUpdate();
+            System.out.println("Cleared cart for user " + userId + ".");
+        } catch (SQLException e) {
+            System.err.println("Error clearing cart: " + e.getMessage());
+            throw e;
+        }
     }
 }

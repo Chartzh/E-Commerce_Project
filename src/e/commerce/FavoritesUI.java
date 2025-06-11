@@ -164,7 +164,7 @@ public class FavoritesUI extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
-        card.setPreferredSize(new Dimension(180, 290)); 
+        card.setPreferredSize(new Dimension(180, 320)); 
 
         JPanel imagePanel = new JPanel() {
             @Override
