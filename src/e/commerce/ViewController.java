@@ -12,4 +12,5 @@ public interface ViewController {
     void showCheckoutView();
     void showAddressView();
     void showPaymentView();
+    void showSuccessView();
 }

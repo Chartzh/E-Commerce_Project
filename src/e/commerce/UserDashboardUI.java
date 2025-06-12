@@ -23,8 +23,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private CheckoutUI checkoutUI;
     private User currentUser;
 
-    private AddressUI addressUI; // Deklarasikan AddressUI
-    private PaymentUI paymentUI; // Deklarasikan PaymentUI jika sudah ada atau akan dibuat
+    private AddressUI addressUI; 
+    private PaymentUI paymentUI;
+    private SuccessUI successUI;
 
     public UserDashboardUI() {
         currentUser = Authentication.getCurrentUser();
@@ -55,8 +56,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         // CartUI dan AddressUI perlu diinisialisasi dengan 'this' (UserDashboardUI sebagai ViewController)
         JPanel cartPanel = new CartUI(this);
-        addressUI = new AddressUI(this); // Inisialisasi AddressUI di sini
-        paymentUI = new PaymentUI(this); // Inisialisasi PaymentUI di sini jika sudah ada
+        addressUI = new AddressUI(this); 
+        paymentUI = new PaymentUI(this); 
+        successUI = new SuccessUI(this);
 
         favoritesUI = new FavoritesUI(this);
 
@@ -67,8 +69,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(checkoutUI, "Checkout");
-        mainPanel.add(addressUI, "Address"); // Tambahkan AddressUI ke CardLayout
-        mainPanel.add(paymentUI, "Payment"); // Tambahkan PaymentUI ke CardLayout jika sudah ada
+        mainPanel.add(addressUI, "Address"); 
+        mainPanel.add(paymentUI, "Payment"); 
+        mainPanel.add(successUI, "Success");
 
         add(headerPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
@@ -143,6 +146,12 @@ public class UserDashboardUI extends JFrame implements ViewController {
     public void showPaymentView() {
         cardLayout.show(mainPanel, "Payment"); 
         System.out.println("Navigasi ke Halaman Pembayaran.");
+    }
+    
+    @Override
+    public void showSuccessView() {
+        cardLayout.show(mainPanel, "Success");
+        System.out.println("Navigasi ke Halaman Sukses.");
     }
 
 

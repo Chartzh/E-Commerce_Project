@@ -945,9 +945,8 @@ public class CartUI extends JPanel {
                 @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)");}
                 @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)");}
-                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)");
-                    JOptionPane.showMessageDialog(null, "Simulasi Pindah ke CheckoutUI", "Dummy Checkout", JOptionPane.INFORMATION_MESSAGE);
-                }
+                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
+                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); }
 
             };
 

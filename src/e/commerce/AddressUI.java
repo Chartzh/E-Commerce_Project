@@ -276,18 +276,23 @@ public class AddressUI extends JPanel {
     private JPanel createDeliveryAddressSection() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        // Padding luar panel
-        panel.setBorder(new EmptyBorder(25, 25, 25, 25)); //
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(230, 230, 230), 1, true),
+            new EmptyBorder(20, 20, 20, 20)
+        ));
 
+        // Header dengan title dan tombol change
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setBackground(Color.WHITE);
+        titlePanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+
         JLabel titleLabel = new JLabel("Delivery Address");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setForeground(DARK_TEXT_COLOR);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(51, 51, 51));
         titlePanel.add(titleLabel, BorderLayout.WEST);
 
-        JButton changeButton = new JButton("CHANGE");
-        changeButton.setFont(new Font("Arial", Font.BOLD, 12));
+        JButton changeButton = new JButton("CHANGE ADDRESS");
+        changeButton.setFont(new Font("Arial", Font.PLAIN, 11));
         changeButton.setForeground(ORANGE_THEME);
         changeButton.setBackground(Color.WHITE);
         changeButton.setBorderPainted(false);
@@ -295,55 +300,76 @@ public class AddressUI extends JPanel {
         changeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         changeButton.addActionListener(e -> showAddressSelectionDialog());
         titlePanel.add(changeButton, BorderLayout.EAST);
+
         panel.add(titlePanel, BorderLayout.NORTH);
 
-        // Menggunakan BoxLayout untuk detail alamat agar lebih rapih dan padding mudah dikontrol
+        // Container untuk detail alamat
         JPanel addressDetailsContainer = new JPanel();
         addressDetailsContainer.setLayout(new BoxLayout(addressDetailsContainer, BoxLayout.Y_AXIS));
         addressDetailsContainer.setBackground(Color.WHITE);
-        addressDetailsContainer.setBorder(new EmptyBorder(15, 0, 15, 0)); // Padding vertikal dari title dan status
+        addressDetailsContainer.setBorder(new EmptyBorder(0, 0, 15, 0));
 
-        // Baris Nama
+        // Nama penerima
         currentAddressNameLabel = new JLabel();
         currentAddressNameLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        currentAddressNameLabel.setForeground(DARK_TEXT_COLOR);
-        currentAddressNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT); // Pastikan rata kiri
-        currentAddressNameLabel.setBorder(new EmptyBorder(0, 0, 5, 0)); // Padding bawah antar baris
+        currentAddressNameLabel.setForeground(new Color(51, 51, 51));
+        currentAddressNameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        currentAddressNameLabel.setBorder(new EmptyBorder(0, 0, 8, 0));
         addressDetailsContainer.add(currentAddressNameLabel);
 
-        // Baris Detail Alamat
+        // Label alamat
+        JLabel addressLabel = new JLabel("Address");
+        addressLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        addressLabel.setForeground(new Color(102, 102, 102));
+        addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        addressLabel.setBorder(new EmptyBorder(0, 0, 5, 0));
+        addressDetailsContainer.add(addressLabel);
+
+        // Detail alamat
         currentAddressDetailLabel = new JLabel();
-        currentAddressDetailLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        currentAddressDetailLabel.setForeground(DARK_TEXT_COLOR);
+        currentAddressDetailLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        currentAddressDetailLabel.setForeground(new Color(51, 51, 51));
         currentAddressDetailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        currentAddressDetailLabel.setBorder(new EmptyBorder(0, 0, 5, 0)); // Padding bawah
+        currentAddressDetailLabel.setBorder(new EmptyBorder(0, 0, 8, 0));
         addressDetailsContainer.add(currentAddressDetailLabel);
 
-        // Baris Mobile
+        // Nomor telepon
         currentAddressMobileLabel = new JLabel();
-        currentAddressMobileLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        currentAddressMobileLabel.setForeground(DARK_TEXT_COLOR);
+        currentAddressMobileLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        currentAddressMobileLabel.setForeground(new Color(51, 51, 51));
         currentAddressMobileLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        currentAddressMobileLabel.setBorder(new EmptyBorder(0, 0, 5, 0)); // Padding bawah
+        currentAddressMobileLabel.setBorder(new EmptyBorder(0, 0, 15, 0));
         addressDetailsContainer.add(currentAddressMobileLabel);
 
-        // Status and delivery estimate
+        panel.add(addressDetailsContainer, BorderLayout.CENTER);
+
+        // Status panel dengan COD dan estimasi pengiriman
         JPanel statusPanel = new JPanel(new BorderLayout());
         statusPanel.setBackground(Color.WHITE);
         statusPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
 
-        String orangeHexColor = String.format("#%06x", ORANGE_THEME.getRGB() & 0xFFFFFF);
-        JLabel codLabel = new JLabel("<html><font color='" + orangeHexColor + "'>&#9679;</font> Cash on delivery available</html>");
-        codLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        codLabel.setForeground(DARK_TEXT_COLOR);
-        statusPanel.add(codLabel, BorderLayout.WEST);
+        // COD status
+        JPanel codPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        codPanel.setBackground(Color.WHITE);
 
-        deliveryEstimateHeaderLabel = new JLabel("Estimated delivery 24 - 25 Sep"); // Dummy date
-        deliveryEstimateHeaderLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        deliveryEstimateHeaderLabel.setForeground(DARK_TEXT_COLOR);
+        JLabel codDot = new JLabel("●");
+        codDot.setFont(new Font("Arial", Font.BOLD, 12));
+        codDot.setForeground(new Color(46, 204, 113)); // Green color
+        codPanel.add(codDot);
+
+        JLabel codLabel = new JLabel(" Cash on delivery available");
+        codLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        codLabel.setForeground(new Color(51, 51, 51));
+        codPanel.add(codLabel);
+
+        statusPanel.add(codPanel, BorderLayout.WEST);
+
+        // Estimasi pengiriman
+        deliveryEstimateHeaderLabel = new JLabel("Estimated Delivery 24 - 25 Sep");
+        deliveryEstimateHeaderLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        deliveryEstimateHeaderLabel.setForeground(new Color(51, 51, 51));
         statusPanel.add(deliveryEstimateHeaderLabel, BorderLayout.EAST);
 
-        panel.add(addressDetailsContainer, BorderLayout.CENTER);
         panel.add(statusPanel, BorderLayout.SOUTH);
 
         return panel;
@@ -352,10 +378,11 @@ public class AddressUI extends JPanel {
     private void updateDisplayedAddress() {
         if (selectedAddress != null) {
             currentAddressNameLabel.setText(selectedAddress.name);
-            currentAddressDetailLabel.setText("<html>" + selectedAddress.street + "<br>" + selectedAddress.cityStateZip + "</html>");
+            currentAddressDetailLabel.setText("<html>" + selectedAddress.street + "<br>" + 
+                                            selectedAddress.cityStateZip + "</html>");
             currentAddressMobileLabel.setText("Mobile: " + selectedAddress.mobile);
-            // Tanggal estimasi di header Delivery Address
-            deliveryEstimateHeaderLabel.setText("Estimated delivery " + calculateDeliveryDates("header")); //
+            deliveryEstimateHeaderLabel.setText("Estimated Delivery " + 
+                                              calculateDeliveryDates("header"));
         } else {
             currentAddressNameLabel.setText("No address selected");
             currentAddressDetailLabel.setText("");
@@ -365,15 +392,29 @@ public class AddressUI extends JPanel {
     }
 
     private void showAddressSelectionDialog() {
-        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Pilih Alamat Pengiriman", Dialog.ModalityType.APPLICATION_MODAL);
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), 
+                                   "Select Delivery Address", Dialog.ModalityType.APPLICATION_MODAL);
         dialog.setLayout(new BorderLayout());
-        dialog.setSize(450, 400); // Slightly larger dialog
+        dialog.setSize(500, 450);
         dialog.setLocationRelativeTo(this);
 
+        // Header dialog
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
+
+        JLabel headerLabel = new JLabel("Select Delivery Address");
+        headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerLabel.setForeground(new Color(51, 51, 51));
+        headerPanel.add(headerLabel, BorderLayout.WEST);
+
+        dialog.add(headerPanel, BorderLayout.NORTH);
+
+        // Address list panel
         JPanel addressListPanel = new JPanel();
         addressListPanel.setLayout(new BoxLayout(addressListPanel, BoxLayout.Y_AXIS));
-        addressListPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        addressListPanel.setBackground(LIGHT_GRAY_BACKGROUND); // Light gray background for the list
+        addressListPanel.setBorder(new EmptyBorder(10, 20, 10, 20));
+        addressListPanel.setBackground(new Color(248, 248, 248));
 
         ButtonGroup addressButtonGroup = new ButtonGroup();
 
@@ -385,14 +426,21 @@ public class AddressUI extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(addressListPanel);
         scrollPane.setBorder(null);
-        scrollPane.getViewport().setBackground(LIGHT_GRAY_BACKGROUND); // Match list background
+        scrollPane.getViewport().setBackground(new Color(248, 248, 248));
         dialog.add(scrollPane, BorderLayout.CENTER);
 
+        // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(Color.WHITE);
-        JButton closeButton = new JButton("Tutup");
+        buttonPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
+
+        JButton closeButton = new JButton("Close");
+        closeButton.setFont(new Font("Arial", Font.PLAIN, 12));
+        closeButton.setBackground(new Color(240, 240, 240));
+        closeButton.setBorder(new EmptyBorder(8, 15, 8, 15));
         closeButton.addActionListener(e -> dialog.dispose());
         buttonPanel.add(closeButton);
+
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
@@ -401,66 +449,65 @@ public class AddressUI extends JPanel {
     private JPanel createAddressCard(Address addr, ButtonGroup buttonGroup) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Color.WHITE);
-        card.setBorder(new LineBorder(BORDER_COLOR, 1, true));
+        card.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(230, 230, 230), 1, true),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
         card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        card.setPreferredSize(new Dimension(400, 100)); // Fixed size for cards
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100)); // Prevent vertical expansion
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
 
-        JPanel radioAndLabelPanel = new JPanel(new BorderLayout());
-        radioAndLabelPanel.setBackground(Color.WHITE);
-        radioAndLabelPanel.setBorder(new EmptyBorder(10, 10, 5, 10)); // Padding
+        // Header dengan radio button dan label
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
 
         JRadioButton radioButton = new JRadioButton();
         radioButton.setBackground(Color.WHITE);
         radioButton.setFocusPainted(false);
-        radioButton.setActionCommand(addr.label); // Store label as action command
+        radioButton.setActionCommand(addr.label);
+        headerPanel.add(radioButton, BorderLayout.WEST);
+
+        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        labelPanel.setBackground(Color.WHITE);
 
         JLabel labelTag = new JLabel(addr.label);
         labelTag.setFont(new Font("Arial", Font.BOLD, 14));
-        labelTag.setForeground(DARK_TEXT_COLOR);
+        labelTag.setForeground(new Color(51, 51, 51));
+        labelPanel.add(labelTag);
 
         if (addr.isDefault) {
             JLabel defaultTag = new JLabel("Default");
-            defaultTag.setFont(new Font("Arial", Font.PLAIN, 11));
+            defaultTag.setFont(new Font("Arial", Font.PLAIN, 10));
             defaultTag.setForeground(Color.WHITE);
             defaultTag.setBackground(ORANGE_THEME);
             defaultTag.setOpaque(true);
-            defaultTag.setBorder(new EmptyBorder(2, 5, 2, 5));
-            defaultTag.setHorizontalAlignment(SwingConstants.CENTER);
-            defaultTag.setVerticalAlignment(SwingConstants.CENTER);
-
-            JPanel tagPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
-            tagPanel.setBackground(Color.WHITE);
-            tagPanel.add(labelTag);
-            tagPanel.add(defaultTag);
-            radioAndLabelPanel.add(tagPanel, BorderLayout.CENTER);
-        } else {
-            radioAndLabelPanel.add(labelTag, BorderLayout.CENTER);
+            defaultTag.setBorder(new EmptyBorder(3, 8, 3, 8));
+            labelPanel.add(defaultTag);
         }
 
-        radioAndLabelPanel.add(radioButton, BorderLayout.WEST); // Radio button on the left
+        headerPanel.add(labelPanel, BorderLayout.CENTER);
+        card.add(headerPanel, BorderLayout.NORTH);
 
-        JLabel fullAddressDetailLabel = new JLabel("<html>" + addr.name + "<br>" + addr.street + "<br>" + addr.cityStateZip + "<br>Mobile: " + addr.mobile + "</html>");
-        fullAddressDetailLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        fullAddressDetailLabel.setForeground(GRAY_TEXT_COLOR);
-        fullAddressDetailLabel.setBorder(new EmptyBorder(0, 10, 10, 10)); // Padding
+        // Detail alamat
+        JLabel addressDetailLabel = new JLabel("<html>" + addr.name + "<br>" + 
+                                             addr.street + "<br>" + 
+                                             addr.cityStateZip + "<br>" + 
+                                             "Mobile: " + addr.mobile + "</html>");
+        addressDetailLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        addressDetailLabel.setForeground(new Color(102, 102, 102));
+        addressDetailLabel.setBorder(new EmptyBorder(8, 25, 0, 0));
+        card.add(addressDetailLabel, BorderLayout.CENTER);
 
-        card.add(radioAndLabelPanel, BorderLayout.NORTH);
-        card.add(fullAddressDetailLabel, BorderLayout.CENTER);
-
-        // Select the radio button if it's the currently selected address
+        // Set selected state
         if (selectedAddress != null && addr.label.equals(selectedAddress.label)) {
             radioButton.setSelected(true);
         }
 
+        // Event handlers
         radioButton.addActionListener(e -> {
-            for (Address sa : savedAddresses) {
-                if (sa.label.equals(e.getActionCommand())) {
-                    selectedAddress = sa;
-                    updateDisplayedAddress(); // Update the main display
-                    break;
-                }
-            }
+            selectedAddress = savedAddresses.stream()
+                    .filter(sa -> sa.label.equals(e.getActionCommand()))
+                    .findFirst().orElse(null);
+            updateDisplayedAddress();
         });
 
         buttonGroup.add(radioButton);
@@ -468,13 +515,11 @@ public class AddressUI extends JPanel {
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getSource() != radioButton) {
-                    radioButton.setSelected(true);
-                    selectedAddress = savedAddresses.stream()
-                                    .filter(sa -> sa.label.equals(radioButton.getActionCommand()))
-                                    .findFirst().orElse(null);
-                    updateDisplayedAddress();
-                }
+                radioButton.setSelected(true);
+                selectedAddress = savedAddresses.stream()
+                        .filter(sa -> sa.label.equals(radioButton.getActionCommand()))
+                        .findFirst().orElse(null);
+                updateDisplayedAddress();
             }
         });
 
@@ -622,22 +667,37 @@ public class AddressUI extends JPanel {
     private JPanel createShippingServicesSection() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        panel.setBorder(new EmptyBorder(15, 20, 15, 20));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(230, 230, 230), 1, true),
+            new EmptyBorder(20, 20, 20, 20)
+        ));
+
+        // Header section
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(new EmptyBorder(0, 0, 20, 0));
 
         JLabel titleLabel = new JLabel("Jasa Pengiriman");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setForeground(DARK_TEXT_COLOR);
-        panel.add(titleLabel, BorderLayout.NORTH);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setForeground(new Color(51, 51, 51));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerPanel.add(titleLabel);
+
+        headerPanel.add(Box.createVerticalStrut(5));
 
         JLabel subtitleLabel = new JLabel("Pilih metode pengiriman yang Anda inginkan.");
-        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 13));
-        subtitleLabel.setForeground(GRAY_TEXT_COLOR);
-        panel.add(subtitleLabel, BorderLayout.CENTER);
+        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        subtitleLabel.setForeground(new Color(102, 102, 102));
+        subtitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        headerPanel.add(subtitleLabel);
 
+        panel.add(headerPanel, BorderLayout.NORTH);
+
+        // Services container
         shippingServiceContainer = new JPanel();
         shippingServiceContainer.setLayout(new BoxLayout(shippingServiceContainer, BoxLayout.Y_AXIS));
         shippingServiceContainer.setBackground(Color.WHITE);
-        shippingServiceContainer.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         JScrollPane scrollPane = new JScrollPane(shippingServiceContainer);
         scrollPane.setBorder(null);
@@ -645,7 +705,7 @@ public class AddressUI extends JPanel {
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-        panel.add(scrollPane, BorderLayout.SOUTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
     }
@@ -654,13 +714,19 @@ public class AddressUI extends JPanel {
         shippingServiceContainer.removeAll();
         ButtonGroup serviceButtonGroup = new ButtonGroup();
 
+        boolean isFirst = true;
         for (Map.Entry<String, ShippingService> entry : shippingServices.entrySet()) {
             ShippingService service = entry.getValue();
             JPanel servicePanel = createShippingServicePanel(service, serviceButtonGroup);
+
+            if (!isFirst) {
+                shippingServiceContainer.add(Box.createVerticalStrut(8));
+            }
             shippingServiceContainer.add(servicePanel);
-            shippingServiceContainer.add(Box.createVerticalStrut(10));
+            isFirst = false;
         }
 
+        // Auto-select logic
         if (selectedShippingService != null) {
             for (AbstractButton button : java.util.Collections.list(serviceButtonGroup.getElements())) {
                 if (button.getActionCommand().equals(selectedShippingService.name)) {
@@ -682,17 +748,21 @@ public class AddressUI extends JPanel {
     private JPanel createShippingServicePanel(ShippingService service, ButtonGroup buttonGroup) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        panel.setBorder(new LineBorder(BORDER_COLOR, 1, true));
-        panel.setPreferredSize(new Dimension(panel.getPreferredSize().width, 70));
-        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 70));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new LineBorder(new Color(220, 220, 220), 1, true),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
         panel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        JRadioButton radioButton = new JRadioButton(service.name);
-        radioButton.setFont(new Font("Arial", Font.BOLD, 14));
+        // Left section with radio button and service info
+        JPanel leftSection = new JPanel(new BorderLayout());
+        leftSection.setBackground(Color.WHITE);
+
+        JRadioButton radioButton = new JRadioButton();
         radioButton.setBackground(Color.WHITE);
         radioButton.setFocusPainted(false);
         radioButton.setActionCommand(service.name);
-
         radioButton.addActionListener(e -> {
             selectedShippingService = shippingServices.get(e.getActionCommand());
             deliveryCharge = selectedShippingService.price;
@@ -700,28 +770,61 @@ public class AddressUI extends JPanel {
         });
         buttonGroup.add(radioButton);
 
-        JPanel leftContent = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        leftContent.setBackground(Color.WHITE);
-        leftContent.add(radioButton);
+        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        radioPanel.setBackground(Color.WHITE);
+        radioPanel.add(radioButton);
+        leftSection.add(radioPanel, BorderLayout.WEST);
 
-        panel.add(leftContent, BorderLayout.WEST);
+        // Service name
+        JLabel serviceNameLabel = new JLabel(service.name);
+        serviceNameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        serviceNameLabel.setForeground(new Color(51, 51, 51));
+        serviceNameLabel.setBorder(new EmptyBorder(0, 15, 0, 0));
+        leftSection.add(serviceNameLabel, BorderLayout.CENTER);
 
-        JPanel rightContent = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
-        rightContent.setBackground(Color.WHITE);
+        panel.add(leftSection, BorderLayout.WEST);
 
-        JLabel estimateLabel = new JLabel(service.arrivalEstimate);
-        estimateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        estimateLabel.setForeground(GRAY_TEXT_COLOR);
-        rightContent.add(estimateLabel);
+        // Right section with price and estimate
+        JPanel rightSection = new JPanel();
+        rightSection.setLayout(new BoxLayout(rightSection, BoxLayout.Y_AXIS));
+        rightSection.setBackground(Color.WHITE);
 
         JLabel priceLabel = new JLabel(formatCurrency(service.price));
         priceLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        priceLabel.setForeground(DARK_TEXT_COLOR);
-        rightContent.add(priceLabel);
+        priceLabel.setForeground(new Color(51, 51, 51));
+        priceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        rightSection.add(priceLabel);
 
-        panel.add(rightContent, BorderLayout.EAST);
+        rightSection.add(Box.createVerticalStrut(3));
 
+        JLabel estimateLabel = new JLabel(service.arrivalEstimate);
+        estimateLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        estimateLabel.setForeground(new Color(102, 102, 102));
+        estimateLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        rightSection.add(estimateLabel);
+
+        panel.add(rightSection, BorderLayout.EAST);
+
+        // Add hover effect
         panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                panel.setBackground(new Color(248, 249, 250));
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    new LineBorder(new Color(200, 200, 200), 1, true),
+                    new EmptyBorder(15, 15, 15, 15)
+                ));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                panel.setBackground(Color.WHITE);
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    new LineBorder(new Color(220, 220, 220), 1, true),
+                    new EmptyBorder(15, 15, 15, 15)
+                ));
+            }
+
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getSource() != radioButton) {
@@ -735,7 +838,6 @@ public class AddressUI extends JPanel {
 
         return panel;
     }
-
 
     private void updateSummaryTotals() {
         totalMRP = 0;
@@ -870,9 +972,9 @@ public class AddressUI extends JPanel {
                 @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)"); }
                 @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)"); }
-                @Override public void showPaymentView() {
-                    JOptionPane.showMessageDialog(null, "Simulasi Pindah ke PaymentUI", "Dummy Payment", JOptionPane.INFORMATION_MESSAGE);
-                }
+                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
+                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); }
+                
             };
 
             AddressUI addressUI = new AddressUI(dummyVC);
