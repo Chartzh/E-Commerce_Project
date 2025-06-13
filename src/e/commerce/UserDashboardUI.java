@@ -7,9 +7,10 @@ import java.awt.image.BufferedImage;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
+import javax.swing.plaf.basic.BasicButtonUI; // Import for custom button UI
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
+import java.util.Timer; // Use java.util.Timer for scheduling tasks
 import java.util.TimerTask;
 import e.commerce.ProductRepository;
 import java.sql.SQLException;
@@ -23,9 +24,28 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private CheckoutUI checkoutUI;
     private User currentUser;
 
-    private AddressUI addressUI; 
+    private AddressUI addressUI;
     private PaymentUI paymentUI;
     private SuccessUI successUI;
+
+    // --- Banner Image Paths ---
+    private static final String BANNER_1_PATH = "/Resources/Images/Banner1.png";
+    private static final String BANNER_2_PATH = "/Resources/Images/Banner2.png";
+
+    // --- Variables for Banner Carousel ---
+    private JPanel bannerCarouselContainer; // Main panel for carousel (holds image panel and controls)
+    private JPanel bannerImagePanel; // This panel will hold the actual banner images with CardLayout
+    private CardLayout bannerCardLayout;
+    private javax.swing.Timer carouselTimer;
+    private int currentBannerIndex = 0;
+    private final String[] bannerNames = {"Banner1", "Banner2"};
+    private final String[] bannerPaths = {BANNER_1_PATH, BANNER_2_PATH};
+    private List<JLabel> bannerLabels; // To hold the JLabel for each banner image
+
+    // --- NEW: Define the aspect ratio for the banner ---
+    private static final double BANNER_ASPECT_RATIO = 16.0 / 5.0; // 16:5 ratio (width / height)
+    private static final int DEFAULT_BANNER_HEIGHT = 300; // A reasonable default height
+    // --- END NEW ---
 
     public UserDashboardUI() {
         currentUser = Authentication.getCurrentUser();
@@ -37,7 +57,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
 
         setTitle("Quantra");
-        setSize(1200, 800);
+        setSize(1200, 800); // Keep initial frame size reasonable
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         IconUtil.setIcon(this);
@@ -48,36 +68,44 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.setLayout(cardLayout);
         checkoutUI = new CheckoutUI(this);
 
-        // Buat panel-panel utama
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
         JPanel ordersPanel = createOrdersPanel();
 
-        // CartUI dan AddressUI perlu diinisialisasi dengan 'this' (UserDashboardUI sebagai ViewController)
         JPanel cartPanel = new CartUI(this);
-        addressUI = new AddressUI(this); 
-        paymentUI = new PaymentUI(this); 
+        addressUI = new AddressUI(this);
+        paymentUI = new PaymentUI(this);
         successUI = new SuccessUI(this);
 
         favoritesUI = new FavoritesUI(this);
 
-        // Tambahkan panel ke CardLayout
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
         mainPanel.add(ordersPanel, "Order");
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(checkoutUI, "Checkout");
-        mainPanel.add(addressUI, "Address"); 
-        mainPanel.add(paymentUI, "Payment"); 
+        mainPanel.add(addressUI, "Address");
+        mainPanel.add(paymentUI, "Payment");
         mainPanel.add(successUI, "Success");
 
         add(headerPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowOpened(WindowEvent e) {
+                startBannerCarousel();
+            }
+
+            @Override
+            public void windowClosing(WindowEvent e) {
+                stopBannerCarousel();
+            }
+        });
     }
 
-    // --- Implementasi metode dari interface ViewController ---
     @Override
     public void showProductDetail(FavoritesUI.FavoriteItem product) {
         for (Component comp : mainPanel.getComponents()) {
@@ -86,7 +114,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 break;
             }
         }
-        
+
         FavoritesUI.FavoriteItem fullProductDetails = ProductRepository.getProductById(product.getId());
         if (fullProductDetails == null) {
             JOptionPane.showMessageDialog(this, "Detail produk tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -130,7 +158,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     public void showOrdersView() {
         cardLayout.show(mainPanel, "Order");
     }
-    
+
     @Override
     public void showCheckoutView() {
         cardLayout.show(mainPanel, "Checkout");
@@ -144,10 +172,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     @Override
     public void showPaymentView() {
-        cardLayout.show(mainPanel, "Payment"); 
+        cardLayout.show(mainPanel, "Payment");
         System.out.println("Navigasi ke Halaman Pembayaran.");
     }
-    
+
     @Override
     public void showSuccessView() {
         cardLayout.show(mainPanel, "Success");
@@ -236,41 +264,41 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         return headerPanel;
     }
-    
+
     private ImageIcon loadUserProfileImage(User user) {
         ImageIcon defaultIcon = new ImageIcon(getClass().getResource("/Resources/Images/default_profile.png"));
-        
+
         if (defaultIcon.getIconWidth() <= 0 || defaultIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
             return createDefaultAvatarIcon(user.getUsername());
         }
-        
+
         Image scaledImage = defaultIcon.getImage().getScaledInstance(35, 35, Image.SCALE_SMOOTH);
         return new ImageIcon(scaledImage);
     }
-    
+
     private ImageIcon createDefaultAvatarIcon(String username) {
         String initials = username.length() > 0 ? username.substring(0, 1).toUpperCase() : "U";
-        
+
         BufferedImage avatar = new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = avatar.createGraphics();
-        
+
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
+
         g2.setColor(new Color(255, 89, 0));
         g2.fillOval(0, 0, 40, 40);
-        
+
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Arial", Font.BOLD, 16));
         FontMetrics fm = g2.getFontMetrics();
         int textWidth = fm.stringWidth(initials);
         int textHeight = fm.getHeight();
-        
+
         g2.drawString(initials, (40 - textWidth) / 2, (40 + textHeight / 2) / 2);
         g2.dispose();
-        
+
         return new ImageIcon(avatar);
     }
-    
+
     private JPanel createModernSearchBar() {
         JPanel searchContainer = new JPanel();
         searchContainer.setLayout(new BorderLayout());
@@ -397,7 +425,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         });
 
-        searchTimer = new Timer();
+        searchTimer = new Timer(); // This is java.util.Timer
 
         searchField.addKeyListener(new KeyAdapter() {
             @Override
@@ -485,53 +513,338 @@ public class UserDashboardUI extends JFrame implements ViewController {
         System.out.println("Pencarian langsung: " + searchText);
     }
 
+    // --- Helper method to load and scale images for banners with aspect ratio ---
+    private void setScaledImage(JLabel label, String imagePath) {
+        label.setIcon(null); // Clear previous icon
+        label.setText("Loading..."); // Optional: show loading text
+        label.setHorizontalAlignment(SwingConstants.CENTER);
+        label.setVerticalAlignment(SwingConstants.CENTER);
+        label.setFont(new Font("Arial", Font.ITALIC, 16));
+        label.setForeground(Color.GRAY);
+
+        new SwingWorker<ImageIcon, Void>() {
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                ImageIcon originalIcon = new ImageIcon(getClass().getResource(imagePath));
+                if (originalIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
+                    System.err.println("Failed to load image: " + imagePath);
+                    return null;
+                }
+
+                Image originalImage = originalIcon.getImage();
+                int originalWidth = originalImage.getWidth(null);
+                int originalHeight = originalImage.getHeight(null);
+
+                if (originalWidth <= 0 || originalHeight <= 0) {
+                    System.err.println("Invalid image dimensions for: " + imagePath);
+                    return null;
+                }
+
+                // Get the current width available for the banner from its parent
+                // This is the width the banner area is currently rendering at
+                int availableWidth = label.getParent().getWidth();
+                if (availableWidth <= 0) {
+                    // Fallback for initial load if parent size is not yet determined
+                    // Use a reasonable default based on typical frame width for initial calculation
+                    availableWidth = 1160; // Common width for a non-zoomed frame
+                }
+
+                // Calculate desired height based on the 16:5 aspect ratio
+                // target_height = available_width / (16.0 / 5.0)
+                int targetHeightForArea = (int) (availableWidth / BANNER_ASPECT_RATIO);
+
+                // Now scale the image to fit *within* this target area while maintaining its own aspect ratio
+                // Use Math.min to ensure the entire image is visible (letterboxing might occur)
+                double scaleX = (double) availableWidth / originalWidth;
+                double scaleY = (double) targetHeightForArea / originalHeight; // Use target height for area
+
+                double scale = Math.min(scaleX, scaleY); // Ensure entire image fits
+
+                int scaledWidth = (int) (originalWidth * scale);
+                int scaledHeight = (int) (originalHeight * scale);
+
+                return new ImageIcon(originalImage.getScaledInstance(scaledWidth, scaledHeight, Image.SCALE_SMOOTH));
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ImageIcon icon = get();
+                    if (icon != null) {
+                        label.setIcon(icon);
+                        label.setText(""); // Clear loading text
+                        // Center the image within the JLabel if it doesn't fill the entire space
+                        label.setHorizontalAlignment(SwingConstants.CENTER);
+                        label.setVerticalAlignment(SwingConstants.CENTER);
+                        label.revalidate();
+                        label.repaint();
+                    } else {
+                        label.setText("Gagal Memuat Banner");
+                        label.setFont(new Font("Arial", Font.BOLD, 20));
+                        label.setHorizontalAlignment(SwingConstants.CENTER);
+                        label.setVerticalAlignment(SwingConstants.CENTER);
+                        label.setForeground(Color.RED);
+                    }
+                } catch (Exception ex) {
+                    System.err.println("Error setting banner image: " + ex.getMessage());
+                    label.setText("Error Memuat Banner");
+                    label.setFont(new Font("Arial", Font.BOLD, 20));
+                    label.setHorizontalAlignment(SwingConstants.CENTER);
+                    label.setVerticalAlignment(SwingConstants.CENTER);
+                    label.setForeground(Color.RED);
+                }
+            }
+        }.execute();
+    }
+
+    // --- Methods for Banner Carousel ---
+    private JPanel createBannerCarouselPanel() {
+        bannerCarouselContainer = new JPanel(new BorderLayout());
+        bannerCarouselContainer.setBorder(new EmptyBorder(0, 0, 0, 0)); // No padding for the banner itself
+
+        bannerImagePanel = new JPanel();
+        bannerCardLayout = new CardLayout();
+        bannerImagePanel.setLayout(bannerCardLayout);
+        bannerLabels = new ArrayList<>();
+
+        // Create and add banner images
+        for (int i = 0; i < bannerPaths.length; i++) {
+            JLabel bannerLabel = new JLabel();
+            bannerLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            bannerLabel.setVerticalAlignment(SwingConstants.CENTER);
+            bannerLabels.add(bannerLabel); // Store the label for later scaling
+
+            JPanel bannerContainer = new JPanel(new BorderLayout());
+            bannerContainer.setBackground(Color.LIGHT_GRAY); // A default background if image has transparent parts or for loading
+            bannerContainer.add(bannerLabel, BorderLayout.CENTER);
+            bannerImagePanel.add(bannerContainer, bannerNames[i]);
+        }
+
+        JLayeredPane layeredPane = new JLayeredPane();
+        layeredPane.add(bannerImagePanel, JLayeredPane.DEFAULT_LAYER);
+
+        JPanel navButtonPanel = new JPanel(new GridBagLayout());
+        navButtonPanel.setOpaque(false); // Make it transparent
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 15, 0, 15); // Padding for buttons from the edge
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+
+        JButton prevButton = new JButton("<");
+        prevButton.setFocusPainted(false);
+        prevButton.setBorderPainted(false);
+        prevButton.setBackground(new Color(0, 0, 0, 80));
+        prevButton.setForeground(Color.WHITE);
+        prevButton.setFont(new Font("Arial", Font.BOLD, 20));
+        prevButton.setPreferredSize(new Dimension(40, 40));
+        prevButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        prevButton.addActionListener(e -> showPrevBanner());
+        prevButton.setUI(new BasicButtonUI() {
+            @Override
+            protected void installDefaults(AbstractButton b) {
+                super.installDefaults(b);
+                b.setRolloverEnabled(true);
+            }
+            @Override
+            public void paint(Graphics g, JComponent c) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getBackground());
+                g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+
+                if (c instanceof AbstractButton && ((AbstractButton) c).getModel().isRollover()) {
+                    g2.setColor(new Color(255, 89, 0, 150));
+                    g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+                }
+
+                g2.setColor(c.getForeground());
+                int arrowSize = 8;
+                int xCenter = c.getWidth() / 2;
+                int yCenter = c.getHeight() / 2;
+                g2.drawLine(xCenter + 2, yCenter - arrowSize, xCenter - arrowSize + 2, yCenter);
+                g2.drawLine(xCenter + 2, yCenter + arrowSize, xCenter - arrowSize + 2, yCenter);
+                g2.dispose();
+            }
+        });
+
+
+        JButton nextButton = new JButton(">");
+        nextButton.setFocusPainted(false);
+        nextButton.setBorderPainted(false);
+        nextButton.setBackground(new Color(0, 0, 0, 80));
+        nextButton.setForeground(Color.WHITE);
+        nextButton.setFont(new Font("Arial", Font.BOLD, 20));
+        nextButton.setPreferredSize(new Dimension(40, 40));
+        nextButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        nextButton.addActionListener(e -> showNextBanner());
+        nextButton.setUI(new BasicButtonUI() {
+            @Override
+            protected void installDefaults(AbstractButton b) {
+                super.installDefaults(b);
+                b.setRolloverEnabled(true);
+            }
+            @Override
+            public void paint(Graphics g, JComponent c) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(c.getBackground());
+                g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+
+                if (c instanceof AbstractButton && ((AbstractButton) c).getModel().isRollover()) {
+                    g2.setColor(new Color(255, 89, 0, 150));
+                    g2.fillOval(0, 0, c.getWidth(), c.getHeight());
+                }
+
+                g2.setColor(c.getForeground());
+                int arrowSize = 8;
+                int xCenter = c.getWidth() / 2;
+                int yCenter = c.getHeight() / 2;
+                g2.drawLine(xCenter - 2, yCenter - arrowSize, xCenter + arrowSize - 2, yCenter);
+                g2.drawLine(xCenter - 2, yCenter + arrowSize, xCenter + arrowSize - 2, yCenter);
+                g2.dispose();
+            }
+        });
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0; // Push button to left
+        gbc.anchor = GridBagConstraints.WEST;
+        navButtonPanel.add(prevButton, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0; // Push button to right
+        gbc.anchor = GridBagConstraints.EAST;
+        navButtonPanel.add(nextButton, gbc);
+
+        layeredPane.add(navButtonPanel, JLayeredPane.PALETTE_LAYER); // Buttons on top of default layer
+
+        bannerCarouselContainer.add(layeredPane, BorderLayout.CENTER); // Add the layered pane to the container
+
+        // ComponentListener to scale images on resize or visibility change
+        bannerCarouselContainer.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                // When container resizes, update layered pane and image panel bounds
+                int currentWidth = bannerCarouselContainer.getWidth();
+                int currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
+
+                // Set preferred size of the container itself for layout management
+                bannerCarouselContainer.setPreferredSize(new Dimension(currentWidth, currentHeight));
+                bannerCarouselContainer.revalidate(); // Revalidate the container after changing preferred size
+
+                layeredPane.setBounds(0, 0, currentWidth, currentHeight);
+                bannerImagePanel.setBounds(0, 0, currentWidth, currentHeight);
+                navButtonPanel.setBounds(0, 0, currentWidth, currentHeight);
+
+                scaleAllBannerImages(); // Re-scale all images with the new dimensions
+                bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
+            }
+            @Override
+            public void componentShown(ComponentEvent e) {
+                // Initial sizing when component becomes visible
+                int currentWidth = bannerCarouselContainer.getWidth();
+                int currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
+                if (currentWidth <= 0) { // If still 0, use a reasonable default
+                    currentWidth = getWidth(); // Use frame width
+                    currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
+                    if (currentHeight <= 0) currentHeight = DEFAULT_BANNER_HEIGHT; // Fallback
+                }
+
+
+                bannerCarouselContainer.setPreferredSize(new Dimension(currentWidth, currentHeight));
+                bannerCarouselContainer.revalidate();
+
+                layeredPane.setBounds(0, 0, currentWidth, currentHeight);
+                bannerImagePanel.setBounds(0, 0, currentWidth, currentHeight);
+                navButtonPanel.setBounds(0, 0, currentWidth, currentHeight);
+
+                scaleAllBannerImages();
+                bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
+            }
+        });
+
+        // Set an initial preferred size for the banner container based on default height
+        // This helps layout managers on initial render before componentResized kicks in
+        bannerCarouselContainer.setPreferredSize(new Dimension(0, DEFAULT_BANNER_HEIGHT)); // Width 0 means fill available width
+        
+        return bannerCarouselContainer;
+    }
+
+    private void scaleAllBannerImages() {
+        // Run scaling in a SwingWorker for all banners to avoid UI freezing
+        new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                // Wait for layout to settle if dimensions are 0 (especially on initial load)
+                while (bannerImagePanel.getWidth() == 0 || bannerImagePanel.getHeight() == 0) {
+                    Thread.sleep(50); // Small delay
+                }
+                for (int i = 0; i < bannerLabels.size(); i++) {
+                    setScaledImage(bannerLabels.get(i), bannerPaths[i]);
+                }
+                return null;
+            }
+        }.execute();
+    }
+
+    private void showPrevBanner() {
+        if (carouselTimer != null && carouselTimer.isRunning()) {
+            carouselTimer.stop(); // Stop automatic rotation on manual interaction
+        }
+        currentBannerIndex = (currentBannerIndex - 1 + bannerNames.length) % bannerNames.length;
+        bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
+        startBannerCarousel(); // Restart timer after manual interaction
+    }
+
+    private void showNextBanner() {
+        if (carouselTimer != null && carouselTimer.isRunning()) {
+            carouselTimer.stop(); // Stop automatic rotation on manual interaction
+        }
+        currentBannerIndex = (currentBannerIndex + 1) % bannerNames.length;
+        bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
+        startBannerCarousel(); // Restart timer after manual interaction
+    }
+
+
+    private void startBannerCarousel() {
+        if (carouselTimer != null && carouselTimer.isRunning()) {
+            carouselTimer.stop();
+        }
+
+        carouselTimer = new javax.swing.Timer(5000, new ActionListener() { // 5000 ms = 5 seconds
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showNextBanner(); // Use the existing method to ensure consistent behavior
+            }
+        });
+        carouselTimer.start();
+    }
+
+    private void stopBannerCarousel() {
+        if (carouselTimer != null) {
+            carouselTimer.stop();
+        }
+    }
+
     private JPanel createDashboardPanel() {
         JPanel dashboardPanel = new JPanel();
         dashboardPanel.setLayout(new BoxLayout(dashboardPanel, BoxLayout.Y_AXIS));
         dashboardPanel.setBackground(Color.WHITE);
 
-        JPanel bannerPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                GradientPaint gradient = new GradientPaint(
-                        0, 0, new Color(173, 216, 230),
-                        getWidth(), getHeight(), new Color(255, 182, 193));
-                g2d.setPaint(gradient);
-                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-            }
-        };
-        bannerPanel.setLayout(new BorderLayout());
-        bannerPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        bannerPanel.setPreferredSize(new Dimension(0, 300));
+        // Add the banner carousel panel at the top
+        dashboardPanel.add(createBannerCarouselPanel());
 
-        JLabel bannerTitle = new JLabel("<html>Beats Solo<br>WIRELESS HEADPHONE</html>");
-        bannerTitle.setFont(new Font("Arial", Font.BOLD, 40));
-        bannerTitle.setForeground(Color.BLACK);
-        bannerTitle.setBorder(new EmptyBorder(20, 20, 0, 0));
-        bannerPanel.add(bannerTitle, BorderLayout.WEST);
-
-        JButton shopButton = new JButton("Belanja Kategori");
-        shopButton.setBackground(new Color(255, 69, 0));
-        shopButton.setForeground(Color.WHITE);
-        shopButton.setBorderPainted(false);
-        shopButton.setFocusPainted(false);
-        shopButton.setFont(new Font("Arial", Font.BOLD, 14));
-        shopButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        shopButton.setBorder(new EmptyBorder(10, 20, 10, 20));
-        shopButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setBorder(new EmptyBorder(10, 20, 20, 0));
-        buttonPanel.add(shopButton);
-        bannerPanel.add(buttonPanel, BorderLayout.SOUTH);
+        // Create a new panel for the content below the banner
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(Color.WHITE);
+        // Apply padding to the content panel
+        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20)); // Padding for content below banner
 
         JPanel categoriesPanel = new JPanel(new GridLayout(2, 3, 15, 15));
         categoriesPanel.setBackground(Color.WHITE);
-        categoriesPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        categoriesPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding here, main contentPanel handles it
 
         String[] categoryNames = {"Earphone", "Wear Gadget", "Laptop", "Gaming Console", "VR Oculus", "Speaker"};
         Color[] backgroundColors = {
@@ -550,7 +863,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         JPanel featuresPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 50, 10));
         featuresPanel.setBackground(Color.WHITE);
-        featuresPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding
 
         String[] featureTexts = {
                 "Pengiriman Gratis untuk Pesanan",
@@ -565,52 +878,17 @@ public class UserDashboardUI extends JFrame implements ViewController {
             featuresPanel.add(featureLabel);
         }
 
-        JPanel promoPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(new Color(255, 69, 0));
-                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
-            }
-        };
-        promoPanel.setLayout(new BorderLayout());
-        promoPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        promoPanel.setPreferredSize(new Dimension(0, 200));
-
-        JLabel promoTitle = new JLabel("<html>DISKON 20%<br>TEMUKAN SENYUM</html>");
-        promoTitle.setFont(new Font("Arial", Font.BOLD, 30));
-        promoTitle.setForeground(Color.WHITE);
-        promoTitle.setBorder(new EmptyBorder(20, 20, 0, 0));
-        promoPanel.add(promoTitle, BorderLayout.WEST);
-
-        JButton shopNowButton = new JButton("Belanja Sekarang");
-        shopNowButton.setBackground(Color.WHITE);
-        shopNowButton.setForeground(Color.BLACK);
-        shopNowButton.setBorderPainted(false);
-        shopNowButton.setFocusPainted(false);
-        shopNowButton.setFont(new Font("Arial", Font.BOLD, 14));
-        shopNowButton.setBorder(new EmptyBorder(10, 20, 10, 20));
-        shopNowButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        JPanel promoButtonPanel = new JPanel();
-        promoButtonPanel.setOpaque(false);
-        promoButtonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
-        promoButtonPanel.setBorder(new EmptyBorder(0, 0, 20, 20));
-        promoButtonPanel.add(shopNowButton);
-        promoPanel.add(promoButtonPanel, BorderLayout.EAST);
-
         JPanel bestSellerPanel = new JPanel(new BorderLayout());
         bestSellerPanel.setBackground(Color.WHITE);
-        bestSellerPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        bestSellerPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding
 
         JLabel bestSellerTitle = new JLabel("Produk Terlaris");
         bestSellerTitle.setFont(new Font("Arial", Font.BOLD, 20));
         bestSellerPanel.add(bestSellerTitle, BorderLayout.NORTH);
-        
+
         JPanel bestSellerProducts = new JPanel(new GridLayout(0, 6, 15, 15));
         bestSellerProducts.setBackground(Color.WHITE);
-        
+
         List<FavoritesUI.FavoriteItem> allProducts = ProductRepository.getAllProducts();
         System.out.println("DEBUG UserDashboardUI: Jumlah produk yang diambil dari database: " + allProducts.size());
 
@@ -630,14 +908,14 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 bestSellerProducts.add(productCard);
             }
         }
-        
+
          bestSellerPanel.add(bestSellerProducts, BorderLayout.CENTER);
-        
-        dashboardPanel.add(bannerPanel);
-        dashboardPanel.add(categoriesPanel);
-        dashboardPanel.add(featuresPanel);
-        dashboardPanel.add(promoPanel);
-        dashboardPanel.add(bestSellerPanel);
+
+        contentPanel.add(categoriesPanel);
+        contentPanel.add(featuresPanel);
+        contentPanel.add(bestSellerPanel);
+
+        dashboardPanel.add(contentPanel);
 
         JScrollPane scrollPane = new JScrollPane(dashboardPanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -648,7 +926,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         wrapperPanel.add(scrollPane, BorderLayout.CENTER);
         return wrapperPanel;
     }
-    
+
     private JPanel createDashboardProductCard(FavoritesUI.FavoriteItem item) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
@@ -679,7 +957,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 String text = "NO IMAGE";
                 int textWidth = fm.stringWidth(text);
                 int textHeight = fm.getHeight();
-                g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2 - fm.getDescent());
+                g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight / 2) / 2 - fm.getDescent());
                 System.out.println("DEBUG UserDashboardUI (ImagePanel): Gambar TIDAK ditemukan untuk produk: " + item.getName());
             } else {
                 int originalWidth = mainImage.getWidth(null);
@@ -884,7 +1162,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         return ordersPanel;
     }
-    
+
     private int getCartItemCount() {
         if (currentUser != null) {
             try {
@@ -897,9 +1175,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
         return 0;
     }
-    
+
     private int getFavItemCount() {
-        return 6; 
+        return 6;
     }
 
     public static void main(String[] args) {
