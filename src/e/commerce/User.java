@@ -3,11 +3,11 @@ package e.commerce;
 import java.awt.Image;
 import java.io.IOException;
 import java.sql.Blob;
-import java.sql.Connection; // Tetap diperlukan karena ada metode DB di sini
-import java.sql.PreparedStatement; // Tetap diperlukan
-import java.sql.ResultSet; // Tetap diperlukan
-import java.sql.SQLException; // Tetap diperlukan
-import java.sql.Statement; // Tetap diperlukan
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import java.io.ByteArrayInputStream;
@@ -18,22 +18,22 @@ public class User {
     private String password; // Ini adalah hash password
     private String email;
     private String nik;
-    private String address;
+    // HAPUS FIELD ALAMAT DARI SINI:
+    // private String address;
     private String phone;
-    private String city;
-    private String province;
-    private String postalCode;
-    private String country;
+    // private String city;
+    // private String province;
+    // private String postalCode;
+    // private String country;
     private byte[] profilePicture;
     private byte[] bannerPicture;
     private String role;
-    private boolean isVerified; // <--- FIELD BARU: isVerified
-
+    private boolean isVerified;
 
     public User() {
         this.profilePicture = null;
         this.bannerPicture = null;
-        this.isVerified = false; // <--- INISIALISASI DEFAULT
+        this.isVerified = false;
     }
 
     // Constructor yang Anda berikan: User(String username, String password, String email)
@@ -44,44 +44,54 @@ public class User {
         this.role = "user";
         this.profilePicture = null;
         this.bannerPicture = null;
-        this.isVerified = false; // <--- Inisialisasi isVerified
+        this.isVerified = false;
     }
 
-    // Constructor yang Anda berikan: User(String username, String password, String email, String nik, ..., String country, String role)
-    public User(String username, String password, String email, String nik, String address, String phone, String city, String province, String postalCode, String country, String role, boolean isVerified) { // <--- MENAMBAHKAN 'isVerified' di parameter
+    // Constructor yang Anda berikan (ini yang kemungkinan digunakan untuk registrasi awal
+    // dan harus disesuaikan jika alamat tidak lagi disimpan di tabel profile)
+    // Ubah sesuai dengan data yang benar-benar disimpan di tabel `users` dan `profile` (tanpa alamat)
+    // Jika Anda hanya menyimpan nik dan phone di tabel profile saat register awal,
+    // maka konstruktor ini perlu parameter nik dan phone.
+    // Jika tidak, biarkan default null di `Authentication.register()` dan update nanti.
+    // Untuk saat ini, asumsikan konstruktor ini untuk data dasar user saja:
+    public User(String username, String password, String email, String role, boolean isVerified) {
         this.username = username;
         this.password = password;
         this.email = email;
-        this.nik = nik;
-        this.address = address;
-        this.phone = phone;
-        this.city = city;
-        this.province = province;
-        this.postalCode = postalCode;
-        this.country = country;
         this.role = role;
         this.profilePicture = null;
         this.bannerPicture = null;
-        this.isVerified = isVerified; // <--- INISIALISASI 'isVerified'
+        this.isVerified = isVerified;
+        // HAPUS INISIALISASI ALAMAT DARI SINI:
+        // this.nik = nik;
+        // this.address = address;
+        // this.phone = phone;
+        // this.city = city;
+        // this.province = province;
+        // this.postalCode = postalCode;
+        // this.country = country;
     }
 
-    // Constructor lengkap (jika Anda memuat semua data sekaligus dari DB)
-    public User(int id, String username, String password, String email, String nik, String address, String phone, String city, String province, String postalCode, String country, byte[] profilePicture, byte[] bannerPicture, String role, boolean isVerified) { // <--- MENAMBAHKAN 'isVerified' di parameter
+
+    // Constructor lengkap (yang bermasalah di Authentication.java)
+    // HAPUS PARAMETER ALAMAT DARI SINI
+    public User(int id, String username, String password, String email, String nik, String phone, byte[] profilePicture, byte[] bannerPicture, String role, boolean isVerified) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.email = email;
         this.nik = nik;
-        this.address = address;
+        // HAPUS INISIALISASI ALAMAT DARI SINI:
+        // this.address = address;
         this.phone = phone;
-        this.city = city;
-        this.province = province;
-        this.postalCode = postalCode;
-        this.country = country;
+        // this.city = city;
+        // this.province = province;
+        // this.postalCode = postalCode;
+        // this.country = country;
         this.profilePicture = profilePicture;
         this.bannerPicture = bannerPicture;
         this.role = role;
-        this.isVerified = isVerified; // <--- INISIALISASI 'isVerified'
+        this.isVerified = isVerified;
     }
 
     // --- Getters dan Setters ---
@@ -95,34 +105,32 @@ public class User {
     public void setEmail(String email) { this.email = email; }
     public String getNik() { return nik; }
     public void setNik(String nik) { this.nik = nik; }
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
+    // HAPUS GETTER DAN SETTER ALAMAT DARI SINI:
+    // public String getAddress() { return address; }
+    // public void setAddress(String address) { this.address = address; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-    public String getProvince() { return province; }
-    public void setProvince(String province) { this.province = province; }
-    public String getPostalCode() { return postalCode; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
+    // public String getCity() { return city; }
+    // public void setCity(String city) { this.city = city; }
+    // public String getProvince() { return province; }
+    // public void setProvince(String province) { this.province = province; }
+    // public String getPostalCode() { return postalCode; }
+    // public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
+    // public String getCountry() { return country; }
+    // public void setCountry(String country) { this.country = country; }
     public byte[] getProfilePicture() { return profilePicture; }
     public void setProfilePicture(byte[] profilePicture) { this.profilePicture = profilePicture; }
     public byte[] getBannerPicture() { return bannerPicture; }
     public void setBannerPicture(byte[] bannerPicture) { this.bannerPicture = bannerPicture; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
-    
-    // --- GETTER DAN SETTER BARU UNTUK 'isVerified' ---
+
     public boolean isVerified() {
         return isVerified;
     }
     public void setVerified(boolean verified) {
         isVerified = verified;
     }
-    // --- AKHIR PENAMBAHAN 'isVerified' ---
-
 
     // Helper method untuk mendapatkan ImageIcon dari profilePicture
     public ImageIcon getProfileImageIcon() {
@@ -134,7 +142,8 @@ public class User {
                 System.err.println("Error converting profile image: " + e.getMessage());
             }
         }
-        return new ImageIcon(getClass().getResource("/resources/default_profile.png")); 
+        // Pastikan path ke default_profile.png benar
+        return new ImageIcon(getClass().getResource("/resources/default_profile.png"));
     }
 
     // Helper method untuk mendapatkan ImageIcon dari bannerPicture
@@ -147,10 +156,11 @@ public class User {
                 System.err.println("Error converting banner image: " + e.getMessage());
             }
         }
-        return new ImageIcon(getClass().getResource("/resources/default_banner.png")); 
+        // Pastikan path ke default_banner.png benar
+        return new ImageIcon(getClass().getResource("/resources/default_banner.png"));
     }
 
-    // --- Metode-metode Database (Asumsi Anda ingin ini tetap ada di User.java) ---
+    // --- Metode-metode Database (PERLU PENYESUAIAN) ---
     // register() method di User.java
     public boolean register() {
         try (Connection conn = DatabaseConnection.getConnection()) {
@@ -168,8 +178,8 @@ public class User {
                 insertUserStmt.setString(1, username);
                 insertUserStmt.setString(2, password); // Password diharapkan sudah di-hash
                 insertUserStmt.setString(3, email);
-                insertUserStmt.setString(4, role); 
-                insertUserStmt.setBoolean(5, isVerified); // Gunakan 'isVerified' dari objek User
+                insertUserStmt.setString(4, role);
+                insertUserStmt.setBoolean(5, isVerified);
 
                 int affectedRows = insertUserStmt.executeUpdate();
                 if (affectedRows > 0) {
@@ -182,18 +192,10 @@ public class User {
                     }
 
                     if (newlyGeneratedUserId != -1) {
-                        String insertProfileSql = "INSERT INTO profile (user_id, nik, address, phone, city, province, postal_code, country, profile_picture, banner_picture) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        // SESUAIKAN INSERT PROFILE: HANYA PERLU user_id
+                        String insertProfileSql = "INSERT INTO profile (user_id) VALUES (?)";
                         PreparedStatement insertProfileStmt = conn.prepareStatement(insertProfileSql);
                         insertProfileStmt.setInt(1, newlyGeneratedUserId);
-                        insertProfileStmt.setNull(2, java.sql.Types.VARCHAR); // nik
-                        insertProfileStmt.setNull(3, java.sql.Types.VARCHAR); // address
-                        insertProfileStmt.setNull(4, java.sql.Types.VARCHAR); // phone
-                        insertProfileStmt.setNull(5, java.sql.Types.VARCHAR); // city
-                        insertProfileStmt.setNull(6, java.sql.Types.VARCHAR); // province
-                        insertProfileStmt.setNull(7, java.sql.Types.VARCHAR); // postal_code
-                        insertProfileStmt.setNull(8, java.sql.Types.VARCHAR); // country
-                        insertProfileStmt.setNull(9, java.sql.Types.BLOB);    // profile_picture
-                        insertProfileStmt.setNull(10, java.sql.Types.BLOB);    // banner_picture
 
                         int profileAffectedRows = insertProfileStmt.executeUpdate();
                         if (profileAffectedRows > 0) {
@@ -217,36 +219,37 @@ public class User {
             throw new RuntimeException("Gagal menyimpan data pengguna (registrasi): " + e.getMessage());
         }
     }
-    
+
     // loadUserById method diubah untuk melakukan JOIN ke tabel 'profile'
+    // HAPUS KOLOM ALAMAT DARI QUERY DAN PENGAMBILAN DATA
     public boolean loadUserById(int userId) {
         try (Connection conn = DatabaseConnection.getConnection()) {
-            String sql = "SELECT u.id, u.username, u.password, u.email, u.role, u.is_verified, " + // MENAMBAH u.is_verified
-                         "p.nik, p.address, p.phone, p.city, p.province, p.postal_code, p.country, " +
-                         "p.profile_picture, p.banner_picture " +
+            String sql = "SELECT u.id, u.username, u.password, u.email, u.role, u.is_verified, " +
+                         "p.nik, p.phone, p.profile_picture, p.banner_picture " + // HAPUS 'p.address', 'p.city', 'p.province', 'p.postal_code', 'p.country'
                          "FROM users u " +
                          "LEFT JOIN profile p ON u.id = p.user_id " +
                          "WHERE u.id = ?";
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, userId);
             ResultSet rs = pstmt.executeQuery();
-            
+
             if (rs.next()) {
                 this.id = rs.getInt("id");
                 this.username = rs.getString("username");
                 this.password = rs.getString("password");
                 this.email = rs.getString("email");
                 this.role = rs.getString("role");
-                this.isVerified = rs.getBoolean("is_verified"); // MENGAMBIL NILAI isVerified dari DB
-                
+                this.isVerified = rs.getBoolean("is_verified");
+
                 this.nik = rs.getString("nik");
-                this.address = rs.getString("address");
                 this.phone = rs.getString("phone");
-                this.city = rs.getString("city");
-                this.province = rs.getString("province");
-                this.postalCode = rs.getString("postal_code");
-                this.country = rs.getString("country");
-                
+                // HAPUS PENGAMBILAN DATA ALAMAT DARI RESULTSET:
+                // this.address = rs.getString("address");
+                // this.city = rs.getString("city");
+                // this.province = rs.getString("province");
+                // this.postalCode = rs.getString("postal_code");
+                // this.country = rs.getString("country");
+
                 Blob profileBlob = rs.getBlob("profile_picture");
                 if (profileBlob != null) {
                     this.profilePicture = profileBlob.getBytes(1, (int) profileBlob.length());

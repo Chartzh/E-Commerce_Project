@@ -15,6 +15,8 @@ import java.awt.geom.Ellipse2D;
 import java.io.*;
 import java.sql.*;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ProfileUI extends JPanel {
     private CardLayout cardLayout;
@@ -101,6 +103,11 @@ public class ProfileUI extends JPanel {
         ProfilePanel profilePanel = new ProfilePanel(currentUser);
         contentPanel.add(profilePanel, "Profile");
 
+        // NEW: Add AddressPanel
+        AddressPanel addressPanel = new AddressPanel(currentUser);
+        contentPanel.add(addressPanel, "Addresses");
+
+
         // Updated navigation items to match the image
         contentPanel.add(createPlaceholderPanel("Payment"), "Payment");
         contentPanel.add(createPlaceholderPanel("Security"), "Security");
@@ -132,7 +139,7 @@ public class ProfileUI extends JPanel {
 
         // --- START PERUBAHAN: Menghilangkan profileInfoPanel (foto profil dan nama) dari sidebar ---
         // Kode berikut dihapus/dikomentari:
-        /*
+        
         JPanel profileInfoPanel = new JPanel(new GridBagLayout());
         profileInfoPanel.setBackground(Color.WHITE);
         profileInfoPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -184,11 +191,12 @@ public class ProfileUI extends JPanel {
 
         navPanel.add(profileInfoPanel);
         navPanel.add(Box.createVerticalStrut(10)); // Space between profile info and buttons
-        */
+       
         // --- END PERUBAHAN: Menghilangkan profileInfoPanel ---
 
 
-        String[] navItems = {"Profile", "Payment", "Security", "Legal Agreement"};
+        // NEW: Add "Addresses" to navigation
+        String[] navItems = {"Profile", "Addresses", "Payment", "Security", "Legal Agreement"};
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -249,7 +257,7 @@ public class ProfileUI extends JPanel {
     // Metode loadProfilePictureForNav tidak lagi diperlukan karena foto profil di sidebar sudah dihapus
     // Jika masih ada kebutuhan untuk memuat foto profil di tempat lain di ProfileUI (selain di ProfilePanel),
     // Anda mungkin perlu membuat versi umum dari metode ini di kelas ProfileUI.
-    /*
+    
     private void loadProfilePictureForNav(JLabel label) {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -280,7 +288,6 @@ public class ProfileUI extends JPanel {
             DatabaseConnection.closeConnection(conn, stmt, rs);
         }
     }
-    */
 
     private JPanel createPlaceholderPanel(String title) {
         JPanel panel = new JPanel(new GridBagLayout()); // Use GridBagLayout for centering
@@ -310,8 +317,8 @@ public class ProfileUI extends JPanel {
     private class ProfilePanel extends JPanel {
         private JLabel profileImageLabel;
         private JLabel bannerImageLabel;
-        private JTextField txtFullName, txtPhone, txtEmail, txtCity, txtProvince, txtPostalCode, txtCountry, txtNik;
-        private JTextArea txtAddress;
+        // REMOVED: txtCity, txtProvince, txtPostalCode, txtCountry, txtAddress
+        private JTextField txtFullName, txtPhone, txtEmail, txtNik;
         private JButton btnSave;
         private ImageIcon profileImage; // Menyimpan ImageIcon untuk foto profil
         private ImageIcon bannerImage;  // Menyimpan ImageIcon untuk banner
@@ -493,28 +500,8 @@ public class ProfileUI extends JPanel {
             }
             scrollableContent.add(createFormField("Nomor Telepon", phoneNumber, "08123456789", txtPhone));
             
-            // Grid for City, Province, Postal Code, Country (sesuai di gambar) - These belong to profile table
-            JPanel gridPanel = new JPanel(new GridLayout(2, 2, 20, 10)); // 2 rows, 2 columns, gaps
-            gridPanel.setBackground(Color.WHITE);
-            gridPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0)); // Padding
-
-            txtCity = new JTextField();
-            gridPanel.add(createFormField("Kota/Kabupaten", user.getCity(), "Bekasi", txtCity));
-
-            txtProvince = new JTextField();
-            gridPanel.add(createFormField("Provinsi", user.getProvince(), "West Java", txtProvince));
-
-            txtPostalCode = new JTextField();
-            gridPanel.add(createFormField("Kode Pos", user.getPostalCode(), "17111", txtPostalCode));
-
-            txtCountry = new JTextField();
-            gridPanel.add(createFormField("Negara", user.getCountry(), "Indonesia", txtCountry));
-
-            scrollableContent.add(gridPanel);
-
-            // Address field (sesuai Alamat Lengkap di gambar) - This belongs to profile table
-            txtAddress = new JTextArea();
-            scrollableContent.add(createTextAreaField("Alamat Lengkap", user.getAddress() != null ? user.getAddress() : "", "2, Chief Ekenezu Street, Ubeji, Ayigu, Delta State", txtAddress));
+            // REMOVED: Grid for City, Province, Postal Code, Country
+            // REMOVED: Address field
 
             // Save button
             JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -559,11 +546,6 @@ public class ProfileUI extends JPanel {
                 setupPlaceholder(txtEmail, "budi.sabudi@example.com");
                 setupPlaceholder(txtNik, "1234567890123456");
                 setupPlaceholder(txtPhone, "08123456789");
-                setupPlaceholder(txtCity, "Bekasi");
-                setupPlaceholder(txtProvince, "West Java");
-                setupPlaceholder(txtPostalCode, "17111");
-                setupPlaceholder(txtCountry, "Indonesia");
-                setupPlaceholder(txtAddress, "2, Chief Ekenezu Street, Ubeji, Ayigu, Delta State");
             });
         }
 
@@ -597,42 +579,42 @@ public class ProfileUI extends JPanel {
             return panel;
         }
 
-        // Helper method for JTextArea with placeholder
-        private JPanel createTextAreaField(String labelText, String initialValue, String placeholder, JTextArea textArea) {
-            JPanel panel = new JPanel(new BorderLayout(0, 5));
-            panel.setBackground(Color.WHITE);
-            panel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
+        // Helper method for JTextArea with placeholder - REMOVED from ProfilePanel, kept for AddressPanel
+        // private JPanel createTextAreaField(String labelText, String initialValue, String placeholder, JTextArea textArea) {
+        //     JPanel panel = new JPanel(new BorderLayout(0, 5));
+        //     panel.setBackground(Color.WHITE);
+        //     panel.setBorder(BorderFactory.createEmptyBorder(10, 0, 10, 0));
 
-            JLabel lbl = new JLabel(labelText);
-            lbl.setFont(new Font("Arial", Font.PLAIN, 13));
-            lbl.setForeground(darkGrayColor);
-            panel.add(lbl, BorderLayout.NORTH);
+        //     JLabel lbl = new JLabel(labelText);
+        //     lbl.setFont(new Font("Arial", Font.PLAIN, 13));
+        //     lbl.setForeground(darkGrayColor);
+        //     panel.add(lbl, BorderLayout.NORTH);
 
-            textArea.setText(initialValue);
-            textArea.setFont(new Font("Arial", Font.PLAIN, 15));
-            textArea.setLineWrap(true);
-            textArea.setWrapStyleWord(true);
-            textArea.setBorder(new LineBorder(lightGrayColor, 1) { // Softer border, rounded corners
-                @Override
-                public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(getLineColor());
-                    g2.drawRoundRect(x, y, width - 1, height - 1, 8, 8);
-                    g2.dispose();
-                }
-            });
-            JScrollPane scroll = new JScrollPane(textArea);
-            scroll.setBorder(BorderFactory.createEmptyBorder());
-            scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            scroll.setPreferredSize(new Dimension(scroll.getPreferredSize().width, 80));
+        //     textArea.setText(initialValue);
+        //     textArea.setFont(new Font("Arial", Font.PLAIN, 15));
+        //     textArea.setLineWrap(true);
+        //     textArea.setWrapStyleWord(true);
+        //     textArea.setBorder(new LineBorder(lightGrayColor, 1) { // Softer border, rounded corners
+        //         @Override
+        //         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+        //             Graphics2D g2 = (Graphics2D) g.create();
+        //             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        //             g2.setColor(getLineColor());
+        //             g2.drawRoundRect(x, y, width - 1, height - 1, 8, 8);
+        //             g2.dispose();
+        //         }
+        //     });
+        //     JScrollPane scroll = new JScrollPane(textArea);
+        //     scroll.setBorder(BorderFactory.createEmptyBorder());
+        //     scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        //     scroll.setPreferredSize(new Dimension(scroll.getPreferredSize().width, 80));
 
-            // Apply placeholder to JTextArea
-            setupPlaceholder(textArea, placeholder);
+        //     // Apply placeholder to JTextArea
+        //     setupPlaceholder(textArea, placeholder);
 
-            panel.add(scroll, BorderLayout.CENTER);
-            return panel;
-        }
+        //     panel.add(scroll, BorderLayout.CENTER);
+        //     return panel;
+        // }
 
         // --- Placeholder Logic ---
         private void setupPlaceholder(JTextComponent component, String placeholder) {
@@ -772,11 +754,7 @@ public class ProfileUI extends JPanel {
             String email = (Boolean.TRUE.equals(txtEmail.getClientProperty("showingPlaceholder"))) ? "" : txtEmail.getText().trim();
             String nik = (Boolean.TRUE.equals(txtNik.getClientProperty("showingPlaceholder"))) ? "" : txtNik.getText().trim();
             String phone = (Boolean.TRUE.equals(txtPhone.getClientProperty("showingPlaceholder"))) ? "" : txtPhone.getText().trim();
-            String city = (Boolean.TRUE.equals(txtCity.getClientProperty("showingPlaceholder"))) ? "" : txtCity.getText().trim();
-            String province = (Boolean.TRUE.equals(txtProvince.getClientProperty("showingPlaceholder"))) ? "" : txtProvince.getText().trim();
-            String postalCode = (Boolean.TRUE.equals(txtPostalCode.getClientProperty("showingPlaceholder"))) ? "" : txtPostalCode.getText().trim();
-            String country = (Boolean.TRUE.equals(txtCountry.getClientProperty("showingPlaceholder"))) ? "" : txtCountry.getText().trim();
-            String address = (Boolean.TRUE.equals(txtAddress.getClientProperty("showingPlaceholder"))) ? "" : txtAddress.getText().trim();
+            // REMOVED: city, province, postalCode, country, address
 
             // Validasi input
             if (fullName.isEmpty()) {
@@ -787,8 +765,6 @@ public class ProfileUI extends JPanel {
                 JOptionPane.showMessageDialog(this, "Alamat Email tidak boleh kosong.", "Input Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-            // Validasi NIK, Phone, Address, City, Province, Postal Code, Country can be added here if mandatory
-            // For now, allow empty for these if not critical for initial profile.
             
             // Validasi format email
             if (!email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
@@ -834,8 +810,8 @@ public class ProfileUI extends JPanel {
                     user.setEmail(email);
                 }
 
-                // 2. Update profile table (nik, address, phone, city, province, postal_code, country, pictures)
-                StringBuilder updateProfileSqlBuilder = new StringBuilder("UPDATE profile SET nik = ?, address = ?, phone = ?, city = ?, province = ?, postal_code = ?, country = ?");
+                // 2. Update profile table (nik, phone, pictures)
+                StringBuilder updateProfileSqlBuilder = new StringBuilder("UPDATE profile SET nik = ?, phone = ?");
                 boolean updateProfilePic = (selectedFile != null);
                 boolean updateBannerPic = (selectedBannerFile != null);
 
@@ -850,12 +826,8 @@ public class ProfileUI extends JPanel {
                 stmtProfile = conn.prepareStatement(updateProfileSqlBuilder.toString());
                 int paramIndex = 1;
                 stmtProfile.setString(paramIndex++, nik);
-                stmtProfile.setString(paramIndex++, address);
                 stmtProfile.setString(paramIndex++, phone);
-                stmtProfile.setString(paramIndex++, city);
-                stmtProfile.setString(paramIndex++, province);
-                stmtProfile.setString(paramIndex++, postalCode);
-                stmtProfile.setString(paramIndex++, country);
+                // REMOVED: city, province, postalCode, country, address parameters
 
                 if (updateProfilePic) {
                     try (FileInputStream fis = new FileInputStream(selectedFile)) {
@@ -874,12 +846,8 @@ public class ProfileUI extends JPanel {
                     profileUpdated = true;
                     // Update current user object for profile table fields
                     user.setNik(nik);
-                    user.setAddress(address);
                     user.setPhone(phone);
-                    user.setCity(city);
-                    user.setProvince(province);
-                    user.setPostalCode(postalCode);
-                    user.setCountry(country);
+                    // REMOVED: city, province, postalCode, country, address updates
 
                     if (updateProfilePic) {
                         user.setProfilePicture(Files.readAllBytes(selectedFile.toPath()));
@@ -918,5 +886,823 @@ public class ProfileUI extends JPanel {
                 DatabaseConnection.closeConnection(conn, null, null); // Manual close as statements handled above
             }
         }
+    }
+
+    // NEW: Address Panel class
+    private class AddressPanel extends JPanel {
+        private User user;
+        private JPanel addressListPanel;
+        private JScrollPane scrollPane;
+
+        // Colors from parent
+        private Color primaryColor = new Color(255, 102, 0);
+        private Color backgroundColor = new Color(240, 242, 245);
+        private Color lightGrayColor = new Color(225, 228, 232);
+        private Color darkGrayColor = new Color(108, 117, 125);
+        private Color textColor = new Color(33, 37, 41);
+
+        public AddressPanel(User user) {
+            this.user = user;
+            setLayout(new BorderLayout());
+            setBackground(Color.WHITE);
+            setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
+
+            JLabel title = new JLabel("Your Addresses");
+            title.setFont(new Font("Arial", Font.BOLD, 20));
+            title.setForeground(textColor);
+            add(title, BorderLayout.NORTH);
+
+            addressListPanel = new JPanel();
+            addressListPanel.setLayout(new BoxLayout(addressListPanel, BoxLayout.Y_AXIS));
+            addressListPanel.setBackground(Color.WHITE);
+
+            scrollPane = new JScrollPane(addressListPanel);
+            scrollPane.setBorder(BorderFactory.createEmptyBorder());
+            scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+            scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+            add(scrollPane, BorderLayout.CENTER);
+
+            JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+            southPanel.setBackground(Color.WHITE);
+
+            JButton addAddressButton = new JButton("Add New Address");
+            addAddressButton.setFont(new Font("Arial", Font.BOLD, 14));
+            addAddressButton.setForeground(Color.WHITE);
+            addAddressButton.setBackground(primaryColor);
+            addAddressButton.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(primaryColor, 1, true),
+                    BorderFactory.createEmptyBorder(10, 20, 10, 20)
+            ));
+            addAddressButton.setFocusPainted(false);
+            addAddressButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            addAddressButton.addActionListener(e -> showAddAddressDialog());
+            southPanel.add(addAddressButton);
+
+            add(southPanel, BorderLayout.SOUTH);
+
+            loadAddresses();
+        }
+
+        private void loadAddresses() {
+            addressListPanel.removeAll();
+            List<Address> addresses = getAddressesFromDatabase(user.getId());
+            if (addresses.isEmpty()) {
+                JLabel noAddressLabel = new JLabel("No addresses found. Click 'Add New Address' to add one.");
+                noAddressLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+                noAddressLabel.setForeground(darkGrayColor);
+                addressListPanel.add(noAddressLabel);
+            } else {
+                for (Address address : addresses) {
+                    addressListPanel.add(createAddressCard(address));
+                    addressListPanel.add(Box.createVerticalStrut(10)); // Space between cards
+                }
+            }
+            addressListPanel.revalidate();
+            addressListPanel.repaint();
+        }
+
+        private JPanel createAddressCard(Address address) {
+            JPanel card = new JPanel(new BorderLayout(10, 10));
+            card.setBackground(new Color(250, 250, 250));
+            card.setBorder(BorderFactory.createCompoundBorder(
+                    new LineBorder(lightGrayColor, 1, true),
+                    BorderFactory.createEmptyBorder(15, 15, 15, 15)
+            ));
+
+            JLabel addressNameLabel = new JLabel("<html><b>" + address.getLabel() + "</b></html>");
+            addressNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+            addressNameLabel.setForeground(textColor);
+            card.add(addressNameLabel, BorderLayout.NORTH);
+
+            JTextArea addressDetails = new JTextArea();
+            addressDetails.setEditable(false);
+            addressDetails.setLineWrap(true);
+            addressDetails.setWrapStyleWord(true);
+            addressDetails.setBackground(new Color(250, 250, 250));
+            addressDetails.setFont(new Font("Arial", Font.PLAIN, 14));
+            addressDetails.setForeground(darkGrayColor);
+            addressDetails.setText(address.getFullAddress());
+            card.add(addressDetails, BorderLayout.CENTER);
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+            buttonPanel.setBackground(new Color(250, 250, 250));
+
+            JButton editButton = new JButton("Edit");
+            styleMiniButton(editButton, primaryColor);
+            editButton.addActionListener(e -> showEditAddressDialog(address));
+            buttonPanel.add(editButton);
+
+            JButton deleteButton = new JButton("Delete");
+            styleMiniButton(deleteButton, new Color(220, 53, 69)); // Red for delete
+            deleteButton.addActionListener(e -> deleteAddress(address.getId()));
+            buttonPanel.add(deleteButton);
+
+            card.add(buttonPanel, BorderLayout.SOUTH);
+
+            return card;
+        }
+
+        private void styleMiniButton(JButton button, Color bgColor) {
+            button.setFont(new Font("Arial", Font.PLAIN, 12));
+            button.setForeground(Color.WHITE);
+            button.setBackground(bgColor);
+            button.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(bgColor.darker(), 1, true),
+                    BorderFactory.createEmptyBorder(5, 10, 5, 10)
+            ));
+            button.setFocusPainted(false);
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            button.addMouseListener(new MouseAdapter() {
+                public void mouseEntered(MouseEvent e) { button.setBackground(bgColor.darker()); }
+                public void mouseExited(MouseEvent e) { button.setBackground(bgColor); }
+            });
+        }
+
+
+        private void showAddAddressDialog() {
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Add New Address", true);
+            dialog.setLayout(new BorderLayout());
+            dialog.setBackground(Color.WHITE);
+            dialog.setSize(500, 600);
+            dialog.setLocationRelativeTo(this);
+
+            JPanel formPanel = new JPanel(new GridBagLayout());
+            formPanel.setBackground(Color.WHITE);
+            formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(8, 5, 8, 5);
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 1.0;
+
+            JTextField txtLabel = new JTextField();
+            JTextArea txtFullAddress = new JTextArea(3, 20);
+            txtFullAddress.setLineWrap(true);
+            txtFullAddress.setWrapStyleWord(true);
+            JScrollPane spAddress = new JScrollPane(txtFullAddress);
+            spAddress.setBorder(new LineBorder(lightGrayColor, 1));
+
+            JComboBox<String> cmbProvince = new JComboBox<>(getProvinces());
+            JComboBox<String> cmbCity = new JComboBox<>();
+            JComboBox<String> cmbPostalCode = new JComboBox<>();
+            JComboBox<String> cmbCountry = new JComboBox<>(getCountries());
+
+            cmbProvince.addActionListener(e -> {
+                String selectedProvince = (String) cmbProvince.getSelectedItem();
+                if (selectedProvince != null && !selectedProvince.isEmpty()) {
+                    populateCities(cmbCity, selectedProvince);
+                } else {
+                    cmbCity.removeAllItems();
+                }
+                cmbPostalCode.removeAllItems(); // Clear postal codes when province changes
+            });
+
+            cmbCity.addActionListener(e -> {
+                String selectedCity = (String) cmbCity.getSelectedItem();
+                if (selectedCity != null && !selectedCity.isEmpty()) {
+                    populatePostalCodes(cmbPostalCode, (String) cmbProvince.getSelectedItem(), selectedCity);
+                } else {
+                    cmbPostalCode.removeAllItems();
+                }
+            });
+
+            // Initial population
+            if (getProvinces().length > 0) {
+                cmbProvince.setSelectedIndex(0); // Select first province to trigger city loading
+            }
+
+
+            int row = 0;
+            gbc.gridx = 0; gbc.gridy = row++;
+            formPanel.add(new JLabel("Address Label (e.g., Home, Office):"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(txtLabel, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Full Address:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(spAddress, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Province:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbProvince, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("City/Kabupaten:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbCity, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Postal Code:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbPostalCode, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Country:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbCountry, gbc);
+            
+            // Set up placeholders for text fields in dialog
+            setupPlaceholder(txtLabel, "e.g., Home, Office");
+            setupPlaceholder(txtFullAddress, "Street, Building, etc.");
+
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setBackground(Color.WHITE);
+            JButton saveButton = new JButton("Save Address");
+            styleMiniButton(saveButton, primaryColor);
+            saveButton.addActionListener(e -> {
+                String label = getTextFieldValue(txtLabel);
+                String fullAddress = getTextAreaValue(txtFullAddress);
+                String province = (String) cmbProvince.getSelectedItem();
+                String city = (String) cmbCity.getSelectedItem();
+                String postalCode = (String) cmbPostalCode.getSelectedItem();
+                String country = (String) cmbCountry.getSelectedItem();
+
+                if (label.isEmpty() || fullAddress.isEmpty() || province == null || province.isEmpty() ||
+                    city == null || city.isEmpty() || postalCode == null || postalCode.isEmpty() ||
+                    country == null || country.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "All fields must be filled.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                Address newAddress = new Address(
+                    -1, user.getId(), label, fullAddress, city, province, postalCode, country
+                );
+                addAddressToDatabase(newAddress);
+                dialog.dispose();
+                loadAddresses();
+            });
+            JButton cancelButton = new JButton("Cancel");
+            styleMiniButton(cancelButton, darkGrayColor);
+            cancelButton.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(saveButton);
+            buttonPanel.add(cancelButton);
+
+            dialog.add(new JScrollPane(formPanel), BorderLayout.CENTER);
+            dialog.add(buttonPanel, BorderLayout.SOUTH);
+            dialog.setVisible(true);
+        }
+
+        private void showEditAddressDialog(Address address) {
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Edit Address", true);
+            dialog.setLayout(new BorderLayout());
+            dialog.setBackground(Color.WHITE);
+            dialog.setSize(500, 600);
+            dialog.setLocationRelativeTo(this);
+
+            JPanel formPanel = new JPanel(new GridBagLayout());
+            formPanel.setBackground(Color.WHITE);
+            formPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.insets = new Insets(8, 5, 8, 5);
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 1.0;
+
+            JTextField txtLabel = new JTextField(address.getLabel());
+            JTextArea txtFullAddress = new JTextArea(address.getFullAddress(), 3, 20);
+            txtFullAddress.setLineWrap(true);
+            txtFullAddress.setWrapStyleWord(true);
+            JScrollPane spAddress = new JScrollPane(txtFullAddress);
+            spAddress.setBorder(new LineBorder(lightGrayColor, 1));
+
+            JComboBox<String> cmbProvince = new JComboBox<>(getProvinces());
+            JComboBox<String> cmbCity = new JComboBox<>();
+            JComboBox<String> cmbPostalCode = new JComboBox<>();
+            JComboBox<String> cmbCountry = new JComboBox<>(getCountries());
+
+            // Set initial values for dropdowns
+            cmbProvince.setSelectedItem(address.getProvince());
+            populateCities(cmbCity, address.getProvince());
+            cmbCity.setSelectedItem(address.getCity());
+            populatePostalCodes(cmbPostalCode, address.getProvince(), address.getCity());
+            cmbPostalCode.setSelectedItem(address.getPostalCode());
+            cmbCountry.setSelectedItem(address.getCountry());
+
+
+            cmbProvince.addActionListener(e -> {
+                String selectedProvince = (String) cmbProvince.getSelectedItem();
+                if (selectedProvince != null && !selectedProvince.isEmpty()) {
+                    populateCities(cmbCity, selectedProvince);
+                } else {
+                    cmbCity.removeAllItems();
+                }
+                cmbPostalCode.removeAllItems();
+            });
+
+            cmbCity.addActionListener(e -> {
+                String selectedCity = (String) cmbCity.getSelectedItem();
+                if (selectedCity != null && !selectedCity.isEmpty()) {
+                    populatePostalCodes(cmbPostalCode, (String) cmbProvince.getSelectedItem(), selectedCity);
+                } else {
+                    cmbPostalCode.removeAllItems();
+                }
+            });
+
+            int row = 0;
+            gbc.gridx = 0; gbc.gridy = row++;
+            formPanel.add(new JLabel("Address Label (e.g., Home, Office):"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(txtLabel, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Full Address:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(spAddress, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Province:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbProvince, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("City/Kabupaten:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbCity, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Postal Code:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbPostalCode, gbc);
+
+            gbc.gridy = row++;
+            formPanel.add(new JLabel("Country:"), gbc);
+            gbc.gridy = row++;
+            formPanel.add(cmbCountry, gbc);
+
+            // Set up placeholders (even for existing values, if they are empty)
+            setupPlaceholder(txtLabel, "e.g., Home, Office");
+            setupPlaceholder(txtFullAddress, "Street, Building, etc.");
+
+
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            buttonPanel.setBackground(Color.WHITE);
+            JButton saveButton = new JButton("Save Changes");
+            styleMiniButton(saveButton, primaryColor);
+            saveButton.addActionListener(e -> {
+                String label = getTextFieldValue(txtLabel);
+                String fullAddress = getTextAreaValue(txtFullAddress);
+                String province = (String) cmbProvince.getSelectedItem();
+                String city = (String) cmbCity.getSelectedItem();
+                String postalCode = (String) cmbPostalCode.getSelectedItem();
+                String country = (String) cmbCountry.getSelectedItem();
+
+                if (label.isEmpty() || fullAddress.isEmpty() || province == null || province.isEmpty() ||
+                    city == null || city.isEmpty() || postalCode == null || postalCode.isEmpty() ||
+                    country == null || country.isEmpty()) {
+                    JOptionPane.showMessageDialog(dialog, "All fields must be filled.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                address.setLabel(label);
+                address.setFullAddress(fullAddress);
+                address.setCity(city);
+                address.setProvince(province);
+                address.setPostalCode(postalCode);
+                address.setCountry(country);
+
+                updateAddressInDatabase(address);
+                dialog.dispose();
+                loadAddresses();
+            });
+            JButton cancelButton = new JButton("Cancel");
+            styleMiniButton(cancelButton, darkGrayColor);
+            cancelButton.addActionListener(e -> dialog.dispose());
+            buttonPanel.add(saveButton);
+            buttonPanel.add(cancelButton);
+
+            dialog.add(new JScrollPane(formPanel), BorderLayout.CENTER);
+            dialog.add(buttonPanel, BorderLayout.SOUTH);
+            dialog.setVisible(true);
+        }
+
+        // Helper method to retrieve text from JTextField, handling placeholder
+        private String getTextFieldValue(JTextField textField) {
+            return (Boolean.TRUE.equals(textField.getClientProperty("showingPlaceholder"))) ? "" : textField.getText().trim();
+        }
+
+        // Helper method to retrieve text from JTextArea, handling placeholder
+        private String getTextAreaValue(JTextArea textArea) {
+            return (Boolean.TRUE.equals(textArea.getClientProperty("showingPlaceholder"))) ? "" : textArea.getText().trim();
+        }
+
+        // --- Placeholder Logic (replicated for AddressPanel dialogs) ---
+        private void setupPlaceholder(JTextComponent component, String placeholder) {
+            component.putClientProperty("placeholder", placeholder);
+            component.putClientProperty("originalForeground", component.getForeground());
+
+            // Initial setup: if empty, show placeholder
+            if (component instanceof JTextField) {
+                if (((JTextField)component).getText().isEmpty()) {
+                    component.setText(placeholder);
+                    component.setForeground(darkGrayColor);
+                    component.putClientProperty("showingPlaceholder", true);
+                } else {
+                    component.putClientProperty("showingPlaceholder", false);
+                    component.setForeground((Color) component.getClientProperty("originalForeground"));
+                }
+            } else if (component instanceof JTextArea) {
+                if (((JTextArea)component).getText().isEmpty()) {
+                    component.setText(placeholder);
+                    component.setForeground(darkGrayColor);
+                    component.putClientProperty("showingPlaceholder", true);
+                } else {
+                    component.putClientProperty("showingPlaceholder", false);
+                    component.setForeground((Color) component.getClientProperty("originalForeground"));
+                }
+            }
+
+
+            component.addFocusListener(new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    if (Boolean.TRUE.equals(component.getClientProperty("showingPlaceholder"))) {
+                        component.setText("");
+                        component.setForeground((Color) component.getClientProperty("originalForeground"));
+                        component.putClientProperty("showingPlaceholder", false);
+                    }
+                }
+
+                @Override
+                public void focusLost(FocusEvent e) {
+                    if (component.getText().isEmpty()) {
+                        component.setText(placeholder);
+                        component.setForeground(darkGrayColor);
+                        component.putClientProperty("showingPlaceholder", true);
+                    }
+                }
+            });
+        }
+
+
+        // --- Database Operations for Address ---
+
+        // Metode ini akan diubah untuk menyediakan lebih banyak data provinsi
+        private String[] getProvinces() {
+            return new String[]{
+                "", // Pilihan default kosong
+                "Aceh",
+                "Bali",
+                "Banten",
+                "Bengkulu",
+                "Daerah Istimewa Yogyakarta",
+                "DKI Jakarta",
+                "Gorontalo",
+                "Jambi",
+                "Jawa Barat",
+                "Jawa Tengah",
+                "Jawa Timur",
+                "Kalimantan Barat",
+                "Kalimantan Selatan",
+                "Kalimantan Tengah",
+                "Kalimantan Timur",
+                "Kalimantan Utara",
+                "Kepulauan Bangka Belitung",
+                "Kepulauan Riau",
+                "Lampung",
+                "Maluku",
+                "Maluku Utara",
+                "Nusa Tenggara Barat",
+                "Nusa Tenggara Timur",
+                "Papua",
+                "Papua Barat",
+                "Riau",
+                "Sulawesi Barat",
+                "Sulawesi Selatan",
+                "Sulawesi Tengah",
+                "Sulawesi Tenggara",
+                "Sulawesi Utara",
+                "Sumatera Barat",
+                "Sumatera Selatan",
+                "Sumatera Utara"
+            };
+        }
+
+        // Metode ini akan diubah untuk menyediakan lebih banyak data kota/kabupaten
+        private String[] getCities(String province) {
+            switch (province) {
+                case "Aceh":
+                    return new String[]{"", "Banda Aceh", "Sabang", "Lhokseumawe", "Langsa", "Meulaboh", "Takengon", "Sigli"};
+                case "Bali":
+                    return new String[]{"", "Denpasar", "Badung", "Gianyar", "Buleleng", "Karangasem", "Jembrana", "Tabanan", "Klungkung", "Bangli"};
+                case "Banten":
+                    return new String[]{"", "Serang", "Tangerang", "Cilegon", "South Tangerang", "Pandeglang", "Lebak"};
+                case "Bengkulu":
+                    return new String[]{"", "Bengkulu City", "Rejang Lebong", "North Bengkulu", "South Bengkulu", "Seluma", "Mukomuko"};
+                case "Daerah Istimewa Yogyakarta":
+                    return new String[]{"", "Yogyakarta", "Sleman", "Bantul", "Kulon Progo", "Gunung Kidul"};
+                case "DKI Jakarta":
+                    return new String[]{"", "Jakarta Pusat", "Jakarta Barat", "Jakarta Timur", "Jakarta Utara", "Jakarta Selatan", "Kepulauan Seribu"};
+                case "Gorontalo":
+                    return new String[]{"", "Gorontalo City", "Boalemo", "Bone Bolango", "Gorontalo (Kabupaten)", "Pohuwato"};
+                case "Jambi":
+                    return new String[]{"", "Jambi City", "Batang Hari", "Muaro Jambi", "Sarolangun", "Tanjung Jabung Barat", "Tebo"};
+                case "Jawa Barat":
+                    return new String[]{"", "Bandung", "Bekasi", "Bogor", "Depok", "Tasikmalaya", "Cirebon", "Sukabumi", "Garut", "Karawang", "Purwakarta", "Majalengka", "Sumedang", "Indramayu", "Subang", "Cianjur", "Ciamis", "Kuningan"};
+                case "Jawa Tengah":
+                    return new String[]{"", "Semarang", "Surakarta", "Magelang", "Pekalongan", "Salatiga", "Tegal", "Cilacap", "Purwokerto", "Kudus", "Demak", "Jepara", "Pati", "Rembang", "Blora", "Grobogan", "Klaten", "Boyolali", "Sragen", "Wonogiri", "Kebumen", "Purworejo", "Wonosobo", "Banjarnegara", "Banyumas", "Brebes", "Pemalang", "Batang", "Kendal", "Temanggung"};
+                case "Jawa Timur":
+                    return new String[]{"", "Surabaya", "Malang", "Kediri", "Madiun", "Pasuruan", "Mojokerto", "Banyuwangi", "Jember", "Blitar", "Bondowoso", "Gresik", "Lamongan", "Lumajang", "Nganjuk", "Ngawi", "Pacitan", "Pamekasan", "Probolinggo", "Sidoarjo", "Situbondo", "Sumenep", "Trenggalek", "Tuban", "Tulungagung"};
+                case "Kalimantan Barat":
+                    return new String[]{"", "Pontianak", "Singkawang", "Sanggau", "Ketapang", "Sambas", "Mempawah", "Sintang"};
+                case "Kalimantan Selatan":
+                    return new String[]{"", "Banjarmasin", "Banjarbaru", "Tanah Laut", "Kotabaru", "Barito Kuala", "Tabalong", "Hulu Sungai Selatan"};
+                case "Kalimantan Tengah":
+                    return new String[]{"", "Palangka Raya", "Kotawaringin Barat", "Kotawaringin Timur", "Kapuas", "Barito Selatan", "Seruyan"};
+                case "Kalimantan Timur":
+                    return new String[]{"", "Samarinda", "Balikpapan", "Bontang", "Kutai Kartanegara", "Berau", "Paser", "Penajam Paser Utara"};
+                case "Kalimantan Utara":
+                    return new String[]{"", "Tanjung Selor", "Tarakan", "Nunukan", "Malinau", "Tana Tidung"};
+                case "Kepulauan Bangka Belitung":
+                    return new String[]{"", "Pangkal Pinang", "Bangka", "Belitung", "Bangka Tengah", "Bangka Selatan"};
+                case "Kepulauan Riau":
+                    return new String[]{"", "Tanjung Pinang", "Batam", "Bintan", "Karimun", "Natuna"};
+                case "Lampung":
+                    return new String[]{"", "Bandar Lampung", "Metro", "Lampung Selatan", "Lampung Tengah", "Lampung Utara", "Pringsewu"};
+                case "Maluku":
+                    return new String[]{"", "Ambon", "Tual", "Central Maluku", "Buru", "Seram Bagian Barat"};
+                case "Maluku Utara":
+                    return new String[]{"", "Ternate", "Tidore Islands", "Halmahera Barat", "Halmahera Utara", "Morotai"};
+                case "Nusa Tenggara Barat":
+                    return new String[]{"", "Mataram", "Bima", "Lombok Barat", "Lombok Tengah", "Sumbawa"};
+                case "Nusa Tenggara Timur":
+                    return new String[]{"", "Kupang", "Flores Timur", "Sumba Barat Daya", "Timor Tengah Selatan", "Belu"};
+                case "Papua":
+                    return new String[]{"", "Jayapura", "Merauke", "Biak Numfor", "Timika", "Manokwari (Papua)"}; // Manokwari could be here or Papua Barat depending on specific splits
+                case "Papua Barat":
+                    return new String[]{"", "Manokwari", "Sorong", "Fakfak", "Kaimana", "Raja Ampat"};
+                case "Riau":
+                    return new String[]{"", "Pekanbaru", "Dumai", "Kampar", "Indragiri Hilir", "Siak", "Pelalawan"};
+                case "Sulawesi Barat":
+                    return new String[]{"", "Mamuju", "Majene", "Polewali Mandar", "Mamasa", "Pasangkayu"};
+                case "Sulawesi Selatan":
+                    return new String[]{"", "Makassar", "Parepare", "Palopo", "Gowa", "Bone", "Bulukumba", "Maros", "Pangkep"};
+                case "Sulawesi Tengah":
+                    return new String[]{"", "Palu", "Donggala", "Poso", "Morowali", "Sigi"};
+                case "Sulawesi Tenggara":
+                    return new String[]{"", "Kendari", "Bau-Bau", "Muna", "Kolaka", "Konawe"};
+                case "Sulawesi Utara":
+                    return new String[]{"", "Manado", "Bitung", "Tomohon", "Minahasa", "Kotamobagu", "Bolaang Mongondow"};
+                case "Sumatera Barat":
+                    return new String[]{"", "Padang", "Bukittinggi", "Payakumbuh", "Agam", "Lima Puluh Kota", "Pasaman", "Pesisir Selatan"};
+                case "Sumatera Selatan":
+                    return new String[]{"", "Palembang", "Pagar Alam", "Muara Enim", "Lubuklinggau", "Banyuasin", "Ogan Komering Ilir"};
+                case "Sumatera Utara":
+                    return new String[]{"", "Medan", "Pematangsiantar", "Tebing Tinggi", "Deli Serdang", "Langkat", "Simalungun", "Asahan", "Karo"};
+                default:
+                    return new String[]{""};
+            }
+        }
+
+        // Metode ini akan diubah untuk menyediakan lebih banyak data kode pos
+        private String[] getPostalCodes(String province, String city) {
+            // Ini adalah contoh yang diperluas. Data nyata akan sangat panjang.
+            // Sebisa mungkin, kelompokkan berdasarkan kota terlebih dahulu.
+            // Contoh struktur:
+            // if (province.equals("Jawa Barat")) {
+            //    if (city.equals("Bandung")) { return new String[]{"", "40111", "40121", ...}; }
+            //    if (city.equals("Bekasi")) { return new String[]{"", "17111", "17121", ...}; }
+            // }
+
+            // Jawa Barat
+            if ("Jawa Barat".equals(province)) {
+                if ("Bandung".equals(city)) return new String[]{"", "40111", "40121", "40131", "40132", "40141", "40151", "40161", "40171", "40172", "40175", "40211", "40212", "40221", "40222", "40231", "40241", "40251", "40252", "40261", "40271", "40272", "40285", "40286"};
+                if ("Bekasi".equals(city)) return new String[]{"", "17111", "17112", "17113", "17114", "17115", "17116", "17117", "17118", "17119", "17121", "17122", "17123", "17124", "17125", "17126", "17127", "17128", "17129", "17131", "17132", "17133", "17134", "17135", "17136", "17137", "17138", "17139", "17411", "17412", "17413", "17414", "17415", "17416", "17417", "17418", "17419", "17510", "17520", "17530"};
+                if ("Bogor".equals(city)) return new String[]{"", "16110", "16111", "16120", "16130", "16140", "16150", "16160", "16310", "16320", "16330", "16340", "16350", "16360", "16370", "16380", "16390"};
+                if ("Depok".equals(city)) return new String[]{"", "16411", "16412", "16413", "16414", "16415", "16416", "16417", "16418", "16419", "16421", "16422", "16423", "16424", "16425", "16426", "16427", "16428", "16429", "16431", "16432", "16433", "16434", "16435", "16436", "16437", "16438", "16439"};
+                if ("Cirebon".equals(city)) return new String[]{"", "45111", "45112", "45113", "45114", "45115", "45121", "45122", "45123", "45124", "45125"};
+                if ("Tasikmalaya".equals(city)) return new String[]{"", "46111", "46112", "46113", "46114", "46115", "46121", "46122", "46123"};
+                if ("Sukabumi".equals(city)) return new String[]{"", "43111", "43112", "43113", "43114", "43115", "43121", "43122", "43123"};
+                if ("Garut".equals(city)) return new String[]{"", "44111", "44112", "44113", "44114", "44115", "44121", "44122"};
+                if ("Karawang".equals(city)) return new String[]{"", "41311", "41312", "41313", "41314", "41315"};
+                if ("Purwakarta".equals(city)) return new String[]{"", "41111", "41112", "41113", "41114"};
+                if ("Majalengka".equals(city)) return new String[]{"", "45411", "45412"};
+                if ("Sumedang".equals(city)) return new String[]{"", "45311", "45312"};
+                if ("Indramayu".equals(city)) return new String[]{"", "45211", "45212"};
+                if ("Subang".equals(city)) return new String[]{"", "41211", "41212"};
+                if ("Cianjur".equals(city)) return new String[]{"", "43211", "43212"};
+                if ("Ciamis".equals(city)) return new String[]{"", "46211", "46212"};
+                if ("Kuningan".equals(city)) return new String[]{"", "45511", "45512"};
+
+            // DKI Jakarta
+            } else if ("DKI Jakarta".equals(province)) {
+                if ("Jakarta Pusat".equals(city)) return new String[]{"", "10110", "10120", "10130", "10140", "10150", "10160", "10170", "10310", "10320", "10330", "10340", "10350", "10410", "10420", "10430", "10440", "10450", "10460", "10470", "10510", "10520", "10530", "10540", "10550", "10560", "10570", "10610", "10620", "10630", "10640", "10650", "10660", "10670", "10680", "10710", "10720", "10730", "10740", "10750"};
+                if ("Jakarta Barat".equals(city)) return new String[]{"", "11110", "11120", "11130", "11140", "11150", "11160", "11170", "11180", "11210", "11220", "11230", "11240", "11250", "11260", "11270", "11280", "11310", "11320", "11330", "11340", "11350", "11410", "11420", "11430", "11440", "11450", "11460", "11470", "11480", "11510", "11520", "11530", "11540", "11550", "11560", "11570", "11580", "11610", "11620", "11630", "11640", "11650", "11710", "11720", "11730", "11740", "11750"};
+                if ("Jakarta Timur".equals(city)) return new String[]{"", "13110", "13120", "13130", "13140", "13150", "13210", "13220", "13230", "13240", "13250", "13310", "13320", "13330", "13340", "13410", "13420", "13430", "13440", "13510", "13520", "13530", "13540", "13550", "13610", "13620", "13630", "13640", "13650", "13710", "13720", "13730", "13740", "13750", "13760", "13770", "13810", "13820", "13830", "13840", "13850", "13860", "13870", "13910", "13920", "13930", "13940", "13950", "13960", "13970"};
+                if ("Jakarta Utara".equals(city)) return new String[]{"", "14110", "14120", "14130", "14140", "14150", "14210", "14220", "14230", "14240", "14250", "14260", "14270", "14310", "14320", "14330", "14340", "14350", "14410", "14420", "14430", "14440", "14450", "14460", "14470", "14510", "14520"};
+                if ("Jakarta Selatan".equals(city)) return new String[]{"", "12110", "12120", "12130", "12140", "12150", "12160", "12170", "12180", "12190", "12210", "12220", "12230", "12240", "12250", "12260", "12270", "12280", "12290", "12310", "12320", "12330", "12340", "12350", "12410", "12420", "12430", "12440", "12450", "12510", "12520", "12530", "12540", "12550", "12560", "12610", "12620", "12630", "12640", "12650", "12710", "12720", "12730", "12740", "12750", "12760", "12770", "12780", "12790", "12810", "12820", "12830", "12840", "12850", "12860", "12870", "12910", "12920", "12930", "12940", "12950", "12960", "12970", "12980"};
+
+            // Jawa Tengah
+            } else if ("Jawa Tengah".equals(province)) {
+                if ("Semarang".equals(city)) return new String[]{"", "50111", "50112", "50113", "50114", "50115", "50116", "50121", "50122", "50123", "50124", "50125", "50126", "50131", "50132", "50133", "50134", "50135", "50136", "50137", "50138", "50139", "50141", "50142", "50143", "50144", "50145", "50146", "50147", "50148", "50149", "50211", "50212", "50213", "50214", "50215", "50216", "50217", "50218", "50219", "50221", "50222", "50223", "50224", "50225", "50226", "50227", "50228", "50229", "50231", "50232", "50233", "50234", "50235", "50236", "50237", "50238", "50239", "50241", "50242", "50243", "50244", "50245", "50246", "50247", "50248", "50249", "50519"};
+                if ("Surakarta".equals(city)) return new String[]{"", "57111", "57112", "57113", "57114", "57115", "57116", "57117", "57118", "57119", "57121", "57122", "57123", "57124", "57125", "57126", "57127", "57128", "57129", "57131", "57132", "57133", "57134", "57135", "57136", "57137", "57138", "57139", "57141", "57142", "57143", "57144", "57145", "57146", "57147", "57148", "57149", "57151", "57152", "57153", "57154", "57155", "57156", "57157", "57158", "57159"};
+                if ("Magelang".equals(city)) return new String[]{"", "56110", "56111", "56112", "56113", "56114", "56115", "56116", "56117", "56118", "56119", "56121", "56122", "56123"};
+                // ... dan seterusnya untuk kota-kota lain di Jawa Tengah
+            
+
+            // Jawa Timur
+            } else if ("Jawa Timur".equals(province)) {
+                if ("Surabaya".equals(city)) return new String[]{"", "60111", "60112", "60113", "60114", "60115", "60116", "60117", "60118", "60119", "60121", "60122", "60123", "60124", "60125", "60126", "60127", "60128", "60129", "60131", "60132", "60133", "60134", "60135", "60136", "60137", "60138", "60139", "60141", "60142", "60143", "60144", "60145", "60146", "60147", "60148", "60149", "60151", "60152", "60153", "60154", "60155", "60156", "60157", "60158", "60159", "60161", "60162", "60163", "60164", "60165", "60166", "60167", "60168", "60169", "60171", "60172", "60173", "60174", "60175", "60176", "60177", "60178", "60179", "60181", "60182", "60183", "60184", "60185", "60186", "60187", "60188", "60189", "60191", "60192", "60193", "60194", "60195", "60196", "60197", "60198", "60199", "60211", "60212", "60213", "60214", "60215", "60216", "60217", "60218", "60219", "60221", "60222", "60223", "60224", "60225", "60226", "60227", "60228", "60229", "60231", "60232", "60233", "60234", "60235", "60236", "60237", "60238", "60239", "60241", "60242", "60243", "60244", "60245", "60246", "60247", "60248", "60249", "60251", "60252", "60253", "60254", "60255", "60256", "60257", "60258", "60259", "60261", "60262", "60263", "60264", "60265", "60266", "60267", "60268", "60269", "60271", "60272", "60273", "60274", "60275", "60276", "60277", "60278", "60279", "60281", "60282", "60283", "60284", "60285", "60286", "60287", "60288", "60289", "60291", "60292", "60293", "60294", "60295", "60296", "60297", "60298", "60299"};
+                if ("Malang".equals(city)) return new String[]{"", "65111", "65112", "65113", "65114", "65115", "65116", "65117", "65118", "65119", "65121", "65122", "65123", "65124", "65125", "65131", "65132", "65133", "65134", "65135", "65136", "65137", "65138", "65139", "65141", "65142", "65143", "65144", "65145", "65146", "65147", "65148", "65149", "65151", "65152", "65153", "65154", "65155", "65156", "65157", "65158", "65159"};
+                // ... dan seterusnya untuk kota-kota lain di Jawa Timur
+            
+
+            // Bali
+            } else if ("Bali".equals(province)) {
+                if ("Denpasar".equals(city)) return new String[]{"", "80111", "80113", "80114", "80115", "80116", "80117", "80118", "80119", "80211", "80221", "80223", "80224", "80225", "80226", "80227", "80228", "80231", "80232", "80233", "80234", "80235", "80236", "80237", "80238", "80239", "80361"};
+                if ("Badung".equals(city)) return new String[]{"", "80351", "80352", "80353", "80361", "80362"};
+                // ...
+            }
+            return new String[]{""};
+           }
+        
+
+        private String[] getCountries() {
+            return new String[]{"", "Indonesia", "Malaysia", "Singapore", "Thailand"};
+        }
+        
+        private void populateCities(JComboBox<String> cmbCity, String selectedProvince) {
+            cmbCity.removeAllItems();
+            for (String city : getCities(selectedProvince)) {
+                cmbCity.addItem(city);
+            }
+        }
+
+        private void populatePostalCodes(JComboBox<String> cmbPostalCode, String selectedProvince, String selectedCity) {
+            cmbPostalCode.removeAllItems();
+            for (String postalCode : getPostalCodes(selectedProvince, selectedCity)) {
+                cmbPostalCode.addItem(postalCode);
+            }
+        }
+
+
+        private List<Address> getAddressesFromDatabase(int userId) {
+            List<Address> addresses = new ArrayList<>();
+            Connection conn = null;
+            PreparedStatement stmt = null;
+            ResultSet rs = null;
+            try {
+                conn = DatabaseConnection.getConnection();
+                String query = "SELECT id, user_id, label, full_address, city, province, postal_code, country FROM addresses WHERE user_id = ?";
+                stmt = conn.prepareStatement(query);
+                stmt.setInt(1, userId);
+                rs = stmt.executeQuery();
+                while (rs.next()) {
+                    addresses.add(new Address(
+                        rs.getInt("id"),
+                        rs.getInt("user_id"),
+                        rs.getString("label"),
+                        rs.getString("full_address"),
+                        rs.getString("city"),
+                        rs.getString("province"),
+                        rs.getString("postal_code"),
+                        rs.getString("country")
+                    ));
+                }
+            } catch (SQLException e) {
+                System.err.println("Error loading addresses: " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                DatabaseConnection.closeConnection(conn, stmt, rs);
+            }
+            return addresses;
+        }
+
+        private void addAddressToDatabase(Address address) {
+            Connection conn = null;
+            PreparedStatement stmt = null;
+            try {
+                conn = DatabaseConnection.getConnection();
+                String query = "INSERT INTO addresses (user_id, label, full_address, city, province, postal_code, country) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
+                stmt.setInt(1, address.getUserId());
+                stmt.setString(2, address.getLabel());
+                stmt.setString(3, address.getFullAddress());
+                stmt.setString(4, address.getCity());
+                stmt.setString(5, address.getProvince());
+                stmt.setString(6, address.getPostalCode());
+                stmt.setString(7, address.getCountry());
+                int affectedRows = stmt.executeUpdate();
+
+                if (affectedRows > 0) {
+                    try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            address.setId(generatedKeys.getInt(1)); // Set the ID for the new address object
+                        }
+                    }
+                    JOptionPane.showMessageDialog(this, "Address added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to add address.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                System.err.println("Error adding address: " + e.getMessage());
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Database error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                DatabaseConnection.closeConnection(conn, stmt, null);
+            }
+        }
+
+        private void updateAddressInDatabase(Address address) {
+            Connection conn = null;
+            PreparedStatement stmt = null;
+            try {
+                conn = DatabaseConnection.getConnection();
+                String query = "UPDATE addresses SET label = ?, full_address = ?, city = ?, province = ?, postal_code = ?, country = ? WHERE id = ? AND user_id = ?";
+                stmt = conn.prepareStatement(query);
+                stmt.setString(1, address.getLabel());
+                stmt.setString(2, address.getFullAddress());
+                stmt.setString(3, address.getCity());
+                stmt.setString(4, address.getProvince());
+                stmt.setString(5, address.getPostalCode());
+                stmt.setString(6, address.getCountry());
+                stmt.setInt(7, address.getId());
+                stmt.setInt(8, address.getUserId());
+                int affectedRows = stmt.executeUpdate();
+
+                if (affectedRows > 0) {
+                    JOptionPane.showMessageDialog(this, "Address updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to update address. Address not found or no changes.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException e) {
+                System.err.println("Error updating address: " + e.getMessage());
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Database error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            } finally {
+                DatabaseConnection.closeConnection(conn, stmt, null);
+            }
+        }
+
+        private void deleteAddress(int addressId) {
+            int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this address?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                Connection conn = null;
+                PreparedStatement stmt = null;
+                try {
+                    conn = DatabaseConnection.getConnection();
+                    String query = "DELETE FROM addresses WHERE id = ? AND user_id = ?";
+                    stmt = conn.prepareStatement(query);
+                    stmt.setInt(1, addressId);
+                    stmt.setInt(2, user.getId());
+                    int affectedRows = stmt.executeUpdate();
+
+                    if (affectedRows > 0) {
+                        JOptionPane.showMessageDialog(this, "Address deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        loadAddresses(); // Reload the list after deletion
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to delete address. Address not found.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Error deleting address: " + e.getMessage());
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(this, "Database error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                } finally {
+                    DatabaseConnection.closeConnection(conn, stmt, null);
+                }
+            }
+        }
+    }
+
+    // NEW: Address Model Class
+    public static class Address {
+        private int id;
+        private int userId;
+        private String label;
+        private String fullAddress;
+        private String city;
+        private String province;
+        private String postalCode;
+        private String country;
+
+        public Address(int id, int userId, String label, String fullAddress, String city, String province, String postalCode, String country) {
+            this.id = id;
+            this.userId = userId;
+            this.label = label;
+            this.fullAddress = fullAddress;
+            this.city = city;
+            this.province = province;
+            this.postalCode = postalCode;
+            this.country = country;
+        }
+
+        // Getters
+        public int getId() { return id; }
+        public int getUserId() { return userId; }
+        public String getLabel() { return label; }
+        public String getFullAddress() { return fullAddress; }
+        public String getCity() { return city; }
+        public String getProvince() { return province; }
+        public String getPostalCode() { return postalCode; }
+        public String getCountry() { return country; }
+
+        // Setters (for updating)
+        public void setId(int id) { this.id = id; }
+        public void setLabel(String label) { this.label = label; }
+        public void setFullAddress(String fullAddress) { this.fullAddress = fullAddress; }
+        public void setCity(String city) { this.city = city; }
+        public void setProvince(String province) { this.province = province; }
+        public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
+        public void setCountry(String country) { this.country = country; }
     }
 }
