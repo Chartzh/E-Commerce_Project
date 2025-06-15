@@ -1,4 +1,6 @@
-package e.commerce; // Sesuaikan dengan package Anda
+// Di SuccessUI.java
+
+package e.commerce;
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,24 +10,32 @@ import javax.swing.border.LineBorder;
 import javax.swing.border.CompoundBorder;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Random; // Untuk menghasilkan nomor pesanan dummy
+import java.util.Random;
+import java.sql.SQLException;
+import e.commerce.ProductRepository.Order;
+import java.util.List;
 
 public class SuccessUI extends JPanel {
 
     private ViewController viewController;
     private User currentUser;
+    private int orderId; // Untuk menyimpan ID pesanan yang sebenarnya
+    private JLabel orderNumberLabel; // Referensi ke label untuk diperbarui
 
-    // Constants for theme colors
+    // Konstanta untuk warna tema
     private static final Color ORANGE_THEME = new Color(255, 69, 0);
     private static final Color LIGHT_GRAY_BACKGROUND = new Color(245, 245, 245);
     private static final Color BORDER_COLOR = new Color(230, 230, 230);
     private static final Color DARK_TEXT_COLOR = new Color(50, 50, 50);
     private static final Color GRAY_TEXT_COLOR = new Color(120, 120, 120);
-    private static final Color SUCCESS_YELLOW = new Color(255, 193, 7); // Yellow background for checkmark
-    private static final Color SUCCESS_GREEN = new Color(76, 175, 80); // Hijau untuk sukses
+    private static final Color SUCCESS_YELLOW = new Color(255, 193, 7);
+    private static final Color SUCCESS_GREEN = new Color(76, 175, 80);
 
-    public SuccessUI(ViewController viewController) {
+    // Konstruktor yang dimodifikasi untuk menerima orderId
+    public SuccessUI(ViewController viewController, int orderId) {
         this.viewController = viewController;
+        this.orderId = orderId; // Simpan ID pesanan yang diterima
+
         setLayout(new BorderLayout());
         setBackground(LIGHT_GRAY_BACKGROUND);
 
@@ -36,6 +46,7 @@ public class SuccessUI extends JPanel {
         }
 
         createComponents();
+        loadAndDisplayOrderDetails(); // Muat dan tampilkan detail berdasarkan orderId
     }
 
     private void createComponents() {
@@ -67,7 +78,7 @@ public class SuccessUI extends JPanel {
 
         JPanel leftSection = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftSection.setBackground(Color.WHITE);
-        JButton backButton = new JButton("← Back");
+        JButton backButton = new JButton("← Kembali");
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(DARK_TEXT_COLOR);
         backButton.setBackground(Color.WHITE);
@@ -76,7 +87,7 @@ public class SuccessUI extends JPanel {
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showDashboardView(); // Kembali ke Dashboard atau halaman sebelumnya
+                viewController.showDashboardView();
             }
         });
         leftSection.add(backButton);
@@ -85,7 +96,7 @@ public class SuccessUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Sukses"};
         String[] icons = {"🛒", "🏠", "💳", "✅"};
 
         for (int i = 0; i < steps.length; i++) {
@@ -102,7 +113,7 @@ public class SuccessUI extends JPanel {
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Success")) { // Highlight current step
+            if (steps[i].equals("Sukses")) {
                 stepIcon.setForeground(ORANGE_THEME);
                 stepLabel.setForeground(ORANGE_THEME);
                 stepLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -135,32 +146,26 @@ public class SuccessUI extends JPanel {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
-        panel.setBorder(new EmptyBorder(50, 50, 50, 50)); // Padding internal card
-        
-        // Add subtle shadow effect
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(BORDER_COLOR, 1),
             new EmptyBorder(50, 50, 50, 50)
         ));
 
-        // Circular checkmark icon with yellow background
         JPanel checkmarkContainer = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                
-                // Draw yellow circle
+
                 g2d.setColor(SUCCESS_YELLOW);
                 g2d.fillOval(10, 10, 60, 60);
-                
-                // Draw checkmark
+
                 g2d.setColor(Color.WHITE);
                 g2d.setStroke(new BasicStroke(4, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2d.drawLine(25, 40, 35, 50);
                 g2d.drawLine(35, 50, 55, 30);
-                
+
                 g2d.dispose();
             }
         };
@@ -171,39 +176,35 @@ public class SuccessUI extends JPanel {
         panel.add(checkmarkContainer);
         panel.add(Box.createVerticalStrut(30));
 
-        // "Congratulations" text
-        JLabel congratsLabel = new JLabel("Congratulations");
+        JLabel congratsLabel = new JLabel("Selamat");
         congratsLabel.setFont(new Font("Arial", Font.BOLD, 28));
         congratsLabel.setForeground(DARK_TEXT_COLOR);
         congratsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(congratsLabel);
         panel.add(Box.createVerticalStrut(20));
 
-        // Subtitle message
-        JLabel messageLabel = new JLabel("Lorem ipsum is simply dummy text of the printing!");
+        JLabel messageLabel = new JLabel("Pesanan Anda telah berhasil ditempatkan!");
         messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         messageLabel.setForeground(GRAY_TEXT_COLOR);
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(messageLabel);
         panel.add(Box.createVerticalStrut(40));
 
-        // Order Number section
-        JLabel orderNumberTitle = new JLabel("Order Number");
+        JLabel orderNumberTitle = new JLabel("Nomor Pesanan");
         orderNumberTitle.setFont(new Font("Arial", Font.BOLD, 16));
         orderNumberTitle.setForeground(DARK_TEXT_COLOR);
         orderNumberTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(orderNumberTitle);
         panel.add(Box.createVerticalStrut(10));
 
-        JLabel orderNumberLabel = new JLabel(generateDummyOrderNumber());
+        orderNumberLabel = new JLabel("Memuat..."); // Inisialisasi dengan teks memuat
         orderNumberLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         orderNumberLabel.setForeground(ORANGE_THEME);
         orderNumberLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(orderNumberLabel);
         panel.add(Box.createVerticalStrut(15));
 
-        // View Order button
-        JButton viewOrderButton = new JButton("View Order");
+        JButton viewOrderButton = new JButton("Lihat Pesanan");
         viewOrderButton.setBackground(Color.WHITE);
         viewOrderButton.setForeground(ORANGE_THEME);
         viewOrderButton.setBorder(new LineBorder(ORANGE_THEME, 1));
@@ -212,18 +213,16 @@ public class SuccessUI extends JPanel {
         viewOrderButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         viewOrderButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         viewOrderButton.setPreferredSize(new Dimension(150, 40));
-        viewOrderButton.setMaximumSize(new Dimension(200, 40)); // Batasi lebar
+        viewOrderButton.setMaximumSize(new Dimension(200, 40));
         viewOrderButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Melihat detail pesanan...", "View Order", JOptionPane.INFORMATION_MESSAGE);
             if (viewController != null) {
-                viewController.showOrdersView(); // Contoh: pindah ke halaman pesanan
+                viewController.showOrdersView(); // Ini mungkin perlu disesuaikan untuk mengambil ID pesanan spesifik
             }
         });
         panel.add(viewOrderButton);
         panel.add(Box.createVerticalStrut(20));
 
-        // Continue Shopping button
-        JButton continueShoppingButton = new JButton("CONTINUE SHOPPING");
+        JButton continueShoppingButton = new JButton("LANJUTKAN BELANJA");
         continueShoppingButton.setBackground(ORANGE_THEME);
         continueShoppingButton.setForeground(Color.WHITE);
         continueShoppingButton.setBorderPainted(false);
@@ -232,10 +231,10 @@ public class SuccessUI extends JPanel {
         continueShoppingButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         continueShoppingButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         continueShoppingButton.setPreferredSize(new Dimension(200, 40));
-        continueShoppingButton.setMaximumSize(new Dimension(250, 40)); // Batasi lebar
+        continueShoppingButton.setMaximumSize(new Dimension(250, 40));
         continueShoppingButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showDashboardView(); // Kembali ke halaman utama/dashboard
+                viewController.showDashboardView();
             }
         });
         panel.add(continueShoppingButton);
@@ -243,45 +242,81 @@ public class SuccessUI extends JPanel {
         return panel;
     }
 
-    private String generateDummyOrderNumber() {
-        LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMdd");
-        String datePart = today.format(formatter);
+    // Metode baru untuk memuat dan menampilkan detail pesanan dari database
+    private void loadAndDisplayOrderDetails() {
+        if (orderId == -1) {
+            orderNumberLabel.setText("N/A (Pesanan Gagal)");
+            return;
+        }
 
-        Random random = new Random();
-        String randomPart1 = String.format("%05d", random.nextInt(100000)); // 5 digit random
-        String randomPart2 = String.format("%06d", random.nextInt(1000000)); // 6 digit random
+        try {
+            List<Order> orders = ProductRepository.getOrdersForUser(currentUser.getId());
+            Order foundOrder = null;
+            for (Order order : orders) {
+                if (order.getId() == orderId) {
+                    foundOrder = order;
+                    break;
+                }
+            }
 
-        return datePart + "-" + randomPart1 + "-" + randomPart2;
+            if (foundOrder != null) {
+                orderNumberLabel.setText(foundOrder.getOrderNumber());
+            } else {
+                orderNumberLabel.setText("Pesanan #" + orderId + " (Detail tidak ditemukan)");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error mengambil detail pesanan untuk SuccessUI: " + e.getMessage());
+            orderNumberLabel.setText("Error mengambil detail pesanan.");
+            JOptionPane.showMessageDialog(this, "Error mengambil detail pesanan: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
-    // Dummy method untuk format mata uang (jika tidak ada di kelas lain)
+    // Metode format mata uang
     private String formatCurrency(double amount) {
         return String.format("Rp %,.2f", amount);
     }
 
-    // Main method for testing
+    // Metode main untuk pengujian (DIMODIFIKASI untuk meneruskan orderId dummy)
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Order Success");
+            JFrame frame = new JFrame("Pesanan Berhasil");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            // Dummy ViewController untuk pengujian mandiri
+            // User Dummy untuk pengujian
+            User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
+            try {
+                java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
+                field.setAccessible(true);
+                field.set(null, dummyUser);
+                System.out.println("User dummy diatur untuk pengujian di SuccessUI.");
+            } catch (Exception e) {
+                System.err.println("Gagal mengatur user dummy untuk pengujian di SuccessUI: " + e.getMessage());
+            }
+
             ViewController dummyVC = new ViewController() {
-                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Show Product Detail: " + product.getName()); }
-                @Override public void showFavoritesView() { System.out.println("Dummy: Show Favorites View"); }
-                @Override public void showDashboardView() { System.out.println("Dummy: Show Dashboard View"); }
-                @Override public void showCartView() { System.out.println("Dummy: Show Cart View"); }
-                @Override public void showProfileView() { System.out.println("Dummy: Show Profile View"); }
-                @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
-                @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)"); }
-                @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)"); }
-                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
-                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); }
+                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Tampilkan Detail Produk: " + product.getName()); }
+                @Override public void showFavoritesView() { System.out.println("Dummy: Tampilkan Tampilan Favorit"); }
+                @Override public void showDashboardView() { System.out.println("Dummy: Tampilkan Tampilan Dashboard"); }
+                @Override public void showCartView() { System.out.println("Dummy: Tampilkan Tampilan Keranjang"); }
+                @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
+                @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
+                @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
+                @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
+                @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran (Sukses)");
+                }
+                @Override public void showSuccessView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Sukses (Sukses) dengan ID pesanan: " + orderId);
+                }
+                @Override
+                public void showOrderDetailView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
+                }
             };
 
-            SuccessUI successUI = new SuccessUI(dummyVC);
+            // Teruskan ID pesanan dummy untuk pengujian mandiri
+            SuccessUI successUI = new SuccessUI(dummyVC, 12345); // Menggunakan ID pesanan dummy
             frame.add(successUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

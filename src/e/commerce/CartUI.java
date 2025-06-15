@@ -13,6 +13,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.ByteArrayInputStream;
 import java.sql.SQLException;
+import e.commerce.AddressUI.Address;
+import e.commerce.AddressUI.ShippingService;
 
 import e.commerce.ProductRepository;
 import e.commerce.ProductRepository.CartItem;
@@ -292,128 +294,6 @@ public class CartUI extends JPanel {
         return panel;
     }
 
-    // Menghilangkan metode createDeliveryAddressPanel()
-    /*
-    private JPanel createDeliveryAddressPanel() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(Color.WHITE);
-        panel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
-
-        panel.add(createSectionTitle("Delivery Address", "CHANGE", e -> showAddressSelectionDialog()), BorderLayout.NORTH);
-
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBackground(Color.WHITE);
-        content.setBorder(new EmptyBorder(15, 20, 15, 20));
-
-        currentAddressLabel = new JLabel("<html>" + (selectedAddress != null ? selectedAddress.fullAddress : "No address selected") + "</html>");
-        currentAddressLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        currentAddressLabel.setForeground(DARK_TEXT_COLOR);
-        currentAddressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        content.add(currentAddressLabel);
-        content.add(Box.createVerticalGlue());
-
-        panel.add(content, BorderLayout.CENTER);
-        return panel;
-    }
-    */
-
-    // Menghilangkan metode showAddressSelectionDialog() dan createAddressCard()
-    /*
-    private void showAddressSelectionDialog() {
-        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Pilih Alamat Pengiriman", Dialog.ModalityType.APPLICATION_MODAL);
-        dialog.setLayout(new BorderLayout());
-        dialog.setSize(400, 300);
-        dialog.setLocationRelativeTo(this);
-
-        JPanel addressListPanel = new JPanel();
-        addressListPanel.setLayout(new BoxLayout(addressListPanel, BoxLayout.Y_AXIS));
-        addressListPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        addressListPanel.setBackground(Color.WHITE);
-
-        ButtonGroup addressButtonGroup = new ButtonGroup();
-
-        for (Address addr : savedAddresses) {
-            JPanel addressCard = createAddressCard(addr, addressButtonGroup);
-            addressListPanel.add(addressCard);
-            addressListPanel.add(Box.createVerticalStrut(10));
-        }
-
-        JScrollPane scrollPane = new JScrollPane(addressListPanel);
-        scrollPane.setBorder(null);
-        scrollPane.getViewport().setBackground(Color.WHITE);
-        dialog.add(scrollPane, BorderLayout.CENTER);
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(Color.WHITE);
-        JButton closeButton = new JButton("Tutup");
-        closeButton.addActionListener(e -> dialog.dispose());
-        buttonPanel.add(closeButton);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.setVisible(true);
-    }
-
-    private JPanel createAddressCard(Address addr, ButtonGroup buttonGroup) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(new LineBorder(BORDER_COLOR, 1, true));
-        card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        JRadioButton radioButton = new JRadioButton(addr.label);
-        radioButton.setFont(new Font("Arial", Font.BOLD, 14));
-        radioButton.setBackground(Color.WHITE);
-        radioButton.setFocusPainted(false);
-        radioButton.setActionCommand(addr.label);
-
-        JLabel fullAddressLabel = new JLabel("<html>" + addr.fullAddress + "</html>");
-        fullAddressLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        fullAddressLabel.setForeground(GRAY_TEXT_COLOR);
-        fullAddressLabel.setBorder(new EmptyBorder(0, 25, 5, 10));
-
-        JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        radioPanel.setBackground(Color.WHITE);
-        radioPanel.add(radioButton);
-        card.add(radioPanel, BorderLayout.NORTH);
-        card.add(fullAddressLabel, BorderLayout.CENTER);
-
-        if (selectedAddress != null && addr.label.equals(selectedAddress.label)) {
-            radioButton.setSelected(true);
-        }
-
-        radioButton.addActionListener(e -> {
-            for (Address sa : savedAddresses) {
-                if (sa.label.equals(e.getActionCommand())) {
-                    selectedAddress = sa;
-                    currentAddressLabel.setText("<html>" + selectedAddress.fullAddress + "</html>");
-                    updateCheckoutButtonState();
-                    break;
-                }
-            }
-        });
-
-        buttonGroup.add(radioButton);
-
-        card.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                radioButton.setSelected(true);
-                for (Address sa : savedAddresses) {
-                    if (sa.label.equals(radioButton.getActionCommand())) {
-                        selectedAddress = sa;
-                        currentAddressLabel.setText("<html>" + selectedAddress.fullAddress + "</html>");
-                        updateCheckoutButtonState();
-                        break;
-                    }
-                }
-            }
-        });
-
-        return card;
-    }
-    */
-
     private JPanel createPaymentSummaryPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
@@ -480,7 +360,7 @@ public class CartUI extends JPanel {
             int selectedCount = getSelectedItemCount();
             if (selectedCount == 0) {
                 JOptionPane.showMessageDialog(this,
-                    "Please select at least one item to place an order.",
+                    "Mohon pilih setidaknya satu item untuk membuat pesanan.",
                     "Checkout",
                     JOptionPane.INFORMATION_MESSAGE);
             }
@@ -490,8 +370,8 @@ public class CartUI extends JPanel {
                     viewController.showAddressView();
                 } else {
                     JOptionPane.showMessageDialog(this,
-                        "Proceeding to place order\nTotal: " + finalTotalLabel.getText(), // Menghilangkan referensi alamat
-                        "Place Order",
+                        "Melanjutkan untuk membuat pesanan\\nTotal: " + finalTotalLabel.getText(),
+                        "Buat Pesanan",
                         JOptionPane.INFORMATION_MESSAGE);
                 }
             }
@@ -932,28 +812,40 @@ public class CartUI extends JPanel {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Shopping Cart");
+            JFrame frame = new JFrame("Keranjang Belanja");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
             ViewController dummyVC = new ViewController() {
-                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Show Product Detail: " + product.getName()); }
-                @Override public void showFavoritesView() { System.out.println("Dummy: Show Favorites View"); }
-                @Override public void showDashboardView() { System.out.println("Dummy: Show Dashboard View"); }
-                @Override public void showCartView() { System.out.println("Dummy: Show Cart View"); }
-                @Override public void showProfileView() { System.out.println("Dummy: Show Profile View"); }
-                @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
-                @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)");}
-                @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)");}
-                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
-                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); }
-
+                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Tampilkan Detail Produk: " + product.getName()); }
+                @Override public void showFavoritesView() { System.out.println("Dummy: Tampilkan Tampilan Favorit"); }
+                @Override public void showDashboardView() { System.out.println("Dummy: Tampilkan Tampilan Dashboard"); }
+                @Override public void showCartView() { System.out.println("Dummy: Tampilkan Tampilan Keranjang"); }
+                @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
+                @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
+                @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)");}
+                @Override
+                public void showAddressView() {
+                    System.out.println("Dummy: Tampilkan Tampilan Alamat.");
+                    // Dalam aplikasi nyata, ini akan beralih panel ke AddressUI
+                }
+                @Override
+                public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan alamat dan pengiriman.");
+                }
+                @Override
+                public void showSuccessView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Sukses dengan ID pesanan: " + orderId);
+                }
+                @Override
+                public void showOrderDetailView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
+                }
             };
 
+            // Authentication.setCurrentUser(new User(1, "testuser", "pass", "mail", "123", "08123", null, null, "user", true)); // Pastikan user dummy diatur untuk pengujian
             CartUI cartUI = new CartUI(dummyVC);
-
             frame.add(cartUI);
-
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
         });

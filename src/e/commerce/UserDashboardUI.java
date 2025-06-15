@@ -12,8 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer; // Use java.util.Timer for scheduling tasks
 import java.util.TimerTask;
-import e.commerce.ProductRepository;
 import java.sql.SQLException;
+
+// Import Address dan ShippingService dari AddressUI untuk tipe parameter
+import e.commerce.AddressUI.Address;
+import e.commerce.AddressUI.ShippingService;
 
 public class UserDashboardUI extends JFrame implements ViewController {
     private CardLayout cardLayout;
@@ -24,28 +27,27 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private CheckoutUI checkoutUI;
     private User currentUser;
 
-    private AddressUI addressUI;
-    private PaymentUI paymentUI;
-    private SuccessUI successUI;
+    // Hapus inisialisasi ini di sini, akan diinisialisasi saat showView dipanggil
+    // private AddressUI addressUI; // AddressUI masih bisa diinisialisasi di sini karena tidak butuh parameter dari view sebelumnya
+    // private PaymentUI paymentUI;
+    // private SuccessUI successUI;
 
     // --- Banner Image Paths ---
     private static final String BANNER_1_PATH = "/Resources/Images/Banner1.png";
     private static final String BANNER_2_PATH = "/Resources/Images/Banner2.png";
 
     // --- Variables for Banner Carousel ---
-    private JPanel bannerCarouselContainer; // Main panel for carousel (holds image panel and controls)
-    private JPanel bannerImagePanel; // This panel will hold the actual banner images with CardLayout
+    private JPanel bannerCarouselContainer;
+    private JPanel bannerImagePanel;
     private CardLayout bannerCardLayout;
     private javax.swing.Timer carouselTimer;
     private int currentBannerIndex = 0;
     private final String[] bannerNames = {"Banner1", "Banner2"};
     private final String[] bannerPaths = {BANNER_1_PATH, BANNER_2_PATH};
-    private List<JLabel> bannerLabels; // To hold the JLabel for each banner image
+    private List<JLabel> bannerLabels;
 
-    // --- NEW: Define the aspect ratio for the banner ---
-    private static final double BANNER_ASPECT_RATIO = 16.0 / 5.0; // 16:5 ratio (width / height)
-    private static final int DEFAULT_BANNER_HEIGHT = 300; // A reasonable default height
-    // --- END NEW ---
+    private static final double BANNER_ASPECT_RATIO = 16.0 / 5.0;
+    private static final int DEFAULT_BANNER_HEIGHT = 300;
 
     public UserDashboardUI() {
         currentUser = Authentication.getCurrentUser();
@@ -57,7 +59,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
 
         setTitle("Quantra");
-        setSize(1200, 800); // Keep initial frame size reasonable
+        setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         IconUtil.setIcon(this);
@@ -66,19 +68,24 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
-        checkoutUI = new CheckoutUI(this);
+        checkoutUI = new CheckoutUI(this); // CheckoutUI tidak berubah
 
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
         JPanel ordersPanel = createOrdersPanel();
 
+        // Inisialisasi CartUI dan FavoritesUI yang tidak bergantung pada data dari view sebelumnya
         JPanel cartPanel = new CartUI(this);
-        addressUI = new AddressUI(this);
-        paymentUI = new PaymentUI(this);
-        successUI = new SuccessUI(this);
-
         favoritesUI = new FavoritesUI(this);
+        // AddressUI juga bisa langsung diinisialisasi karena tidak memerlukan parameter dari view sebelumnya (hanya currentUser)
+        AddressUI addressUI = new AddressUI(this);
+
+
+        // Hapus inisialisasi PaymentUI dan SuccessUI di sini!
+        // paymentUI = new PaymentUI(this); // ERROR di sini
+        // successUI = new SuccessUI(this); // ERROR di sini
+
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
@@ -86,9 +93,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(checkoutUI, "Checkout");
-        mainPanel.add(addressUI, "Address");
-        mainPanel.add(paymentUI, "Payment");
-        mainPanel.add(successUI, "Success");
+        mainPanel.add(addressUI, "Address"); // Tambahkan AddressUI ke mainPanel
+
 
         add(headerPanel, BorderLayout.NORTH);
         add(mainPanel, BorderLayout.CENTER);
@@ -138,6 +144,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     @Override
     public void showCartView() {
+        // Hapus instance CartUI lama jika ada dan buat yang baru untuk refresh data
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof CartUI) {
                 mainPanel.remove(comp);
@@ -156,7 +163,19 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     @Override
     public void showOrdersView() {
-        cardLayout.show(mainPanel, "Order");
+        // Hapus instance OrderHistory lama jika ada untuk refresh data
+        // Ini penting agar data di OrderHistory diperbarui setiap kali ditampilkan
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof OrderHistory) {
+                mainPanel.remove(comp); // Hapus panel OrderHistory yang lama
+                break;
+            }
+        }
+        // Buat instance OrderHistory yang baru (sekarang sebagai JPanel)
+        OrderHistory newOrdersPanel = new OrderHistory(this); // Teruskan ViewController
+        mainPanel.add(newOrdersPanel, "Order"); // Tambahkan ke CardLayout dengan nama "Order"
+        cardLayout.show(mainPanel, "Order"); // Tampilkan panel "Order"
+        System.out.println("Navigasi ke Halaman Riwayat Pesanan.");
     }
 
     @Override
@@ -166,24 +185,70 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     @Override
     public void showAddressView() {
+        // Hapus instance AddressUI lama jika ada dan buat yang baru untuk refresh data
+        // Ini memastikan alamat dimuat ulang setiap kali kembali ke AddressUI
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof AddressUI) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        AddressUI newAddressUI = new AddressUI(this);
+        mainPanel.add(newAddressUI, "Address");
         cardLayout.show(mainPanel, "Address");
         System.out.println("Navigasi ke Halaman Alamat.");
     }
 
     @Override
-    public void showPaymentView() {
+    public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
+        // Hapus instance PaymentUI lama jika ada dan buat yang baru
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof PaymentUI) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        // Inisialisasi PaymentUI dengan alamat dan jasa pengiriman yang dipilih
+        PaymentUI newPaymentUI = new PaymentUI(this, selectedAddress, selectedShippingService);
+        mainPanel.add(newPaymentUI, "Payment");
         cardLayout.show(mainPanel, "Payment");
-        System.out.println("Navigasi ke Halaman Pembayaran.");
+        System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman.");
     }
 
     @Override
-    public void showSuccessView() {
+    public void showSuccessView(int orderId) {
+        // Hapus instance SuccessUI lama jika ada dan buat yang baru
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof SuccessUI) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        // Inisialisasi SuccessUI dengan orderId yang baru dibuat
+        SuccessUI newSuccessUI = new SuccessUI(this, orderId);
+        mainPanel.add(newSuccessUI, "Success");
         cardLayout.show(mainPanel, "Success");
-        System.out.println("Navigasi ke Halaman Sukses.");
+        System.out.println("Navigasi ke Halaman Sukses dengan ID Pesanan: " + orderId);
+    }
+    
+    @Override
+    public void showOrderDetailView(int orderId) {
+        // Hapus instance OrderDetailUI lama jika ada untuk refresh data
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof OrderDetailUI) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        // Buat instance OrderDetailUI baru dengan orderId
+        OrderDetailUI orderDetailPanel = new OrderDetailUI(this, orderId);
+        mainPanel.add(orderDetailPanel, "OrderDetail"); // Tambahkan ke CardLayout
+        cardLayout.show(mainPanel, "OrderDetail"); // Tampilkan panel
+        System.out.println("Navigasi ke Halaman Detail Pesanan untuk ID: " + orderId);
     }
 
 
-    private JPanel createHeaderPanel(User currentUser) {
+    private JPanel createHeaderPanel(User currentUser) { /* ... isi metode ini tidak berubah ... */
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setPreferredSize(new Dimension(getWidth(), 70));
@@ -244,6 +309,22 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 showCartView();
             }
         });
+        
+        ImageIcon orderIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/order_icon.png"));
+        Image originalOrderImage = orderIcon.getImage();
+        Image resizedOrderImage = originalOrderImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        ImageIcon resizedOrderIcon = new ImageIcon(resizedOrderImage);
+        
+        JLabel lblOrders = new JLabel(resizedOrderIcon); // 
+        lblOrders.setHorizontalTextPosition(SwingConstants.RIGHT);
+        lblOrders.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblOrders.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showOrdersView(); // Memanggil metode yang akan menampilkan OrderHistory
+            }
+        });
+        rightPanel.add(lblOrders);
 
         profileImageLabel = new JLabel();
         ImageIcon profileIcon = loadUserProfileImage(currentUser);
@@ -265,7 +346,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return headerPanel;
     }
 
-    private ImageIcon loadUserProfileImage(User user) {
+    private ImageIcon loadUserProfileImage(User user) { /* ... isi metode ini tidak berubah ... */
         ImageIcon defaultIcon = new ImageIcon(getClass().getResource("/Resources/Images/default_profile.png"));
 
         if (defaultIcon.getIconWidth() <= 0 || defaultIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
@@ -276,7 +357,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return new ImageIcon(scaledImage);
     }
 
-    private ImageIcon createDefaultAvatarIcon(String username) {
+    private ImageIcon createDefaultAvatarIcon(String username) { /* ... isi metode ini tidak berubah ... */
         String initials = username.length() > 0 ? username.substring(0, 1).toUpperCase() : "U";
 
         BufferedImage avatar = new BufferedImage(40, 40, BufferedImage.TYPE_INT_ARGB);
@@ -299,7 +380,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return new ImageIcon(avatar);
     }
 
-    private JPanel createModernSearchBar() {
+    private JPanel createModernSearchBar() { /* ... isi metode ini tidak berubah ... */
         JPanel searchContainer = new JPanel();
         searchContainer.setLayout(new BorderLayout());
         searchContainer.setBackground(Color.WHITE);
@@ -368,7 +449,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return searchContainer;
     }
 
-    private JTextField createSearchTextField() {
+    private JTextField createSearchTextField() { /* ... isi metode ini tidak berubah ... */
         JTextField searchField = new JTextField();
         searchField.setFont(new Font("Arial", Font.PLAIN, 14));
         searchField.setBorder(null);
@@ -453,7 +534,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return searchField;
     }
 
-    private JButton createSearchButton() {
+    private JButton createSearchButton() { /* ... isi metode ini tidak berubah ... */
         JButton searchButton = new JButton();
         searchButton.setPreferredSize(new Dimension(30, 24));
         searchButton.setBorder(null);
@@ -487,7 +568,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return searchButton;
     }
 
-    private ImageIcon createSearchIcon() {
+    private ImageIcon createSearchIcon() { /* ... isi metode ini tidak berubah ... */
         BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = icon.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -501,7 +582,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return new ImageIcon(icon);
     }
 
-    private void performSearch(String searchText) {
+    private void performSearch(String searchText) { /* ... isi metode ini tidak berubah ... */
         System.out.println("Mencari: " + searchText);
         JOptionPane.showMessageDialog(this,
             "Mencari: \"" + searchText + "\"\n\nFungsionalitas pencarian akan diimplementasikan di sini.",
@@ -509,14 +590,13 @@ public class UserDashboardUI extends JFrame implements ViewController {
             JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void performInstantSearch(String searchText) {
+    private void performInstantSearch(String searchText) { /* ... isi metode ini tidak berubah ... */
         System.out.println("Pencarian langsung: " + searchText);
     }
 
-    // --- Helper method to load and scale images for banners with aspect ratio ---
-    private void setScaledImage(JLabel label, String imagePath) {
-        label.setIcon(null); // Clear previous icon
-        label.setText("Loading..."); // Optional: show loading text
+    private void setScaledImage(JLabel label, String imagePath) { /* ... isi metode ini tidak berubah ... */
+        label.setIcon(null);
+        label.setText("Memuat...");
         label.setHorizontalAlignment(SwingConstants.CENTER);
         label.setVerticalAlignment(SwingConstants.CENTER);
         label.setFont(new Font("Arial", Font.ITALIC, 16));
@@ -527,7 +607,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             protected ImageIcon doInBackground() throws Exception {
                 ImageIcon originalIcon = new ImageIcon(getClass().getResource(imagePath));
                 if (originalIcon.getImageLoadStatus() != MediaTracker.COMPLETE) {
-                    System.err.println("Failed to load image: " + imagePath);
+                    System.err.println("Gagal memuat gambar: " + imagePath);
                     return null;
                 }
 
@@ -536,29 +616,20 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 int originalHeight = originalImage.getHeight(null);
 
                 if (originalWidth <= 0 || originalHeight <= 0) {
-                    System.err.println("Invalid image dimensions for: " + imagePath);
+                    System.err.println("Dimensi gambar tidak valid untuk: " + imagePath);
                     return null;
                 }
 
-                // Get the current width available for the banner from its parent
-                // This is the width the banner area is currently rendering at
                 int availableWidth = label.getParent().getWidth();
                 if (availableWidth <= 0) {
-                    // Fallback for initial load if parent size is not yet determined
-                    // Use a reasonable default based on typical frame width for initial calculation
-                    availableWidth = 1160; // Common width for a non-zoomed frame
+                    availableWidth = 1160;
                 }
 
-                // Calculate desired height based on the 16:5 aspect ratio
-                // target_height = available_width / (16.0 / 5.0)
                 int targetHeightForArea = (int) (availableWidth / BANNER_ASPECT_RATIO);
 
-                // Now scale the image to fit *within* this target area while maintaining its own aspect ratio
-                // Use Math.min to ensure the entire image is visible (letterboxing might occur)
                 double scaleX = (double) availableWidth / originalWidth;
-                double scaleY = (double) targetHeightForArea / originalHeight; // Use target height for area
-
-                double scale = Math.min(scaleX, scaleY); // Ensure entire image fits
+                double scaleY = (double) targetHeightForArea / originalHeight;
+                double scale = Math.min(scaleX, scaleY);
 
                 int scaledWidth = (int) (originalWidth * scale);
                 int scaledHeight = (int) (originalHeight * scale);
@@ -572,8 +643,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
                     ImageIcon icon = get();
                     if (icon != null) {
                         label.setIcon(icon);
-                        label.setText(""); // Clear loading text
-                        // Center the image within the JLabel if it doesn't fill the entire space
+                        label.setText("");
                         label.setHorizontalAlignment(SwingConstants.CENTER);
                         label.setVerticalAlignment(SwingConstants.CENTER);
                         label.revalidate();
@@ -586,7 +656,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
                         label.setForeground(Color.RED);
                     }
                 } catch (Exception ex) {
-                    System.err.println("Error setting banner image: " + ex.getMessage());
+                    System.err.println("Error mengatur gambar banner: " + ex.getMessage());
                     label.setText("Error Memuat Banner");
                     label.setFont(new Font("Arial", Font.BOLD, 20));
                     label.setHorizontalAlignment(SwingConstants.CENTER);
@@ -597,25 +667,23 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }.execute();
     }
 
-    // --- Methods for Banner Carousel ---
-    private JPanel createBannerCarouselPanel() {
+    private JPanel createBannerCarouselPanel() { /* ... isi metode ini tidak berubah ... */
         bannerCarouselContainer = new JPanel(new BorderLayout());
-        bannerCarouselContainer.setBorder(new EmptyBorder(0, 0, 0, 0)); // No padding for the banner itself
+        bannerCarouselContainer.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         bannerImagePanel = new JPanel();
         bannerCardLayout = new CardLayout();
         bannerImagePanel.setLayout(bannerCardLayout);
         bannerLabels = new ArrayList<>();
 
-        // Create and add banner images
         for (int i = 0; i < bannerPaths.length; i++) {
             JLabel bannerLabel = new JLabel();
             bannerLabel.setHorizontalAlignment(SwingConstants.CENTER);
             bannerLabel.setVerticalAlignment(SwingConstants.CENTER);
-            bannerLabels.add(bannerLabel); // Store the label for later scaling
+            bannerLabels.add(bannerLabel);
 
             JPanel bannerContainer = new JPanel(new BorderLayout());
-            bannerContainer.setBackground(Color.LIGHT_GRAY); // A default background if image has transparent parts or for loading
+            bannerContainer.setBackground(Color.LIGHT_GRAY);
             bannerContainer.add(bannerLabel, BorderLayout.CENTER);
             bannerImagePanel.add(bannerContainer, bannerNames[i]);
         }
@@ -624,10 +692,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
         layeredPane.add(bannerImagePanel, JLayeredPane.DEFAULT_LAYER);
 
         JPanel navButtonPanel = new JPanel(new GridBagLayout());
-        navButtonPanel.setOpaque(false); // Make it transparent
+        navButtonPanel.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 15, 0, 15); // Padding for buttons from the edge
+        gbc.insets = new Insets(0, 15, 0, 15);
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.NONE;
 
@@ -708,49 +776,44 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 1.0; // Push button to left
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         navButtonPanel.add(prevButton, gbc);
 
         gbc.gridx = 1;
-        gbc.weightx = 1.0; // Push button to right
+        gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.EAST;
         navButtonPanel.add(nextButton, gbc);
 
-        layeredPane.add(navButtonPanel, JLayeredPane.PALETTE_LAYER); // Buttons on top of default layer
+        layeredPane.add(navButtonPanel, JLayeredPane.PALETTE_LAYER);
 
-        bannerCarouselContainer.add(layeredPane, BorderLayout.CENTER); // Add the layered pane to the container
+        bannerCarouselContainer.add(layeredPane, BorderLayout.CENTER);
 
-        // ComponentListener to scale images on resize or visibility change
         bannerCarouselContainer.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                // When container resizes, update layered pane and image panel bounds
                 int currentWidth = bannerCarouselContainer.getWidth();
                 int currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
 
-                // Set preferred size of the container itself for layout management
                 bannerCarouselContainer.setPreferredSize(new Dimension(currentWidth, currentHeight));
-                bannerCarouselContainer.revalidate(); // Revalidate the container after changing preferred size
+                bannerCarouselContainer.revalidate();
 
                 layeredPane.setBounds(0, 0, currentWidth, currentHeight);
                 bannerImagePanel.setBounds(0, 0, currentWidth, currentHeight);
                 navButtonPanel.setBounds(0, 0, currentWidth, currentHeight);
 
-                scaleAllBannerImages(); // Re-scale all images with the new dimensions
+                scaleAllBannerImages();
                 bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
             }
             @Override
             public void componentShown(ComponentEvent e) {
-                // Initial sizing when component becomes visible
                 int currentWidth = bannerCarouselContainer.getWidth();
                 int currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
-                if (currentWidth <= 0) { // If still 0, use a reasonable default
-                    currentWidth = getWidth(); // Use frame width
+                if (currentWidth <= 0) {
+                    currentWidth = getWidth();
                     currentHeight = (int) (currentWidth / BANNER_ASPECT_RATIO);
-                    if (currentHeight <= 0) currentHeight = DEFAULT_BANNER_HEIGHT; // Fallback
+                    if (currentHeight <= 0) currentHeight = DEFAULT_BANNER_HEIGHT;
                 }
-
 
                 bannerCarouselContainer.setPreferredSize(new Dimension(currentWidth, currentHeight));
                 bannerCarouselContainer.revalidate();
@@ -764,21 +827,17 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         });
 
-        // Set an initial preferred size for the banner container based on default height
-        // This helps layout managers on initial render before componentResized kicks in
-        bannerCarouselContainer.setPreferredSize(new Dimension(0, DEFAULT_BANNER_HEIGHT)); // Width 0 means fill available width
-        
+        bannerCarouselContainer.setPreferredSize(new Dimension(0, DEFAULT_BANNER_HEIGHT));
+
         return bannerCarouselContainer;
     }
 
-    private void scaleAllBannerImages() {
-        // Run scaling in a SwingWorker for all banners to avoid UI freezing
+    private void scaleAllBannerImages() { /* ... isi metode ini tidak berubah ... */
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // Wait for layout to settle if dimensions are 0 (especially on initial load)
                 while (bannerImagePanel.getWidth() == 0 || bannerImagePanel.getHeight() == 0) {
-                    Thread.sleep(50); // Small delay
+                    Thread.sleep(50);
                 }
                 for (int i = 0; i < bannerLabels.size(); i++) {
                     setScaledImage(bannerLabels.get(i), bannerPaths[i]);
@@ -788,63 +847,60 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }.execute();
     }
 
-    private void showPrevBanner() {
+    private void showPrevBanner() { /* ... isi metode ini tidak berubah ... */
         if (carouselTimer != null && carouselTimer.isRunning()) {
-            carouselTimer.stop(); // Stop automatic rotation on manual interaction
+            carouselTimer.stop();
         }
         currentBannerIndex = (currentBannerIndex - 1 + bannerNames.length) % bannerNames.length;
         bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
-        startBannerCarousel(); // Restart timer after manual interaction
+        startBannerCarousel();
     }
 
-    private void showNextBanner() {
+    private void showNextBanner() { /* ... isi metode ini tidak berubah ... */
         if (carouselTimer != null && carouselTimer.isRunning()) {
-            carouselTimer.stop(); // Stop automatic rotation on manual interaction
+            carouselTimer.stop();
         }
         currentBannerIndex = (currentBannerIndex + 1) % bannerNames.length;
         bannerCardLayout.show(bannerImagePanel, bannerNames[currentBannerIndex]);
-        startBannerCarousel(); // Restart timer after manual interaction
+        startBannerCarousel();
     }
 
 
-    private void startBannerCarousel() {
+    private void startBannerCarousel() { /* ... isi metode ini tidak berubah ... */
         if (carouselTimer != null && carouselTimer.isRunning()) {
             carouselTimer.stop();
         }
 
-        carouselTimer = new javax.swing.Timer(5000, new ActionListener() { // 5000 ms = 5 seconds
+        carouselTimer = new javax.swing.Timer(5000, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                showNextBanner(); // Use the existing method to ensure consistent behavior
+                showNextBanner();
             }
         });
         carouselTimer.start();
     }
 
-    private void stopBannerCarousel() {
+    private void stopBannerCarousel() { /* ... isi metode ini tidak berubah ... */
         if (carouselTimer != null) {
             carouselTimer.stop();
         }
     }
 
-    private JPanel createDashboardPanel() {
+    private JPanel createDashboardPanel() { /* ... isi metode ini tidak berubah ... */
         JPanel dashboardPanel = new JPanel();
         dashboardPanel.setLayout(new BoxLayout(dashboardPanel, BoxLayout.Y_AXIS));
         dashboardPanel.setBackground(Color.WHITE);
 
-        // Add the banner carousel panel at the top
         dashboardPanel.add(createBannerCarouselPanel());
 
-        // Create a new panel for the content below the banner
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(Color.WHITE);
-        // Apply padding to the content panel
-        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20)); // Padding for content below banner
+        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JPanel categoriesPanel = new JPanel(new GridLayout(2, 3, 15, 15));
         categoriesPanel.setBackground(Color.WHITE);
-        categoriesPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding here, main contentPanel handles it
+        categoriesPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         String[] categoryNames = {"Earphone", "Wear Gadget", "Laptop", "Gaming Console", "VR Oculus", "Speaker"};
         Color[] backgroundColors = {
@@ -863,7 +919,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         JPanel featuresPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 50, 10));
         featuresPanel.setBackground(Color.WHITE);
-        featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding
+        featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         String[] featureTexts = {
                 "Pengiriman Gratis untuk Pesanan",
@@ -880,7 +936,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         JPanel bestSellerPanel = new JPanel(new BorderLayout());
         bestSellerPanel.setBackground(Color.WHITE);
-        bestSellerPanel.setBorder(new EmptyBorder(0, 0, 0, 0)); // No internal padding
+        bestSellerPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         JLabel bestSellerTitle = new JLabel("Produk Terlaris");
         bestSellerTitle.setFont(new Font("Arial", Font.BOLD, 20));
@@ -927,7 +983,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return wrapperPanel;
     }
 
-    private JPanel createDashboardProductCard(FavoritesUI.FavoriteItem item) {
+    private JPanel createDashboardProductCard(FavoritesUI.FavoriteItem item) { /* ... isi metode ini tidak berubah ... */
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
         card.setBackground(Color.WHITE);
@@ -1086,7 +1142,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Pastikan klik bukan pada tombol "Tambah ke Keranjang"
                 if (e.getSource() != addToCartButton) {
                     showProductDetail(item);
                 }
@@ -1107,7 +1162,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return card;
     }
 
-    private JPanel createCategoryCard(String name, Color bgColor) {
+    private JPanel createCategoryCard(String name, Color bgColor) { /* ... isi metode ini tidak berubah ... */
         JPanel card = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -1153,10 +1208,17 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     private JPanel createOrdersPanel() {
+        // Karena OrderHistory sekarang adalah JFrame (seperti yang Anda berikan),
+        // Kita tidak bisa menempatkannya langsung di dalam mainPanel (yang adalah JPanel).
+        // Sebagai gantinya, jika showOrdersView() dipanggil, itu akan membuka OrderHistory di jendela baru.
+        // Oleh karena itu, panel ini hanya menjadi placeholder jika Anda ingin item menu "Order" tetap ada.
+        // Jika Anda ingin OrderHistory sebagai JPanel, Anda perlu memodifikasi OrderHistory.java agar meng-extend JPanel,
+        // dan memiliki konstruktor yang sesuai (misalnya, OrderHistory(ViewController vc)).
+        // Untuk saat ini, kita akan mengembalikan JPanel kosong sebagai placeholder.
         JPanel ordersPanel = new JPanel(new BorderLayout());
         ordersPanel.setBackground(Color.WHITE);
 
-        JLabel lblNotAvailable = new JLabel("Halaman Pesanan Belum Tersedia", SwingConstants.CENTER);
+        JLabel lblNotAvailable = new JLabel("Silakan klik 'Pesanan' di header untuk melihat riwayat pesanan.", SwingConstants.CENTER);
         lblNotAvailable.setFont(new Font("Arial", Font.BOLD, 18));
         ordersPanel.add(lblNotAvailable, BorderLayout.CENTER);
 
@@ -1177,11 +1239,26 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     private int getFavItemCount() {
+        // Ini adalah nilai dummy, Anda perlu mengimplementasikan logika pengambilan data dari database
+        // seperti ProductRepository.getFavoriteItemsForUser(currentUser.getId()).size();
         return 6;
     }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
+            // Pastikan Authentication.currentUser diatur sebelum membuat UserDashboardUI
+            // Ini biasanya dilakukan di LoginUI setelah login berhasil.
+            // Untuk pengujian mandiri:
+            User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
+            try {
+                java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
+                field.setAccessible(true);
+                field.set(null, dummyUser);
+                System.out.println("User dummy diatur untuk pengujian di UserDashboardUI.");
+            } catch (Exception e) {
+                System.err.println("Gagal mengatur user dummy untuk pengujian di UserDashboardUI: " + e.getMessage());
+            }
+
             new UserDashboardUI().setVisible(true);
         });
     }

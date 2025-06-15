@@ -20,6 +20,7 @@ import java.util.Map;
 import e.commerce.FavoritesUI;
 
 
+
 // Import tambahan untuk database
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -78,7 +79,7 @@ public class AddressUI extends JPanel {
     // MODIFIKASI: INNER CLASS Address
     // Disertakan di sini, dan disesuaikan untuk data dari database 'addresses'
     // =========================================================================
-    private static class Address {
+    public static class Address {
         int id; // ID dari database (kolom 'id')
         int userId; // user_id dari database (kolom 'user_id')
         String label; // e.g., 'Home', 'Office' (kolom 'label')
@@ -140,7 +141,7 @@ public class AddressUI extends JPanel {
     // END MODIFIKASI: INNER CLASS Address
     // =========================================================================
 
-    private static class ShippingService {
+    public static class ShippingService {
         String name;
         String arrivalEstimate;
         double price;
@@ -310,7 +311,7 @@ public class AddressUI extends JPanel {
 
         JPanel leftSection = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftSection.setBackground(Color.WHITE);
-        JButton backButton = new JButton("← Back");
+        JButton backButton = new JButton("← Kembali");
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(DARK_TEXT_COLOR);
         backButton.setBackground(Color.WHITE);
@@ -387,12 +388,12 @@ public class AddressUI extends JPanel {
         titlePanel.setBackground(Color.WHITE);
         titlePanel.setBorder(new EmptyBorder(0, 0, 15, 0));
 
-        JLabel titleLabel = new JLabel("Delivery Address");
+        JLabel titleLabel = new JLabel("Alamat Pengiriman");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         titleLabel.setForeground(new Color(51, 51, 51));
         titlePanel.add(titleLabel, BorderLayout.WEST);
 
-        JButton changeButton = new JButton("CHANGE ADDRESS");
+        JButton changeButton = new JButton("GANTI ALAMAT");
         changeButton.setFont(new Font("Arial", Font.PLAIN, 11));
         changeButton.setForeground(ORANGE_THEME);
         changeButton.setBackground(Color.WHITE);
@@ -419,7 +420,7 @@ public class AddressUI extends JPanel {
         addressDetailsContainer.add(currentAddressNameLabel);
 
         // Label alamat
-        JLabel addressLabel = new JLabel("Address");
+        JLabel addressLabel = new JLabel("Alamat");
         addressLabel.setFont(new Font("Arial", Font.BOLD, 12));
         addressLabel.setForeground(new Color(102, 102, 102));
         addressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -458,7 +459,7 @@ public class AddressUI extends JPanel {
         codDot.setForeground(new Color(46, 204, 113)); // Green color
         codPanel.add(codDot);
 
-        JLabel codLabel = new JLabel(" Cash on delivery available");
+        JLabel codLabel = new JLabel("Tersedia bayar di tempat");
         codLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         codLabel.setForeground(new Color(51, 51, 51));
         codPanel.add(codLabel);
@@ -466,7 +467,7 @@ public class AddressUI extends JPanel {
         statusPanel.add(codPanel, BorderLayout.WEST);
 
         // Estimasi pengiriman
-        deliveryEstimateHeaderLabel = new JLabel("Estimated Delivery 24 - 25 Sep"); // Ini akan diupdate
+        deliveryEstimateHeaderLabel = new JLabel("Perkiraan Sampai 24 - 25 Sep"); // Ini akan diupdate
         deliveryEstimateHeaderLabel.setFont(new Font("Arial", Font.BOLD, 12));
         deliveryEstimateHeaderLabel.setForeground(new Color(51, 51, 51));
         statusPanel.add(deliveryEstimateHeaderLabel, BorderLayout.EAST);
@@ -506,7 +507,7 @@ public class AddressUI extends JPanel {
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
-        JLabel headerLabel = new JLabel("Select Delivery Address");
+        JLabel headerLabel = new JLabel("Pilih Alamat Pengiriman");
         headerLabel.setFont(new Font("Arial", Font.BOLD, 16));
         headerLabel.setForeground(new Color(51, 51, 51));
         headerPanel.add(headerLabel, BorderLayout.WEST);
@@ -526,7 +527,7 @@ public class AddressUI extends JPanel {
 
 
         if (addressesForDialog.isEmpty()) {
-            JLabel noAddressesLabel = new JLabel("No addresses found. Please add one in your profile settings.");
+            JLabel noAddressesLabel = new JLabel("Tidak ada alamat yang ditemukan. Silahkan tambahkan di pengaturan profil.");
             noAddressesLabel.setFont(new Font("Arial", Font.ITALIC, 13));
             noAddressesLabel.setForeground(GRAY_TEXT_COLOR);
             noAddressesLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -552,7 +553,7 @@ public class AddressUI extends JPanel {
         buttonPanel.setBackground(Color.WHITE);
         buttonPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
-        JButton selectButton = new JButton("Select Address");
+        JButton selectButton = new JButton("Pilih Alamat");
         selectButton.setFont(new Font("Arial", Font.BOLD, 12));
         selectButton.setBackground(ORANGE_THEME);
         selectButton.setForeground(Color.WHITE);
@@ -696,7 +697,7 @@ public class AddressUI extends JPanel {
 
         panel.add(summaryDetails, BorderLayout.CENTER);
 
-        JButton continueButton = new JButton("CONTINUE");
+        JButton continueButton = new JButton("LANJUTKAN");
         continueButton.setBackground(ORANGE_THEME);
         continueButton.setForeground(Color.WHITE);
         continueButton.setBorderPainted(false);
@@ -715,7 +716,7 @@ public class AddressUI extends JPanel {
             }
 
             if (viewController != null) {
-                viewController.showPaymentView();
+                viewController.showPaymentView(selectedAddress, selectedShippingService);
             } else {
                 JOptionPane.showMessageDialog(this, "Proceeding to Payment page.", "Payment", JOptionPane.INFORMATION_MESSAGE);
             }
@@ -1430,34 +1431,43 @@ public class AddressUI extends JPanel {
     // =========================================================================
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Address Selection UI");
+            JFrame frame = new JFrame("UI Pemilihan Alamat");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            // Dummy user untuk testing (HANYA UNTUK TESTING)
+            // User dummy untuk pengujian
             User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
             try {
-                // Menggunakan reflection untuk mengatur currentUser di Authentication
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
                 field.setAccessible(true);
                 field.set(null, dummyUser);
-                System.out.println("Dummy user set for testing.");
+                System.out.println("User dummy diatur untuk pengujian di AddressUI.");
             } catch (Exception e) {
-                System.err.println("Failed to set dummy user for testing: " + e.getMessage());
+                System.err.println("Gagal mengatur user dummy untuk pengujian di AddressUI: " + e.getMessage());
             }
 
-            // Dummy ViewController
             ViewController dummyVC = new ViewController() {
-                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Show Product Detail: " + product.getName()); }
-                @Override public void showFavoritesView() { System.out.println("Dummy: Show Favorites View"); }
-                @Override public void showDashboardView() { System.out.println("Dummy: Show Dashboard View"); }
-                @Override public void showCartView() { System.out.println("Dummy: Show Cart View"); }
-                @Override public void showProfileView() { System.out.println("Dummy: Show Profile View"); }
-                @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
-                @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)"); }
-                @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)"); }
-                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
-                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); }
+                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Tampilkan Detail Produk: " + product.getName()); }
+                @Override public void showFavoritesView() { System.out.println("Dummy: Tampilkan Tampilan Favorit"); }
+                @Override public void showDashboardView() { System.out.println("Dummy: Tampilkan Tampilan Dashboard"); }
+                @Override public void showCartView() { System.out.println("Dummy: Tampilkan Tampilan Keranjang"); }
+                @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
+                @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
+                @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
+                @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
+                @Override
+                public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat (" + selectedAddress.getLabel() + ") dan Jasa Pengiriman (" + selectedShippingService.name + ")");
+                    // Dalam aplikasi nyata, ini akan beralih panel ke PaymentUI
+                }
+                @Override
+                public void showSuccessView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Sukses dengan ID pesanan: " + orderId);
+                }
+                @Override
+                public void showOrderDetailView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
+                }
             };
 
             AddressUI addressUI = new AddressUI(dummyVC);

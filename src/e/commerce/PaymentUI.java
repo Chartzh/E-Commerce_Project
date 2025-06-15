@@ -19,6 +19,10 @@ import java.util.LinkedHashMap;
 
 import e.commerce.ProductRepository;
 import e.commerce.ProductRepository.CartItem;
+// Import kelas inner Address dan ShippingService dari AddressUI
+import e.commerce.AddressUI.Address;
+import e.commerce.AddressUI.ShippingService;
+
 
 public class PaymentUI extends JPanel {
     private JLabel totalMRPLabel;
@@ -34,42 +38,48 @@ public class PaymentUI extends JPanel {
     private double deliveryCharge = 0;
     private List<ProductRepository.CartItem> cartItems;
 
-    // Form fields untuk Kartu Kredit/Debit
-    private JPanel transferBankDetailsPanel; // Panel rincian untuk Transfer Bank
-    private JPanel eWalletDetailsPanel;      // Panel rincian untuk E-Wallet
-    private JPanel codDetailsPanel;          // Panel rincian untuk COD
-    private JPanel creditDebitCardFormPanel; // Panel rincian untuk Kartu Kredit/Debit
+    // Field form untuk Kartu Kredit/Debit
+    private JPanel transferBankDetailsPanel;
+    private JPanel eWalletDetailsPanel;
+    private JPanel codDetailsPanel;
+    private JPanel creditDebitCardFormPanel;
 
     private JTextField cardNumberField;
     private JTextField cardExpiryField;
     private JTextField cvvField;
     private JTextField cardNameField;
-    private JButton payNowButton;
+    private JButton payNowButton; // Ini akan menjadi tombol utama "BAYAR SEKARANG"
 
-    private ButtonGroup paymentMethodGroup; // Field untuk ButtonGroup metode pembayaran
+    private ButtonGroup paymentMethodGroup;
 
-    // Referensi ke panel utama setiap opsi metode pembayaran (untuk border dan ukuran)
     private JPanel transferBankOptionPanel;
     private JPanel eWalletOptionPanel;
     private JPanel codOptionPanel;
     private JPanel creditDebitCardOptionPanel;
 
-
     private ViewController viewController;
     private User currentUser;
 
-    // Constants for theme colors
+    // Field baru untuk menyimpan data yang diteruskan dari AddressUI
+    private Address selectedShippingAddress;
+    private ShippingService selectedDeliveryService;
+
+    // Konstanta untuk warna tema
     private static final Color ORANGE_THEME = new Color(255, 69, 0);
     private static final Color LIGHT_GRAY_BACKGROUND = new Color(245, 245, 245);
-    private static final Color BORDER_COLOR = new Color(230, 230, 230); // Border abu-abu normal
-    private static final Color ACTIVE_BORDER_COLOR = new Color(255, 69, 0); // Border aktif (orange)
-    private static final Color DARK_TEXT_COLOR = new Color(50, 50, 50); // Warna teks gelap (hitam)
+    private static final Color BORDER_COLOR = new Color(230, 230, 230);
+    private static final Color ACTIVE_BORDER_COLOR = new Color(255, 69, 0);
+    private static final Color DARK_TEXT_COLOR = new Color(50, 50, 50);
     private static final Color GRAY_TEXT_COLOR = new Color(120, 120, 120);
     private static final Color GREEN_DISCOUNT_TEXT = new Color(76, 175, 80);
     private static final Color TEAL_FREE_TEXT = new Color(0, 150, 136);
 
-    public PaymentUI(ViewController viewController) {
+    // Konstruktor yang dimodifikasi untuk menerima selectedAddress dan selectedShippingService
+    public PaymentUI(ViewController viewController, Address selectedShippingAddress, ShippingService selectedDeliveryService) {
         this.viewController = viewController;
+        this.selectedShippingAddress = selectedShippingAddress;
+        this.selectedDeliveryService = selectedDeliveryService;
+
         setLayout(new BorderLayout());
         setBackground(LIGHT_GRAY_BACKGROUND);
 
@@ -77,20 +87,26 @@ public class PaymentUI extends JPanel {
         if (this.currentUser == null) {
             System.err.println("PaymentUI: Tidak ada user yang login. Halaman tidak dapat dimuat.");
             JOptionPane.showMessageDialog(this, "Anda harus login untuk melihat halaman ini.", "Error", JOptionPane.ERROR_MESSAGE);
+            // Secara opsional, arahkan ke halaman login
+            return;
         }
 
         loadCartItemsFromDatabase();
-        if (deliveryCharge == 0 && cartItems != null && !cartItems.isEmpty()) {
-            deliveryCharge = 15000.0;
+        // Gunakan biaya pengiriman dari selectedDeliveryService
+        if (selectedDeliveryService != null) {
+            deliveryCharge = selectedDeliveryService.price;
+        } else {
+            deliveryCharge = 0; // Fallback jika tidak ada jasa pengiriman yang dipilih
         }
 
         createComponents();
         updateSummaryTotals();
+        updatePayNowButtonText(); // Perbarui teks tombol dengan total akhir
     }
 
     private void loadCartItemsFromDatabase() {
         if (currentUser != null) {
-            cartItems = ProductRepository.getCartItemsForUser(currentUser.getId());
+            cartItems = ProductRepository.getCartItemsForUser(currentUser.getId()); // Inisialisasi daftar kosong untuk mencegah NullPointerException
             System.out.println("DEBUG PaymentUI: Memuat " + cartItems.size() + " item dari database untuk user ID: " + currentUser.getId());
         } else {
             cartItems = new ArrayList<>();
@@ -124,7 +140,6 @@ public class PaymentUI extends JPanel {
         JPanel selectPaymentModePanel = createSelectPaymentModeSection();
         selectPaymentModePanel.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
         leftColumnPanel.add(selectPaymentModePanel);
-        // leftColumnPanel.add(Box.createVerticalGlue()); // Hapus ini jika rincian di bawah radio button akan dorong ke bawah
 
         gbc.gridx = 0;
         gbc.gridy = 0;
@@ -159,7 +174,7 @@ public class PaymentUI extends JPanel {
 
         JPanel leftSection = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftSection.setBackground(Color.WHITE);
-        JButton backButton = new JButton("← Back");
+        JButton backButton = new JButton("← Kembali");
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(DARK_TEXT_COLOR);
         backButton.setBackground(Color.WHITE);
@@ -177,7 +192,7 @@ public class PaymentUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Sukses"};
         String[] icons = {"🛒", "🏠", "💳", "✅"};
 
         for (int i = 0; i < steps.length; i++) {
@@ -194,7 +209,7 @@ public class PaymentUI extends JPanel {
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Payment")) {
+            if (steps[i].equals("Pembayaran")) {
                 stepIcon.setForeground(ORANGE_THEME);
                 stepLabel.setForeground(ORANGE_THEME);
                 stepLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -226,11 +241,11 @@ public class PaymentUI extends JPanel {
     private JPanel createSelectPaymentModeSection() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        panel.setBorder(new EmptyBorder(25, 25, 25, 25)); // Padding yang cukup
+        panel.setBorder(new EmptyBorder(25, 25, 25, 25));
 
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setBackground(Color.WHITE);
-        JLabel titleLabel = new JLabel("Select Payment Mode");
+        JLabel titleLabel = new JLabel("Pilih Mode Pembayaran");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(DARK_TEXT_COLOR);
         titlePanel.add(titleLabel, BorderLayout.WEST);
@@ -239,19 +254,19 @@ public class PaymentUI extends JPanel {
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(Color.WHITE);
-        contentPanel.setBorder(new EmptyBorder(15, 0, 0, 0)); // Padding dari judul
+        contentPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
         paymentMethodGroup = new ButtonGroup();
 
         // --- Opsi Pembayaran: Transfer Bank ---
         JRadioButton transferBankRadioButton = new JRadioButton("Transfer Bank");
         transferBankRadioButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        transferBankRadioButton.setForeground(DARK_TEXT_COLOR); // Set warna teks
+        transferBankRadioButton.setForeground(DARK_TEXT_COLOR);
         transferBankRadioButton.setBackground(Color.WHITE);
         transferBankRadioButton.setFocusPainted(false);
         transferBankRadioButton.setActionCommand("Transfer Bank");
-        transferBankOptionPanel = createPaymentOptionPanel(transferBankRadioButton, transferBankDetailsPanel); // Buat panel opsi
-        transferBankRadioButton.addActionListener(e -> showPaymentDetails(transferBankDetailsPanel, transferBankOptionPanel)); // Panggil showPaymentDetails baru
+        transferBankOptionPanel = createPaymentOptionPanel(transferBankRadioButton, transferBankDetailsPanel);
+        transferBankRadioButton.addActionListener(e -> showPaymentDetails(transferBankDetailsPanel, transferBankOptionPanel));
         contentPanel.add(transferBankOptionPanel);
         paymentMethodGroup.add(transferBankRadioButton);
         contentPanel.add(Box.createVerticalStrut(10));
@@ -259,10 +274,10 @@ public class PaymentUI extends JPanel {
         // --- Opsi Pembayaran: E-Wallet (OVO, GoPay, DANA) ---
         JRadioButton eWalletRadioButton = new JRadioButton("E-Wallet (OVO, GoPay, DANA)");
         eWalletRadioButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        eWalletRadioButton.setForeground(DARK_TEXT_COLOR); // Set warna teks
+        eWalletRadioButton.setForeground(DARK_TEXT_COLOR);
         eWalletRadioButton.setBackground(Color.WHITE);
         eWalletRadioButton.setFocusPainted(false);
-        eWalletRadioButton.setActionCommand("E-Wallet (OVO, GoPay, DANA)");
+        eWalletRadioButton.setActionCommand("E-Wallet"); // ActionCommand disederhanakan
         eWalletOptionPanel = createPaymentOptionPanel(eWalletRadioButton, eWalletDetailsPanel);
         eWalletRadioButton.addActionListener(e -> showPaymentDetails(eWalletDetailsPanel, eWalletOptionPanel));
         contentPanel.add(eWalletOptionPanel);
@@ -272,7 +287,7 @@ public class PaymentUI extends JPanel {
         // --- Opsi Pembayaran: Cash on Delivery ---
         JRadioButton codRadioButton = new JRadioButton("Cash on Delivery");
         codRadioButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        codRadioButton.setForeground(DARK_TEXT_COLOR); // Set warna teks
+        codRadioButton.setForeground(DARK_TEXT_COLOR);
         codRadioButton.setBackground(Color.WHITE);
         codRadioButton.setFocusPainted(false);
         codRadioButton.setActionCommand("Cash on Delivery");
@@ -285,7 +300,7 @@ public class PaymentUI extends JPanel {
         // --- Opsi Pembayaran: Kartu Kredit/Debit ---
         JRadioButton creditDebitCardRadioButton = new JRadioButton("Kartu Kredit/Debit");
         creditDebitCardRadioButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        creditDebitCardRadioButton.setForeground(DARK_TEXT_COLOR); // Set warna teks
+        creditDebitCardRadioButton.setForeground(DARK_TEXT_COLOR);
         creditDebitCardRadioButton.setBackground(Color.WHITE);
         creditDebitCardRadioButton.setFocusPainted(false);
         creditDebitCardRadioButton.setActionCommand("Kartu Kredit/Debit");
@@ -294,7 +309,7 @@ public class PaymentUI extends JPanel {
         contentPanel.add(creditDebitCardOptionPanel);
         paymentMethodGroup.add(creditDebitCardRadioButton);
 
-        // Set default selection (contoh: Kartu Kredit/Debit)
+        // Set pilihan default (contoh: Kartu Kredit/Debit)
         creditDebitCardRadioButton.setSelected(true);
         showPaymentDetails(creditDebitCardFormPanel, creditDebitCardOptionPanel); // Tampilkan form default
 
@@ -303,49 +318,39 @@ public class PaymentUI extends JPanel {
         return panel;
     }
 
-    // Metode Helper baru untuk membuat panel opsi pembayaran (radio button + detail)
     private JPanel createPaymentOptionPanel(JRadioButton radioButton, JPanel detailPanel) {
         JPanel optionPanel = new JPanel();
         optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
         optionPanel.setBackground(Color.WHITE);
-        
-        // Atur preferred dan maximum size untuk mengontrol tinggi saat tersembunyi
-        // Tinggi minimal saat tersembunyi (hanya radio button) + padding
-        int collapsedHeight = radioButton.getPreferredSize().height + 20; // 20 untuk padding EmptyBorder
+
+        int collapsedHeight = radioButton.getPreferredSize().height + 20;
         optionPanel.setPreferredSize(new Dimension(optionPanel.getPreferredSize().width, collapsedHeight));
-        optionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight)); // Batasi tinggi saat tersembunyi
+        optionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight));
 
         optionPanel.setBorder(BorderFactory.createCompoundBorder(
-            new LineBorder(BORDER_COLOR, 1, true), // Border normal
-            new EmptyBorder(10, 15, 10, 15) // Padding internal
+            new LineBorder(BORDER_COLOR, 1, true),
+            new EmptyBorder(10, 15, 10, 15)
         ));
 
-        // Header opsi (Radio button)
         JPanel radioHeader = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         radioHeader.setBackground(Color.WHITE);
         radioHeader.add(radioButton);
         optionPanel.add(radioHeader);
 
-        // Tambahkan panel rincian ke dalam optionPanel, di bawah radio button
         optionPanel.add(detailPanel);
-        detailPanel.setVisible(false); // Sembunyikan secara default
+        detailPanel.setVisible(false);
 
-        // Tambahkan listener untuk mengubah border saat dipilih (dipanggil dari radio button listener)
-        // Listener ini memastikan border panel opsi berubah saat dipilih
         radioButton.addActionListener(e -> {
             updateOptionPanelBorders(optionPanel);
-            // Revalidate dan repaint parent PaymentUI untuk menyesuaikan layout setelah visibilitas detail berubah
             revalidate();
             repaint();
         });
 
-        // Listener klik pada seluruh panel opsi
         optionPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getSource() != radioButton) { // Hindari double-trigger jika klik langsung pada RB
+                if (e.getSource() != radioButton) {
                     radioButton.setSelected(true);
-                    // Panggil listener radio button secara manual untuk memicu perubahan detail dan border
                     radioButton.getActionListeners()[0].actionPerformed(new ActionEvent(radioButton, ActionEvent.ACTION_PERFORMED, "clicked"));
                 }
             }
@@ -353,70 +358,53 @@ public class PaymentUI extends JPanel {
 
         return optionPanel;
     }
-    
-    // Helper untuk mengubah border panel opsi
+
     private void updateOptionPanelBorders(JPanel activeOptionPanel) {
-        // Reset semua border panel opsi ke normal
         transferBankOptionPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_COLOR, 1, true), new EmptyBorder(10, 15, 10, 15)));
         eWalletOptionPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_COLOR, 1, true), new EmptyBorder(10, 15, 10, 15)));
         codOptionPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_COLOR, 1, true), new EmptyBorder(10, 15, 10, 15)));
         creditDebitCardOptionPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(BORDER_COLOR, 1, true), new EmptyBorder(10, 15, 10, 15)));
 
-        // Set border aktif pada panel yang dipilih
         if (activeOptionPanel != null) {
-            // Border yang lebih tebal dan berwarna saat aktif
             activeOptionPanel.setBorder(BorderFactory.createCompoundBorder(new LineBorder(ACTIVE_BORDER_COLOR, 2, true), new EmptyBorder(9, 14, 9, 14)));
-            // Atur ulang preferred/maximum size untuk panel aktif agar bisa expand
             activeOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         }
     }
 
-
-    // Helper untuk menampilkan/menyembunyikan panel rincian
     private void showPaymentDetails(JPanel panelToShow, JPanel selectedOptionPanel) {
-        // Sembunyikan semua panel rincian terlebih dahulu
         transferBankDetailsPanel.setVisible(false);
         eWalletDetailsPanel.setVisible(false);
         codDetailsPanel.setVisible(false);
         creditDebitCardFormPanel.setVisible(false);
 
-        // Atur kembali ukuran semua optionPanel ke ukuran "tersembunyi"
-        int collapsedHeight = 36; // Tinggi radio button + padding (kira-kira)
+        int collapsedHeight = 36;
         transferBankOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight));
         eWalletOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight));
         codOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight));
         creditDebitCardOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, collapsedHeight));
 
-
-        // Tampilkan panel yang dipilih
         if (panelToShow != null) {
             panelToShow.setVisible(true);
-            // Izinkan panel aktif untuk mengembang secara vertikal
             if (selectedOptionPanel != null) {
                  selectedOptionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
             }
         }
-        
-        // Update border panel opsi
+
         updateOptionPanelBorders(selectedOptionPanel);
 
-        // Penting: Revalidate dan repaint kontainer induk untuk mendorong elemen lain
         revalidate();
         repaint();
     }
 
-
     private JRadioButton createRadioButtonRowPanel(JRadioButton radioButton) {
-        // Metode ini sekarang hanya mengembalikan radio button itu sendiri karena sudah ditangani di createPaymentOptionPanel
         return radioButton;
     }
 
-    // --- Detail Panel untuk Transfer Bank ---
     private JPanel createTransferBankDetailsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(Color.WHITE);
-        panel.setBorder(new EmptyBorder(10, 0, 10, 0)); // Padding internal detail panel
+        panel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
         JLabel title = new JLabel("Detail Transfer Bank");
         title.setFont(new Font("Arial", Font.BOLD, 14));
@@ -428,39 +416,32 @@ public class PaymentUI extends JPanel {
         panel.add(createDetailRow("Bank BCA", "1234567890 (a.n. PT. Quantra Indonesia)"));
         panel.add(createDetailRow("Bank Mandiri", "0987654321 (a.n. PT. Quantra Indonesia)"));
         panel.add(Box.createVerticalStrut(10));
-        
-        // Perbaikan format HTML untuk bold
-        String formattedAmount = formatCurrency(getTotalPaymentAmount()); // Dapatkan string format dulu
-        panel.add(new JLabel("<html>Silakan transfer sejumlah <b>" + formattedAmount + "</b> dalam 24 jam.</html>"));
-        panel.add(new JLabel("Pesanan akan diproses setelah pembayaran terverifikasi."));
+
+        String formattedAmount = formatCurrency(getTotalPaymentAmount());
+        JLabel amountInstructionLabel = new JLabel("<html>Silakan transfer sejumlah <b>" + formattedAmount + "</b> dalam 24 jam.</html>");
+        amountInstructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(amountInstructionLabel);
+        JLabel processingInstructionLabel = new JLabel("Pesanan akan diproses setelah pembayaran terverifikasi.");
+        processingInstructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(processingInstructionLabel);
         panel.add(Box.createVerticalStrut(20));
 
-        // Tombol BAYAR SEKARANG - di sini digunakan ulang, tapi listenernya akan spesifik untuk metode ini
-        payNowButton = new JButton("KONFIRMASI PEMBAYARAN");
-        payNowButton.setBackground(ORANGE_THEME);
-        payNowButton.setForeground(Color.WHITE);
-        payNowButton.setBorderPainted(false);
-        payNowButton.setFocusPainted(false);
-        payNowButton.setFont(new Font("Arial", Font.BOLD, 14));
-        payNowButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        payNowButton.setPreferredSize(new Dimension(200, 40));
-        payNowButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        payNowButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        payNowButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Pembayaran akan dikonfirmasi. Mohon tunggu.", "Konfirmasi Transfer", JOptionPane.INFORMATION_MESSAGE);
-            if (viewController != null) {
-                // TODO: Jika SuccessUI belum ada, pastikan ViewController Anda punya showSuccessView()
-                // dan ganti ini:
-                // viewController.showCheckoutView(); // Default ke CheckoutUI
-                // menjadi:
-                viewController.showSuccessView(); // Changed to showSuccessView()
-            }
-        });
-        panel.add(payNowButton);
+        // Tombol ini memanggil processPayment
+        JButton confirmButton = new JButton("KONFIRMASI PEMBAYARAN");
+        confirmButton.setBackground(ORANGE_THEME);
+        confirmButton.setForeground(Color.WHITE);
+        confirmButton.setBorderPainted(false);
+        confirmButton.setFocusPainted(false);
+        confirmButton.setFont(new Font("Arial", Font.BOLD, 14));
+        confirmButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        confirmButton.setPreferredSize(new Dimension(200, 40));
+        confirmButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        confirmButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        confirmButton.addActionListener(e -> processPayment("Transfer Bank"));
+        panel.add(confirmButton);
         return panel;
     }
 
-    // --- Detail Panel untuk E-Wallet ---
     private JPanel createEWalletDetailsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -474,10 +455,16 @@ public class PaymentUI extends JPanel {
         panel.add(title);
         panel.add(Box.createVerticalStrut(10));
 
-        panel.add(new JLabel("Pindai QR code atau ikuti instruksi di aplikasi e-wallet."));
+        JLabel instructionLabel = new JLabel("Pindai QR code atau ikuti instruksi di aplikasi e-wallet.");
+        instructionLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(instructionLabel);
         String formattedAmount = formatCurrency(getTotalPaymentAmount());
-        panel.add(new JLabel("Total pembayaran: <b>" + formattedAmount + "</b>"));
-        panel.add(new JLabel("[QR Code Placeholder / Instruksi E-Wallet]")); // Placeholder untuk QR code atau instruksi
+        JLabel totalAmountLabel = new JLabel("Total pembayaran: <b>" + formattedAmount + "</b>");
+        totalAmountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(totalAmountLabel);
+        JLabel qrCodePlaceholder = new JLabel("[QR Code Placeholder / Instruksi E-Wallet]");
+        qrCodePlaceholder.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(qrCodePlaceholder);
         panel.add(Box.createVerticalStrut(20));
 
         JButton payButton = new JButton("BAYAR DENGAN E-WALLET");
@@ -490,17 +477,11 @@ public class PaymentUI extends JPanel {
         payButton.setPreferredSize(new Dimension(200, 40));
         payButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         payButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        payButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Aplikasi E-Wallet akan terbuka untuk pembayaran.", "E-Wallet", JOptionPane.INFORMATION_MESSAGE);
-            if (viewController != null) {
-                viewController.showSuccessView(); // Changed to showSuccessView()
-            }
-        });
+        payButton.addActionListener(e -> processPayment("E-Wallet"));
         panel.add(payButton);
         return panel;
     }
 
-    // --- Detail Panel untuk Cash on Delivery ---
     private JPanel createCodDetailsPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
@@ -514,9 +495,13 @@ public class PaymentUI extends JPanel {
         panel.add(title);
         panel.add(Box.createVerticalStrut(10));
 
-        panel.add(new JLabel("Bayar tunai kepada kurir saat pesanan Anda tiba."));
+        JLabel instruction1Label = new JLabel("Bayar tunai kepada kurir saat pesanan Anda tiba.");
+        instruction1Label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(instruction1Label);
         String formattedAmount = formatCurrency(getTotalPaymentAmount());
-        panel.add(new JLabel("Pastikan Anda memiliki uang tunai yang cukup sejumlah <b>" + formattedAmount + "</b>."));
+        JLabel instruction2Label = new JLabel("Pastikan Anda memiliki uang tunai yang cukup sejumlah <b>" + formattedAmount + "</b>.");
+        instruction2Label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(instruction2Label);
         panel.add(Box.createVerticalStrut(20));
 
         JButton confirmCodButton = new JButton("KONFIRMASI COD");
@@ -529,12 +514,7 @@ public class PaymentUI extends JPanel {
         confirmCodButton.setPreferredSize(new Dimension(200, 40));
         confirmCodButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         confirmCodButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        confirmCodButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(this, "Pesanan Anda akan segera diproses dengan metode COD.", "Konfirmasi COD", JOptionPane.INFORMATION_MESSAGE);
-            if (viewController != null) {
-                viewController.showSuccessView(); // Changed to showSuccessView()
-            }
-        });
+        confirmCodButton.addActionListener(e -> processPayment("Cash on Delivery"));
         panel.add(confirmCodButton);
         return panel;
     }
@@ -546,7 +526,7 @@ public class PaymentUI extends JPanel {
         lbl.setFont(new Font("Arial", Font.PLAIN, 14));
         lbl.setForeground(DARK_TEXT_COLOR);
         row.add(lbl, BorderLayout.WEST);
-        
+
         JLabel val = new JLabel("<html><b>" + value + "</b></html>");
         val.setFont(new Font("Arial", Font.PLAIN, 14));
         val.setForeground(DARK_TEXT_COLOR);
@@ -560,7 +540,7 @@ public class PaymentUI extends JPanel {
         JPanel formPanel = new JPanel();
         formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
         formPanel.setBackground(Color.WHITE);
-        formPanel.setBorder(new EmptyBorder(10, 0, 10, 0)); // Tanpa indentasi di sini, sudah di handle oleh createPaymentOptionPanel
+        formPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
         JLabel formTitle = new JLabel("Detail Kartu Kredit/Debit");
         formTitle.setFont(new Font("Arial", Font.BOLD, 14));
@@ -603,10 +583,10 @@ public class PaymentUI extends JPanel {
         helpButton.setPreferredSize(new Dimension(20, 20));
         helpButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         helpButton.addActionListener(e -> JOptionPane.showMessageDialog(formPanel, "CVV adalah 3 atau 4 digit nomor keamanan di belakang kartu Anda.", "Apa itu CVV?", JOptionPane.INFORMATION_MESSAGE));
-        
+
         cvvLabelPanel.add(cvvLabel, BorderLayout.WEST);
         cvvLabelPanel.add(helpButton, BorderLayout.EAST);
-        
+
         cvvMainPanel.add(cvvLabelPanel, BorderLayout.NORTH);
         cvvMainPanel.add(Box.createVerticalStrut(5), BorderLayout.CENTER);
 
@@ -634,6 +614,7 @@ public class PaymentUI extends JPanel {
         formPanel.add(saveCardCheckbox);
         formPanel.add(Box.createVerticalStrut(20));
 
+        // Tombol utama "BAYAR SEKARANG" untuk form ini
         payNowButton = new JButton("BAYAR SEKARANG " + formatCurrency(getTotalPaymentAmount()));
         payNowButton.setBackground(ORANGE_THEME);
         payNowButton.setForeground(Color.WHITE);
@@ -653,32 +634,7 @@ public class PaymentUI extends JPanel {
             }
 
             String selectedPaymentMethod = selectedMethodModel.getActionCommand();
-
-            if (selectedPaymentMethod.equals("Kartu Kredit/Debit")) {
-                if (cardNumberField.getText().isEmpty() || cardExpiryField.getText().isEmpty() ||
-                    cvvField.getText().isEmpty() || cardNameField.getText().isEmpty()) {
-                    JOptionPane.showMessageDialog(formPanel, "Semua field kartu kredit harus diisi.", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                if (!isValidCardNumber(cardNumberField.getText())) {
-                    JOptionPane.showMessageDialog(formPanel, "Nomor kartu tidak valid.", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                if (!isValidExpiryDate(cardExpiryField.getText())) {
-                    JOptionPane.showMessageDialog(formPanel, "Tanggal kedaluwarsa tidak valid (MM/YY).", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-                if (!isValidCVV(cvvField.getText())) {
-                    JOptionPane.showMessageDialog(formPanel, "CVV tidak valid (3 atau 4 digit).", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-            }
-            
-            if (viewController != null) {
-                viewController.showSuccessView(); // Changed to showSuccessView()
-            } else {
-                JOptionPane.showMessageDialog(formPanel, "Pembayaran berhasil dengan metode: " + selectedPaymentMethod, "Pembayaran Sukses", JOptionPane.INFORMATION_MESSAGE);
-            }
+            processPayment(selectedPaymentMethod); // Panggil metode proses pembayaran
         });
         formPanel.add(payNowButton);
 
@@ -688,17 +644,17 @@ public class PaymentUI extends JPanel {
     private JPanel createFormField(String labelText, JTextField textField) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-        
+
         JLabel label = new JLabel(labelText);
         label.setFont(new Font("Arial", Font.PLAIN, 12));
         label.setForeground(DARK_TEXT_COLOR);
-        label.setBorder(new EmptyBorder(0, 0, 5, 0)); // Padding bawah untuk label
+        label.setBorder(new EmptyBorder(0, 0, 5, 0));
         panel.add(label, BorderLayout.NORTH);
 
         textField.setFont(new Font("Arial", Font.PLAIN, 14));
         textField.setBorder(new LineBorder(BORDER_COLOR));
         panel.add(textField, BorderLayout.CENTER);
-        
+
         return panel;
     }
 
@@ -707,11 +663,10 @@ public class PaymentUI extends JPanel {
         field.setFont(new Font("Arial", Font.PLAIN, 14));
         field.setBorder(BorderFactory.createCompoundBorder(
             new LineBorder(new Color(206, 212, 218), 1, true),
-            new EmptyBorder(8, 10, 8, 10) // Padding internal field
+            new EmptyBorder(8, 10, 8, 10)
         ));
         field.setBackground(Color.WHITE);
 
-        // Placeholder functionality
         field.setForeground(new Color(150, 150, 150));
         field.setText(placeholder);
 
@@ -723,7 +678,7 @@ public class PaymentUI extends JPanel {
                     field.setForeground(DARK_TEXT_COLOR);
                 }
                 field.setBorder(BorderFactory.createCompoundBorder(
-                    new LineBorder(ORANGE_THEME, 2, true), // Border aktif
+                    new LineBorder(ORANGE_THEME, 2, true),
                     new EmptyBorder(7, 9, 7, 9)
                 ));
             }
@@ -743,30 +698,94 @@ public class PaymentUI extends JPanel {
         return field;
     }
 
+    // Logika pemrosesan pembayaran utama (diekstraksi ke metode baru)
+    private void processPayment(String paymentMethod) {
+        if (cartItems == null || cartItems.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Keranjang Anda kosong. Tidak dapat memproses pembayaran.", "Keranjang Kosong", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (selectedShippingAddress == null || selectedDeliveryService == null) {
+            JOptionPane.showMessageDialog(this, "Informasi alamat pengiriman atau jasa pengiriman tidak lengkap. Harap kembali ke halaman alamat.", "Error Pembayaran", JOptionPane.ERROR_MESSAGE);
+            if (viewController != null) {
+                viewController.showAddressView(); // Arahkan kembali ke AddressUI
+            }
+            return;
+        }
+
+        if (paymentMethod.equals("Kartu Kredit/Debit")) {
+            if (cardNumberField.getText().isEmpty() || cardExpiryField.getText().isEmpty() ||
+                cvvField.getText().isEmpty() || cardNameField.getText().isEmpty() ||
+                cardNumberField.getText().equals("xxxx xxxx xxxx xxxx") ||
+                cardExpiryField.getText().equals("MM/YY") ||
+                cvvField.getText().equals("123") ||
+                cardNameField.getText().equals("Nama Lengkap")) {
+                JOptionPane.showMessageDialog(this, "Semua field kartu kredit harus diisi.", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (!isValidCardNumber(cardNumberField.getText())) {
+                JOptionPane.showMessageDialog(this, "Nomor kartu tidak valid.", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (!isValidExpiryDate(cardExpiryField.getText())) {
+                JOptionPane.showMessageDialog(this, "Tanggal kedaluwarsa tidak valid (MM/YY).", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (!isValidCVV(cvvField.getText())) {
+                JOptionPane.showMessageDialog(this, "CVV tidak valid (3 atau 4 digit).", "Validasi Pembayaran", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
+        int orderId = -1;
+        try {
+            orderId = ProductRepository.createOrder(
+                currentUser.getId(),
+                cartItems,
+                getTotalPaymentAmount(),
+                selectedShippingAddress,
+                selectedDeliveryService,
+                paymentMethod
+            );
+
+            if (orderId != -1) {
+                JOptionPane.showMessageDialog(this, "Pembayaran berhasil dengan metode: " + paymentMethod + ". Nomor Pesanan: " + orderId, "Pembayaran Sukses", JOptionPane.INFORMATION_MESSAGE);
+                if (viewController != null) {
+                    viewController.showSuccessView(orderId); // Teruskan ID pesanan yang sebenarnya
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal membuat pesanan. Terjadi kesalahan internal.", "Error Pesanan", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException ex) {
+            System.err.println("Error membuat pesanan: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Gagal memproses pembayaran. Error database: " + ex.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     // Metode Validasi
     private boolean isValidCardNumber(String cardNumber) {
         String cleanNumber = cardNumber.replaceAll("\\s+", "");
-        return cleanNumber.matches("\\d{13,19}"); // 13-19 digit angka
+        return cleanNumber.matches("\\d{13,19}");
     }
 
     private boolean isValidExpiryDate(String expiry) {
-        if (!expiry.matches("(0[1-9]|1[0-2])/\\d{2}")) { // Format MM/YY
+        if (!expiry.matches("(0[1-9]|1[0-2])/\\d{2}")) {
             return false;
         }
         String[] parts = expiry.split("/");
         int month = Integer.parseInt(parts[0]);
-        int year = Integer.parseInt(parts[1]) + 2000; // Asumsi YY adalah tahun 20xx
+        int year = Integer.parseInt(parts[1]) + 2000;
 
         LocalDate currentDate = LocalDate.now();
-        LocalDate expiryDate = LocalDate.of(year, month, 1).plusMonths(1).minusDays(1); // Akhir bulan kedaluwarsa
+        LocalDate expiryDate = LocalDate.of(year, month, 1).plusMonths(1).minusDays(1);
 
         return expiryDate.isAfter(currentDate);
     }
 
     private boolean isValidCVV(String cvv) {
-        return cvv.matches("\\d{3,4}"); // 3 atau 4 digit angka
+        return cvv.matches("\\d{3,4}");
     }
-
 
     private JPanel createPaymentSummaryPanel() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -776,7 +795,7 @@ public class PaymentUI extends JPanel {
         panel.setMinimumSize(new Dimension(300, 280));
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
 
-        panel.add(createSectionTitle("Payment Summary", null, null), BorderLayout.NORTH);
+        panel.add(createSectionTitle("Ringkasan Pembayaran", null, null), BorderLayout.NORTH);
 
         JPanel summaryDetails = new JPanel();
         summaryDetails.setLayout(new BoxLayout(summaryDetails, BoxLayout.Y_AXIS));
@@ -793,16 +812,17 @@ public class PaymentUI extends JPanel {
         summaryDetails.add(createSummaryRowPanel("Total MRP", totalMRPLabel, DARK_TEXT_COLOR, totalMRP));
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Discount on MRP", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP));
+        summaryDetails.add(createSummaryRowPanel("Diskon pada MRP", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP));
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Coupon savings", couponSavingsLabel, GREEN_DISCOUNT_TEXT, couponSavings));
+        summaryDetails.add(createSummaryRowPanel("Penghematan Kupon", couponSavingsLabel, GREEN_DISCOUNT_TEXT, couponSavings));
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Applicable GST", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST));
+        summaryDetails.add(createSummaryRowPanel("GST yang Berlaku", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST));
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Delivery", deliveryLabel, TEAL_FREE_TEXT, deliveryCharge, formatCurrency(deliveryCharge)));
+        // Display "Gratis" jika biaya pengiriman 0
+        summaryDetails.add(createSummaryRowPanel("Pengiriman", deliveryLabel, TEAL_FREE_TEXT, deliveryCharge, formatCurrency(deliveryCharge)));
         summaryDetails.add(Box.createVerticalStrut(10));
 
         JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
@@ -838,6 +858,7 @@ public class PaymentUI extends JPanel {
         keyLabel.setForeground(DARK_TEXT_COLOR);
         rowPanel.add(keyLabel, BorderLayout.WEST);
 
+        // Jika customValueText disediakan, gunakan itu. Jika tidak, format jumlah mata uang.
         valueLabelRef.setText(customValueText != null ? customValueText : formatCurrency(amount));
         valueLabelRef.setFont(new Font("Arial", Font.PLAIN, 14));
         valueLabelRef.setForeground(valueColor);
@@ -874,15 +895,12 @@ public class PaymentUI extends JPanel {
         return titlePanel;
     }
 
-
     private void updateSummaryTotals() {
         totalMRP = 0;
         discountOnMRP = 0;
         couponSavings = 0;
         applicableGST = 0;
-        if (deliveryCharge == 0 && cartItems != null && !cartItems.isEmpty()) {
-            deliveryCharge = 15000.0;
-        }
+        // deliveryCharge sudah diatur dari selectedDeliveryService di konstruktor, tidak perlu dihitung ulang dari awal kecuali logika berubah
 
         if (cartItems != null) {
             for (ProductRepository.CartItem item : cartItems) {
@@ -898,20 +916,27 @@ public class PaymentUI extends JPanel {
         if (couponSavingsLabel != null) couponSavingsLabel.setText(formatCurrency(couponSavings));
         if (applicableGSTLabel != null) applicableGSTLabel.setText(formatCurrency(applicableGST));
 
-        if (deliveryLabel != null) deliveryLabel.setText(deliveryCharge == 0 ? "Free" : formatCurrency(deliveryCharge));
+        if (deliveryLabel != null) {
+            // Tampilkan "Gratis" hanya jika deliveryCharge benar-benar 0.0
+            deliveryLabel.setText(deliveryCharge == 0.0 ? "Gratis" : formatCurrency(deliveryCharge));
+        }
         if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
-        
+
+        // Perbarui teks tombol payNowButton
+        updatePayNowButtonText();
+    }
+
+    // Metode untuk memperbarui teks tombol "BAYAR SEKARANG"
+    private void updatePayNowButtonText() {
         if (payNowButton != null) {
-             payNowButton.setText("BAYAR SEKARANG " + formatCurrency(finalTotal));
+             payNowButton.setText("BAYAR SEKARANG " + formatCurrency(getTotalPaymentAmount()));
         }
     }
 
     // --- Metode untuk menghitung total pembayaran akhir ---
     private double getTotalPaymentAmount() {
-        double calculatedTotal = totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
-        return calculatedTotal;
+        return totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
     }
-
 
     private String formatCurrency(double amount) {
         return String.format("Rp %,.2f", amount);
@@ -939,14 +964,14 @@ public class PaymentUI extends JPanel {
                     if (image != null) {
                         hasImage = true;
                     } else {
-                        System.err.println("ImageIO.read returned null for BLOB image for colorHex: " + fallbackColor);
+                        System.err.println("ImageIO.read mengembalikan null untuk gambar BLOB untuk colorHex: " + fallbackColor);
                     }
                 } catch (IOException e) {
-                    System.err.println("Error loading image from BLOB for colorHex: " + fallbackColor + ": " + e.getMessage());
+                    System.err.println("Error memuat gambar dari BLOB untuk colorHex: " + fallbackColor + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
-                System.out.println("No BLOB image data provided for image panel (fallback to color for ID: " + fallbackColor + ").");
+                System.out.println("Tidak ada data gambar BLOB yang disediakan untuk panel gambar (fallback ke warna untuk ID: " + fallbackColor + ").");
             }
         }
 
@@ -980,7 +1005,7 @@ public class PaymentUI extends JPanel {
 
                 g2d.setColor(color.darker());
                 g2d.setFont(new Font("Arial", Font.BOLD, 10));
-                String text = "NO IMAGE";
+                String text = "TIDAK ADA GAMBAR";
                 FontMetrics fm = g2d.getFontMetrics();
                 int textWidth = fm.stringWidth(text);
                 int textHeight = fm.getHeight();
@@ -989,26 +1014,50 @@ public class PaymentUI extends JPanel {
         }
     }
 
+    // Metode main untuk pengujian (DIMODIFIKASI untuk meneruskan alamat dan pengiriman dummy)
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Payment Selection");
+            JFrame frame = new JFrame("Pemilihan Pembayaran");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
+            // User Dummy untuk pengujian
+            User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
+            try {
+                java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
+                field.setAccessible(true);
+                field.set(null, dummyUser);
+                System.out.println("User dummy diatur untuk pengujian di PaymentUI.");
+            } catch (Exception e) {
+                System.err.println("Gagal mengatur user dummy untuk pengujian di PaymentUI: " + e.getMessage());
+            }
+
+            // Alamat dan Jasa Pengiriman Dummy untuk pengujian
+            Address dummyAddress = new Address(1, 1, "Rumah", "Jl. Dummy No. 123", "Jakarta", "DKI Jakarta", "10110", "Indonesia");
+            ShippingService dummyShipping = new ShippingService("JNE", "3-4 Hari", 15000.0);
+
             ViewController dummyVC = new ViewController() {
-                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Show Product Detail: " + product.getName()); }
-                @Override public void showFavoritesView() { System.out.println("Dummy: Show Favorites View"); }
-                @Override public void showDashboardView() { System.out.println("Dummy: Show Dashboard View"); }
-                @Override public void showCartView() { System.out.println("Dummy: Show Cart View"); }
-                @Override public void showProfileView() { System.out.println("Dummy: Show Profile View"); }
-                @Override public void showOrdersView() { System.out.println("Dummy: Show Orders View"); }
-                @Override public void showCheckoutView() { System.out.println("Dummy: Show Checkout View (Success)"); }
-                @Override public void showAddressView() { System.out.println("Dummy: Show Address View (Success)"); }
-                @Override public void showPaymentView() { System.out.println("Dummy: Show Payment View (Success)"); }
-                @Override public void showSuccessView() { System.out.println("Dummy: Show Success View (Success)"); } // Added this line
+                @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { System.out.println("Dummy: Tampilkan Detail Produk: " + product.getName()); }
+                @Override public void showFavoritesView() { System.out.println("Dummy: Tampilkan Tampilan Favorit"); }
+                @Override public void showDashboardView() { System.out.println("Dummy: Tampilkan Tampilan Dashboard"); }
+                @Override public void showCartView() { System.out.println("Dummy: Tampilkan Tampilan Keranjang"); }
+                @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
+                @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
+                @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
+                @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
+                @Override public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran (Sukses) dengan alamat dan pengiriman.");
+                }
+                @Override public void showSuccessView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Sukses (Sukses) dengan ID pesanan: " + orderId);
+                }
+                @Override
+                public void showOrderDetailView(int orderId) {
+                    System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
+                }
             };
 
-            PaymentUI paymentUI = new PaymentUI(dummyVC);
+            PaymentUI paymentUI = new PaymentUI(dummyVC, dummyAddress, dummyShipping);
             frame.add(paymentUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);
