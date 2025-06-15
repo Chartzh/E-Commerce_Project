@@ -7,10 +7,10 @@ import java.awt.image.BufferedImage;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.plaf.basic.BasicButtonUI; // Import for custom button UI
+import javax.swing.plaf.basic.BasicButtonUI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer; // Use java.util.Timer for scheduling tasks
+import java.util.Timer;
 import java.util.TimerTask;
 import java.sql.SQLException;
 
@@ -23,14 +23,14 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private JPanel mainPanel;
     private JLabel profileImageLabel;
     private Timer searchTimer;
-    private FavoritesUI favoritesUI;
+    private FavoritesUI favoritesUI; // Deklarasi tetap
     private CheckoutUI checkoutUI;
     private User currentUser;
 
     // Hapus inisialisasi ini di sini, akan diinisialisasi saat showView dipanggil
-    // private AddressUI addressUI; // AddressUI masih bisa diinisialisasi di sini karena tidak butuh parameter dari view sebelumnya
-    // private PaymentUI paymentUI;
-    // private SuccessUI successUI;
+    private AddressUI addressUI; // AddressUI masih bisa diinisialisasi di sini karena tidak butuh parameter dari view sebelumnya
+    private PaymentUI paymentUI;
+    private SuccessUI successUI;
 
     // --- Banner Image Paths ---
     private static final String BANNER_1_PATH = "/Resources/Images/Banner1.png";
@@ -68,24 +68,18 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
-        checkoutUI = new CheckoutUI(this); // CheckoutUI tidak berubah
+        checkoutUI = new CheckoutUI(this);
 
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
         JPanel ordersPanel = createOrdersPanel();
 
-        // Inisialisasi CartUI dan FavoritesUI yang tidak bergantung pada data dari view sebelumnya
         JPanel cartPanel = new CartUI(this);
-        favoritesUI = new FavoritesUI(this);
-        // AddressUI juga bisa langsung diinisialisasi karena tidak memerlukan parameter dari view sebelumnya (hanya currentUser)
+
+        favoritesUI = new FavoritesUI(this, currentUser.getId()); //
+
         AddressUI addressUI = new AddressUI(this);
-
-
-        // Hapus inisialisasi PaymentUI dan SuccessUI di sini!
-        // paymentUI = new PaymentUI(this); // ERROR di sini
-        // successUI = new SuccessUI(this); // ERROR di sini
-
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
@@ -134,6 +128,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     @Override
     public void showFavoritesView() {
+        // Opsional: Jika Anda ingin me-refresh daftar favorit setiap kali tampilan dibuka
+        // Anda perlu menambahkan metode publik di FavoritesUI (misalnya, refreshFavoritesData())
+        // untuk memicu pemuatan ulang dari database.
+        // favoritesUI.refreshFavoritesData(); // <--- Panggil jika metode ini ada di FavoritesUI
         cardLayout.show(mainPanel, "Favorites");
     }
 
@@ -154,6 +152,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel newCartPanel = new CartUI(this);
         mainPanel.add(newCartPanel, "Cart");
         cardLayout.show(mainPanel, "Cart");
+        // Perbarui jumlah item keranjang di header setelah masuk ke CartUI
+        updateHeaderCartAndFavCounts();
     }
 
     @Override
@@ -229,8 +229,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(newSuccessUI, "Success");
         cardLayout.show(mainPanel, "Success");
         System.out.println("Navigasi ke Halaman Sukses dengan ID Pesanan: " + orderId);
+        // Penting: Setelah order berhasil, perbarui tampilan keranjang dan favorit di header
+        updateHeaderCartAndFavCounts();
     }
-    
+
     @Override
     public void showOrderDetailView(int orderId) {
         // Hapus instance OrderDetailUI lama jika ada untuk refresh data
@@ -248,7 +250,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
 
-    private JPanel createHeaderPanel(User currentUser) { /* ... isi metode ini tidak berubah ... */
+    private JPanel createHeaderPanel(User currentUser) {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setPreferredSize(new Dimension(getWidth(), 70));
@@ -282,7 +284,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         ImageIcon resizedFavIcon = new ImageIcon(resizedFavImage);
 
         JLabel lblFav = new JLabel(resizedFavIcon);
-        lblFav.setText(" " + getFavItemCount());
+        // UBAH: Ambil jumlah favorit dari database
+        lblFav.setText(" " + getFavItemCount()); //
         lblFav.setFont(new Font("Arial", Font.BOLD, 14));
         lblFav.setHorizontalTextPosition(SwingConstants.RIGHT);
         lblFav.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -309,13 +312,13 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 showCartView();
             }
         });
-        
+
         ImageIcon orderIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/order_icon.png"));
         Image originalOrderImage = orderIcon.getImage();
         Image resizedOrderImage = originalOrderImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
         ImageIcon resizedOrderIcon = new ImageIcon(resizedOrderImage);
-        
-        JLabel lblOrders = new JLabel(resizedOrderIcon); // 
+
+        JLabel lblOrders = new JLabel(resizedOrderIcon);
         lblOrders.setHorizontalTextPosition(SwingConstants.RIGHT);
         lblOrders.setCursor(new Cursor(Cursor.HAND_CURSOR));
         lblOrders.addMouseListener(new MouseAdapter() {
@@ -945,7 +948,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel bestSellerProducts = new JPanel(new GridLayout(0, 6, 15, 15));
         bestSellerProducts.setBackground(Color.WHITE);
 
-        List<FavoritesUI.FavoriteItem> allProducts = ProductRepository.getAllProducts();
+        List<FavoritesUI.FavoriteItem> allProducts = ProductRepository.getAllProducts(); //
         System.out.println("DEBUG UserDashboardUI: Jumlah produk yang diambil dari database: " + allProducts.size());
 
         int productsToShow = Math.min(allProducts.size(), 8);
@@ -1109,11 +1112,13 @@ public class UserDashboardUI extends JFrame implements ViewController {
             int quantity = 1;
 
             try {
-                ProductRepository.addProductToCart(userId, productId, quantity);
+                ProductRepository.addProductToCart(userId, productId, quantity); //
                 JOptionPane.showMessageDialog(UserDashboardUI.this,
                     "'" + item.getName() + "' berhasil ditambahkan ke keranjang!",
                     "Berhasil Ditambahkan",
                     JOptionPane.INFORMATION_MESSAGE);
+                // Setelah menambahkan ke keranjang, perbarui jumlah di header
+                updateHeaderCartAndFavCounts();
             } catch (SQLException ex) {
                 System.err.println("Error menambahkan produk ke keranjang: " + ex.getMessage());
                 JOptionPane.showMessageDialog(UserDashboardUI.this,
@@ -1142,6 +1147,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Pastikan klik tidak berasal dari tombol "Tambah ke Keranjang" atau "♥"
+                // Heart button sudah ditangani di FavoritesUI.java
                 if (e.getSource() != addToCartButton) {
                     showProductDetail(item);
                 }
@@ -1228,7 +1235,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private int getCartItemCount() {
         if (currentUser != null) {
             try {
-                List<ProductRepository.CartItem> items = ProductRepository.getCartItemsForUser(currentUser.getId());
+                // Panggil ProductRepository untuk mendapatkan item keranjang
+                List<ProductRepository.CartItem> items = ProductRepository.getCartItemsForUser(currentUser.getId()); //
                 return items.stream().mapToInt(ProductRepository.CartItem::getQuantity).sum();
             } catch (Exception e) {
                 System.err.println("Error mengambil jumlah item keranjang dari database: " + e.getMessage());
@@ -1239,10 +1247,50 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     private int getFavItemCount() {
-        // Ini adalah nilai dummy, Anda perlu mengimplementasikan logika pengambilan data dari database
-        // seperti ProductRepository.getFavoriteItemsForUser(currentUser.getId()).size();
-        return 6;
+        if (currentUser != null) {
+            try {
+                // Panggil ProductRepository untuk mendapatkan jumlah item favorit
+                return ProductRepository.getFavoriteItemsForUser(currentUser.getId()).size(); //
+            } catch (SQLException e) {
+                System.err.println("Error mengambil jumlah item favorit dari database: " + e.getMessage());
+                return 0;
+            }
+        }
+        return 0;
     }
+
+    // TAMBAHKAN METODE BARU INI untuk memperbarui hitungan di header
+    private void updateHeaderCartAndFavCounts() {
+        SwingUtilities.invokeLater(() -> {
+            // Temukan label favorit dan keranjang di headerPanel
+            Component[] components = ((JPanel) this.getContentPane().getComponent(0)).getComponents(); // Assuming headerPanel is at BorderLayout.NORTH
+            for (Component comp : components) {
+                if (comp instanceof JPanel && ((JPanel)comp).getLayout() instanceof FlowLayout) { // This is likely the rightPanel
+                    JPanel rightPanel = (JPanel)comp;
+                    for (Component innerComp : rightPanel.getComponents()) {
+                        if (innerComp instanceof JLabel) {
+                            JLabel label = (JLabel) innerComp;
+                            if (label.getIcon() != null) { // Check if it has an icon to identify fav/cart
+                                String iconDescription = ((ImageIcon)label.getIcon()).getDescription();
+                                if (iconDescription != null) {
+                                    if (iconDescription.contains("fav_icon.png")) {
+                                        label.setText(" " + getFavItemCount());
+                                    } else if (iconDescription.contains("cart_icon.png")) {
+                                        label.setText(" " + getCartItemCount());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break; // Found the right panel, no need to continue
+                }
+            }
+            // revalidate and repaint the header to ensure changes are drawn
+            ((JPanel) this.getContentPane().getComponent(0)).revalidate();
+            ((JPanel) this.getContentPane().getComponent(0)).repaint();
+        });
+    }
+
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -1259,7 +1307,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 System.err.println("Gagal mengatur user dummy untuk pengujian di UserDashboardUI: " + e.getMessage());
             }
 
-            new UserDashboardUI().setVisible(true);
+            UserDashboardUI dashboard = new UserDashboardUI(); // Buat instance
+            dashboard.setVisible(true); // Tampilkan
+            dashboard.updateHeaderCartAndFavCounts(); // Panggil untuk memperbarui hitungan setelah UI terlihat
         });
     }
 }

@@ -11,30 +11,33 @@ import java.util.ArrayList;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.sql.SQLException; // Import SQLException
 
 public class FavoritesUI extends JPanel {
-    private List<FavoriteItem> favoriteItems;
+    private List<FavoriteItem> favoriteItems; // This will now be populated from DB
     private JPanel favoriteProductsPanel;
     private ViewController viewController;
+    private int currentUserId; // To store the ID of the logged-in user
 
-    public FavoritesUI(ViewController viewController) {
+    public FavoritesUI(ViewController viewController, int userId) { // Added userId parameter
         this.viewController = viewController;
-        initializeDummyData();
+        this.currentUserId = userId; // Store the user ID
+        loadFavoriteData(); // Load data from the database
         initializeUI();
     }
 
-    private void initializeDummyData() {
-        // Mengambil semua produk dari database melalui ProductRepository
-        // Ini adalah tempat data produk dimuat dari DB saat FavoritesUI diinisialisasi
-        favoriteItems = ProductRepository.getAllProducts();
-
-        // Opsional: Jika Anda ingin hanya beberapa produk yang muncul sebagai "favorit"
-        // Misalnya, hanya ambil 6 produk pertama yang dimuat dari DB
-        // List<FavoriteItem> allDbProducts = ProductRepository.getAllProducts();
-        // favoriteItems = new ArrayList<>();
-        // for (int i = 0; i < Math.min(6, allDbProducts.size()); i++) {
-        //     favoriteItems.add(allDbProducts.get(i));
-        // }
+    private void loadFavoriteData() {
+        try {
+            favoriteItems = ProductRepository.getFavoriteItemsForUser(currentUserId);
+        } catch (SQLException e) {
+            System.err.println("Error loading favorite items from database: " + e.getMessage());
+            e.printStackTrace();
+            favoriteItems = new ArrayList<>(); // Initialize as empty list on error
+            JOptionPane.showMessageDialog(this,
+                    "Error loading your favorite items. Please try again later.",
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void initializeUI() {
@@ -58,6 +61,7 @@ public class FavoritesUI extends JPanel {
         titleLabel.setForeground(Color.BLACK);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
+        // Update countLabel to reflect actual number of favorite items
         JLabel countLabel = new JLabel(favoriteItems.size() + " item");
         countLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         countLabel.setForeground(Color.GRAY);
@@ -164,7 +168,7 @@ public class FavoritesUI extends JPanel {
         card.setLayout(new BorderLayout());
         card.setBackground(Color.WHITE);
         card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
-        card.setPreferredSize(new Dimension(180, 320)); 
+        card.setPreferredSize(new Dimension(180, 320));
 
         JPanel imagePanel = new JPanel() {
             @Override
@@ -178,7 +182,7 @@ public class FavoritesUI extends JPanel {
                 g2d.fillRect(0, 0, getWidth(), getHeight());
 
                 Image mainImage = null;
-                if (!item.getLoadedImages().isEmpty()) {
+                if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) { // Check for null list
                     mainImage = item.getLoadedImages().get(0);
                 }
 
@@ -207,30 +211,30 @@ public class FavoritesUI extends JPanel {
                     g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null);
                 }
             }
-            
+
             @Override
             public Dimension getPreferredSize() {
-                return new Dimension(180, 180); 
+                return new Dimension(180, 180);
             }
 
             @Override
             public Dimension getMinimumSize() {
-                return new Dimension(50, 50); 
+                return new Dimension(50, 50);
             }
 
             @Override
             public Dimension getMaximumSize() {
-                return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE); 
+                return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
             }
         };
-        imagePanel.setOpaque(true); 
+        imagePanel.setOpaque(true);
 
         JPanel overlayPanel = new JPanel();
         overlayPanel.setLayout(new BorderLayout());
-        overlayPanel.setOpaque(false); 
+        overlayPanel.setOpaque(false);
 
         JPanel heartPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        heartPanel.setOpaque(false); 
+        heartPanel.setOpaque(false);
         heartPanel.setBorder(new EmptyBorder(8, 8, 8, 8));
 
         JButton heartButton = new JButton("♥");
@@ -249,22 +253,36 @@ public class FavoritesUI extends JPanel {
             }
 
             @Override
-            public void mouseExited(MouseEvent e) { // Perbaikan: methodExited -> mouseExited
+            public void mouseExited(MouseEvent e) {
                 heartButton.setBackground(Color.WHITE);
             }
 
             @Override
             public void mouseClicked(MouseEvent e) {
                 int result = JOptionPane.showConfirmDialog(
-                                        FavoritesUI.this,
-                                        "Hapus '" + item.getName() + "' dari favorit?",
-                                        "Hapus Favorit",
-                                        JOptionPane.YES_NO_OPTION,
-                                        JOptionPane.QUESTION_MESSAGE
+                        FavoritesUI.this,
+                        "Hapus '" + item.getName() + "' dari favorit?",
+                        "Hapus Favorit",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE
                 );
 
                 if (result == JOptionPane.YES_OPTION) {
-                    removeFavoriteItem(item);
+                    try {
+                        ProductRepository.removeFavoriteItem(currentUserId, item.getId()); // Call DB method
+                        removeFavoriteItem(item); // Update UI
+                        JOptionPane.showMessageDialog(FavoritesUI.this,
+                                "'" + item.getName() + "' berhasil dihapus dari favorit.",
+                                "Hapus Berhasil",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    } catch (SQLException ex) {
+                        System.err.println("Error removing favorite item from database: " + ex.getMessage());
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(FavoritesUI.this,
+                                "Gagal menghapus '" + item.getName() + "' dari favorit. Silakan coba lagi.",
+                                "Error Hapus Favorit",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
                 }
             }
         });
@@ -275,7 +293,7 @@ public class FavoritesUI extends JPanel {
         JPanel imageContainer = new JPanel();
         imageContainer.setLayout(new OverlayLayout(imageContainer));
         imageContainer.add(overlayPanel);
-        imageContainer.add(imagePanel); 
+        imageContainer.add(imagePanel);
 
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
@@ -319,12 +337,23 @@ public class FavoritesUI extends JPanel {
         addToCartButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         addToCartButton.addActionListener(e -> {
-            JOptionPane.showMessageDialog(
-                                FavoritesUI.this,
-                                "'" + item.getName() + "' ditambahkan ke keranjang!",
-                                "Ditambahkan ke Keranjang",
-                                JOptionPane.INFORMATION_MESSAGE
-            );
+            try {
+                // Assuming you want to add 1 quantity by default
+                ProductRepository.addProductToCart(currentUserId, item.getId(), 1);
+                JOptionPane.showMessageDialog(
+                        FavoritesUI.this,
+                        "'" + item.getName() + "' ditambahkan ke keranjang!",
+                        "Ditambahkan ke Keranjang",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } catch (SQLException ex) {
+                System.err.println("Error adding product to cart: " + ex.getMessage());
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(FavoritesUI.this,
+                        "Gagal menambahkan '" + item.getName() + "' ke keranjang. Silakan coba lagi.",
+                        "Error Tambah ke Keranjang",
+                        JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         buttonPanel.add(addToCartButton);
@@ -347,9 +376,9 @@ public class FavoritesUI extends JPanel {
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (!SwingUtilities.isDescendingFrom(e.getComponent(), heartButton) && 
+                if (!SwingUtilities.isDescendingFrom(e.getComponent(), heartButton) &&
                     !SwingUtilities.isDescendingFrom(e.getComponent(), addToCartButton)) {
-                    
+
                     showProductDetails(item);
                 }
             }
@@ -370,6 +399,7 @@ public class FavoritesUI extends JPanel {
 
     private void removeFavoriteItem(FavoriteItem item) {
         favoriteItems.remove(item);
+        // Re-initialize the UI to reflect the changes (e.g., update item count, show empty state if needed)
         initializeUI();
         revalidate();
         repaint();
@@ -381,7 +411,7 @@ public class FavoritesUI extends JPanel {
         }
     }
 
-    // *** INNER CLASS FavoriteItem ***
+    // *** INNER CLASS FavoriteItem (Keep this as is, but consider moving it to a more central location if used by other UIs) ***
     public static class FavoriteItem {
         private int id;
         private String name;
@@ -393,15 +423,15 @@ public class FavoritesUI extends JPanel {
         private String minOrder;
         private String brand;
         private Color bgColor;
-        
-        private List<byte[]> rawImageDataList; 
+
+        private List<byte[]> rawImageDataList;
         private List<String> rawFileExtensionList;
 
-        protected List<Image> loadedImages; 
+        protected List<Image> loadedImages;
 
         public FavoriteItem(int id, String name, String description, double price, double originalPrice,
                             int stock, String condition, String minOrder, String brand,
-                            String hexColor, List<String> imagePaths) { 
+                            String hexColor, List<String> imagePaths) { // imagePaths is still here but will be null from ProductRepository
             this.id = id;
             this.name = name;
             this.description = description;
@@ -414,15 +444,15 @@ public class FavoritesUI extends JPanel {
             this.bgColor = Color.decode(hexColor);
             this.loadedImages = new ArrayList<>();
         }
-        
+
         public void setImageDataLists(List<byte[]> imageDataList, List<String> fileExtensionList) {
             this.rawImageDataList = imageDataList;
             this.rawFileExtensionList = fileExtensionList;
-            loadImageFromBytes(); // Panggil untuk memuat gambar setelah data diterima
+            loadImageFromBytes(); // Call to load images after data is received
         }
 
         private void loadImageFromBytes() {
-            loadedImages.clear(); 
+            loadedImages.clear();
             if (rawImageDataList != null && !rawImageDataList.isEmpty()) {
                 for (int i = 0; i < rawImageDataList.size(); i++) {
                     byte[] imageData = rawImageDataList.get(i);
@@ -432,11 +462,11 @@ public class FavoritesUI extends JPanel {
                             if (img != null) {
                                 loadedImages.add(img);
                             } else {
-                                System.err.println("ImageIO.read kembali null untuk gambar ID produk " + this.id);
+                                System.err.println("ImageIO.read returned null for product ID " + this.id);
                                 loadedImages.add(null);
                             }
                         } catch (IOException e) {
-                            System.err.println("Gagal mengkonversi byte[] ke Image untuk ID produk " + this.id + ": " + e.getMessage());
+                            System.err.println("Failed to convert byte[] to Image for product ID " + this.id + ": " + e.getMessage());
                             loadedImages.add(null);
                         }
                     } else {

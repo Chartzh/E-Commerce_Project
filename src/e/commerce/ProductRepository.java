@@ -1301,5 +1301,126 @@ public static List<Order> getOrdersForSeller(int sellerId) throws SQLException {
        }
        return order;
    }
+   
+    public static List<FavoritesUI.FavoriteItem> getFavoriteItemsForUser(int userId) throws SQLException {
+        List<FavoritesUI.FavoriteItem> favoriteProducts = new ArrayList<>();
+        // Join favorites table with products and product_images to get full details
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, " +
+                     "pi.image_data, pi.file_extension " +
+                     "FROM favorites f " +
+                     "JOIN products p ON f.product_id = p.product_id " +
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + // Only main image
+                     "WHERE f.user_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("product_id");
+                    String name = rs.getString("name");
+                    String description = rs.getString("description");
+                    double price = rs.getDouble("price");
+                    double originalPrice = rs.getDouble("original_price");
+                    int stock = rs.getInt("stock");
+                    String condition = rs.getString("condition");
+                    String minOrder = rs.getString("min_order");
+                    String brand = rs.getString("brand");
+                    byte[] imageData = rs.getBytes("image_data");
+                    String fileExtension = rs.getString("file_extension");
+
+                    String hexColor = "#FDF8E8"; // Default color
+
+                    FavoritesUI.FavoriteItem product = new FavoritesUI.FavoriteItem(
+                        id, name, description, price, originalPrice,
+                        stock, condition, minOrder, brand,
+                        hexColor, null // imagePaths is null as we directly use imageData
+                    );
+
+                    if (imageData != null) {
+                        List<byte[]> singleImageList = new ArrayList<>();
+                        singleImageList.add(imageData);
+                        List<String> singleExtensionList = new ArrayList<>();
+                        singleExtensionList.add(fileExtension != null ? fileExtension : "jpg");
+                        product.setImageDataLists(singleImageList, singleExtensionList);
+                    }
+                    favoriteProducts.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching favorite items for user " + userId + ": " + e.getMessage());
+            throw e; // Re-throw to be handled by FavoritesUI
+        }
+        return favoriteProducts;
+    }
+
+    /**
+     * Menambahkan produk ke daftar favorit pengguna.
+     * Mencegah duplikasi entri favorit.
+     * @param userId ID pengguna.
+     * @param productId ID produk yang akan ditambahkan ke favorit.
+     * @return true jika berhasil ditambahkan, false jika sudah ada atau gagal.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean addFavoriteItem(int userId, int productId) throws SQLException {
+        // First, check if the item is already a favorite
+        String checkSql = "SELECT COUNT(*) FROM favorites WHERE user_id = ? AND product_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            checkStmt.setInt(1, userId);
+            checkStmt.setInt(2, productId);
+            try (ResultSet rs = checkStmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    System.out.println("Product " + productId + " is already a favorite for user " + userId + ".");
+                    return false; // Already a favorite
+                }
+            }
+        }
+
+        // If not already a favorite, insert it
+        String insertSql = "INSERT INTO favorites (user_id, product_id, favorited_at) VALUES (?, ?, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                System.out.println("Product " + productId + " added to favorites for user " + userId + ".");
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error adding product " + productId + " to favorites for user " + userId + ": " + e.getMessage());
+            throw e;
+        }
+        return false;
+    }
+
+    /**
+     * Menghapus produk dari daftar favorit pengguna.
+     * @param userId ID pengguna.
+     * @param productId ID produk yang akan dihapus dari favorit.
+     * @return true jika berhasil dihapus, false jika tidak ditemukan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean removeFavoriteItem(int userId, int productId) throws SQLException {
+        String sql = "DELETE FROM favorites WHERE user_id = ? AND product_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                System.out.println("Product " + productId + " removed from favorites for user " + userId + ".");
+                return true;
+            } else {
+                System.out.println("Product " + productId + " not found in favorites for user " + userId + ".");
+                return false;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error removing product " + productId + " from favorites for user " + userId + ": " + e.getMessage());
+            throw e;
+        }
+    }
 
 }
