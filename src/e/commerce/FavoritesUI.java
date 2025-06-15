@@ -423,6 +423,8 @@ public class FavoritesUI extends JPanel {
         private String minOrder;
         private String brand;
         private Color bgColor;
+        private int sellerId;
+        
 
         private List<byte[]> rawImageDataList;
         private List<String> rawFileExtensionList;
@@ -431,7 +433,7 @@ public class FavoritesUI extends JPanel {
 
         public FavoriteItem(int id, String name, String description, double price, double originalPrice,
                             int stock, String condition, String minOrder, String brand,
-                            String hexColor, List<String> imagePaths) { // imagePaths is still here but will be null from ProductRepository
+                            String hexColor, List<String> imagePaths, int sellerId) { // imagePaths is still here but will be null from ProductRepository
             this.id = id;
             this.name = name;
             this.description = description;
@@ -443,6 +445,7 @@ public class FavoritesUI extends JPanel {
             this.brand = brand;
             this.bgColor = Color.decode(hexColor);
             this.loadedImages = new ArrayList<>();
+            this.sellerId = sellerId;
         }
 
         public void setImageDataLists(List<byte[]> imageDataList, List<String> fileExtensionList) {
@@ -477,6 +480,7 @@ public class FavoritesUI extends JPanel {
         }
 
         public int getId() { return id; }
+        public int getSellerId() { return sellerId; }
         public String getName() { return name; }
         public String getDescription() { return description; }
         public double getPrice() { return price; }

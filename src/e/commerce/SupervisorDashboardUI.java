@@ -33,6 +33,9 @@ public class SupervisorDashboardUI extends JFrame {
 
     private JComboBox<String> orderStatusFilterCombo;
 
+    private ChatFloatingButton chatFloatingButton;
+    private ChatPopupUI chatPopupUI;
+
     private static final Color ORANGE_PRIMARY = new Color(255, 102, 0);
     private static final Color ORANGE_LIGHT = new Color(255, 153, 51);
     private static final Color WHITE = Color.WHITE;
@@ -63,14 +66,15 @@ public class SupervisorDashboardUI extends JFrame {
         setLocationRelativeTo(null);
 
         IconUtil.setIcon(this);
-        setLayout(new BorderLayout());
+        setLayout(null);
 
-        JPanel sidebar = createSidebar();
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
 
+        JPanel sidebar = createSidebar();
         JPanel headerPanel = createHeaderPanel(currentUser);
+        
         JPanel productPanel = createProductManagementPanel();
         JPanel ordersPanel = createOrdersPanel();
         ProfileUI profilePanel = new ProfileUI();
@@ -78,13 +82,73 @@ public class SupervisorDashboardUI extends JFrame {
         mainPanel.add(productPanel, "Produk");
         mainPanel.add(ordersPanel, "Pesanan");
         mainPanel.add(profilePanel, "Profil");
+        
+        add(sidebar);
+        add(headerPanel);
+        add(mainPanel);
 
-        JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.add(headerPanel, BorderLayout.NORTH);
-        contentWrapper.add(mainPanel, BorderLayout.CENTER);
+        // Membuat dummy ViewController yang akan diteruskan ke ChatPopupUI
+        // Ini adalah minimal, bisa diperluas jika ChatPopupUI perlu memicu lebih banyak aksi UI dari dashboard.
+        ViewController dummyVCForChatPopup = new ViewController() {
+            @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
+            @Override public void showFavoritesView() { /* do nothing */ }
+            @Override public void showDashboardView() { /* do nothing */ }
+            @Override public void showCartView() { /* do nothing */ }
+            @Override public void showProfileView() { /* do nothing */ }
+            @Override public void showOrdersView() { /* do nothing */ }
+            @Override public void showCheckoutView() { /* do nothing */ }
+            @Override public void showAddressView() { /* do nothing */ }
+            @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
+            @Override public void showSuccessView(int orderId) { /* do nothing */ }
+            @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
+            @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
+                // Ketika ChatPopupUI ingin memicu chat ke seller, ia akan memanggil ini.
+                // Disini kita akan memanggil metode startChatWith pada instance chatPopupUI itu sendiri.
+                chatPopupUI.startChatWith(sellerId, sellerUsername);
+            }
+        };
 
-        add(sidebar, BorderLayout.WEST);
-        add(contentWrapper, BorderLayout.CENTER);
+        chatFloatingButton = new ChatFloatingButton(this,  dummyVCForChatPopup); // 'this' adalah JFrame, cocok
+        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize());
+        
+        JLayeredPane layeredPane = getRootPane().getLayeredPane();
+        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER);
+
+        // Mengirim 'this' (JFrame owner) dan dummyVCForChatPopup (ViewController)
+        chatPopupUI = new ChatPopupUI(this, dummyVCForChatPopup); // <--- PERBAIKI DI SINI
+        chatPopupUI.pack();
+        chatPopupUI.setLocationRelativeTo(this);
+
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                sidebar.setBounds(0, 0, 200, getHeight());
+                headerPanel.setBounds(200, 0, getWidth() - 200, 60);
+                mainPanel.setBounds(200, 60, getWidth() - 200, getHeight() - 60);
+                chatFloatingButton.setLocationBasedOnParent(getWidth(), getHeight());
+                if (chatPopupUI.isVisible()) {
+                    int x = getX() + getWidth() - chatPopupUI.getWidth() - 20;
+                    int y = getY() + getHeight() - chatPopupUI.getHeight() - 20;
+                    chatPopupUI.setLocation(x, y);
+                }
+                revalidate();
+                repaint();
+            }
+        });
+
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (chatPopupUI != null) {
+                    chatPopupUI.stopRefreshTimer();
+                    chatPopupUI.dispose();
+                }
+            }
+            @Override
+            public void windowOpened(WindowEvent e) {
+                getComponentListeners()[0].componentResized(new ComponentEvent(SupervisorDashboardUI.this, ComponentEvent.COMPONENT_RESIZED));
+            }
+        });
 
         cardLayout.show(mainPanel, "Produk");
     }
@@ -153,6 +217,7 @@ public class SupervisorDashboardUI extends JFrame {
                     } else if (panelName.equals("Pesanan")) {
                         loadOrdersForSeller();
                     }
+                    chatFloatingButton.setVisible(true);
                 });
 
                 if (navItems[i].equals("Produk Saya")) {
@@ -393,7 +458,7 @@ public class SupervisorDashboardUI extends JFrame {
         List<byte[]> imagesToUpload = new ArrayList<>();
         List<String> imageExtensions = new ArrayList<>();
 
-        if (productId != null) { // Mode Edit
+        if (productId != null) {
             btnBrowseImage.setVisible(false);
             txtImagePath.setVisible(false);
             imageControlPanel.add(btnManageImages);
@@ -412,10 +477,9 @@ public class SupervisorDashboardUI extends JFrame {
             } else {
                 JOptionPane.showMessageDialog(dialog, "Produk dengan ID " + productId + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-        } else { // Mode Add New Product
+        } else {
             btnManageImages.setVisible(false);
         }
-
 
         btnBrowseImage.addActionListener(e -> {
             JFileChooser fileChooser = new JFileChooser();
@@ -505,7 +569,7 @@ public class SupervisorDashboardUI extends JFrame {
                 }
 
                 try {
-                    if (productId == null) { // Add New Product
+                    if (productId == null) {
                         Integer userIdForProduct = currentUser.getId();
                         if (userIdForProduct == null) {
                             JOptionPane.showMessageDialog(dialog, "ID Pengguna tidak ditemukan. Mohon login sebagai penjual.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -520,7 +584,7 @@ public class SupervisorDashboardUI extends JFrame {
                             }
                         }
                         JOptionPane.showMessageDialog(dialog, "Produk berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
-                    } else { // Edit Product
+                    } else {
                         boolean updateProductSuccess = ProductRepository.updateProduct(productId, name, description, price, originalPrice, stock, condition, minOrder, brand);
 
                         if (updateProductSuccess) {
@@ -563,7 +627,6 @@ public class SupervisorDashboardUI extends JFrame {
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblImage); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(imageControlPanel);
 
-
         dialog.add(panel, BorderLayout.CENTER);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
         dialog.setVisible(true);
@@ -576,7 +639,8 @@ public class SupervisorDashboardUI extends JFrame {
                 ProductRepository.deleteProduct(productId);
                 loadProductsForSupervisor();
                 JOptionPane.showMessageDialog(this, "Produk berhasil dihapus dari database", "Sukses", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException e) {
+            }
+            catch (SQLException e) {
                 JOptionPane.showMessageDialog(this, "Error menghapus produk: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
                 e.printStackTrace();
             }
@@ -662,7 +726,6 @@ public class SupervisorDashboardUI extends JFrame {
 
                 String customerName = getCustomerUsername(order.getUserId());
                 if (customerName == null) customerName = "Pelanggan Tidak Dikenal";
-
 
                 orderTableModel.addRow(new Object[]{
                     order.getId(),
@@ -852,8 +915,7 @@ public class SupervisorDashboardUI extends JFrame {
 
     class OrderActionButtonRenderer extends JPanel implements TableCellRenderer {
         private JButton viewDetailsBtn;
-        // private JButton updateStatusBtn; // Dihilangkan dari renderer karena editor akan menanganinya
-        private JComboBox<String> statusDropdown; // Menambahkan dropdown di renderer
+        private JComboBox<String> statusDropdown;
 
         public OrderActionButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
@@ -865,19 +927,12 @@ public class SupervisorDashboardUI extends JFrame {
             viewDetailsBtn.setFont(new Font("Arial", Font.PLAIN, 12));
             viewDetailsBtn.setFocusPainted(false);
 
-            // updateStatusBtn = new JButton("Update Status"); // Dihilangkan
-            // updateStatusBtn.setBackground(ORANGE_PRIMARY);
-            // updateStatusBtn.setForeground(WHITE);
-            // updateStatusBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-            // updateStatusBtn.setFocusPainted(false);
-
-            // Inisialisasi dropdown di renderer (tidak interaktif)
             statusDropdown = new StatusComboBox("");
             statusDropdown.setFont(new Font("Arial", Font.PLAIN, 12));
             statusDropdown.setBackground(Color.WHITE);
-            statusDropdown.setForeground(TEXT_DARK); // Default text color for dropdown
-            statusDropdown.setEnabled(false); // Selalu nonaktif di renderer
-            statusDropdown.setFocusable(false); // Tidak bisa fokus
+            statusDropdown.setForeground(TEXT_DARK);
+            statusDropdown.setEnabled(false);
+            statusDropdown.setFocusable(false);
 
 
             add(viewDetailsBtn);
@@ -891,14 +946,13 @@ public class SupervisorDashboardUI extends JFrame {
             } else {
                 setBackground(table.getBackground());
             }
-            String orderStatusDb = (String) value;
+            String orderStatusDb = (String) table.getValueAt(row, 5);
 
             viewDetailsBtn.setVisible(true);
             statusDropdown.setVisible(true);
 
             statusDropdown.setSelectedItem(mapDbStatusToDisplayForSupervisor(orderStatusDb));
 
-            // Nonaktifkan dropdown jika status sudah final
             if (orderStatusDb.equals("Delivered") || orderStatusDb.equals("Cancelled")) {
                 statusDropdown.setEnabled(false);
             } else {
@@ -914,7 +968,8 @@ public class SupervisorDashboardUI extends JFrame {
         protected SupervisorDashboardUI parent;
         protected int currentOrderId;
         private JComboBox<String> statusChooser;
-        private JTable currentTable; // Field untuk menyimpan referensi tabel saat ini
+        private JTable currentTable;
+        private int editingRow;
 
         public OrderActionButtonEditor(JCheckBox checkBox, SupervisorDashboardUI parent) {
             super(checkBox);
@@ -929,48 +984,41 @@ public class SupervisorDashboardUI extends JFrame {
             statusChooser.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
             statusChooser.addActionListener(e -> {
-                // Gunakan currentTable dan editingRow yang telah disimpan
                 String newStatusDisplay = (String) statusChooser.getSelectedItem();
-                // Pastikan currentTable tidak null dan editingRow valid
                 if (currentTable == null || editingRow == -1) {
                     JOptionPane.showMessageDialog(parent, "Terjadi kesalahan: Baris tabel tidak teridentifikasi.", "Error Internal", JOptionPane.ERROR_MESSAGE);
                     fireEditingStopped();
                     return;
                 }
 
-                String currentStatusDb = (String) currentTable.getValueAt(editingRow, 5); // Menggunakan editingRow
+                String currentStatusDb = (String) currentTable.getValueAt(editingRow, 5);
                 String newStatusDb = mapDisplayStatusToDbForSupervisor(newStatusDisplay);
 
                 if (newStatusDb != null && !newStatusDb.equals(currentStatusDb)) {
-                    // Validasi khusus: hanya bisa mengubah dari "Dikemas" atau "Menunggu Pembayaran" atau "Dikirim"
                     boolean isValidChange = false;
-                    if (currentStatusDb.equals("Processing")) { // Dari "Dikemas"
+                    if (currentStatusDb.equals("Processing")) {
                         if (newStatusDb.equals("Shipped") || newStatusDb.equals("Cancelled")) {
                             isValidChange = true;
                         }
-                    } else if (currentStatusDb.equals("Pending Payment")) { // Dari "Menunggu Pembayaran"
+                    } else if (currentStatusDb.equals("Pending Payment")) {
                         if (newStatusDb.equals("Processing") || newStatusDb.equals("Cancelled")) {
                             isValidChange = true;
                         }
-                    } else if (currentStatusDb.equals("Shipped")) { // Dari "Dikirim"
+                    } else if (currentStatusDb.equals("Shipped")) {
                         if (newStatusDb.equals("Delivered")) {
                             isValidChange = true;
                         }
                     } else if (currentStatusDb.equals("Delivered") || currentStatusDb.equals("Cancelled")) {
-                        // Tidak bisa diubah jika sudah selesai atau dibatalkan
                         isValidChange = false;
                     } else {
-                        // Status lain yang tidak diharapkan atau tidak diizinkan diubah oleh supervisor
                         isValidChange = false;
                     }
 
                     if (!isValidChange) {
                          JOptionPane.showMessageDialog(parent, "Status tidak bisa diubah dari '" + mapDbStatusToDisplayForSupervisor(currentStatusDb) + "' ke '" + newStatusDisplay + "'.", "Aksi Tidak Diizinkan", JOptionPane.WARNING_MESSAGE);
-                         // Reset dropdown ke status sebelumnya
                          statusChooser.setSelectedItem(mapDbStatusToDisplayForSupervisor(currentStatusDb));
                          return;
                     }
-
 
                     int confirm = JOptionPane.showConfirmDialog(parent,
                             "Apakah Anda yakin ingin mengubah status pesanan #" + currentOrderId + " menjadi " + newStatusDisplay + "?",
@@ -990,16 +1038,13 @@ public class SupervisorDashboardUI extends JFrame {
             });
         }
 
-        // Field untuk menyimpan baris yang sedang diedit
-        private int editingRow;
-
         @Override
         public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-            this.currentTable = table; // Simpan referensi tabel
-            this.editingRow = row;     // Simpan nomor baris
+            this.currentTable = table;
+            this.editingRow = row;
 
             currentOrderId = (int) table.getValueAt(row, 0);
-            String currentStatusDb = (String) table.getValueAt(row, 5); // Menggunakan 'row' yang benar
+            String currentStatusDb = (String) table.getValueAt(row, 5);
 
             JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
             panel.setBackground(table.getBackground());
@@ -1014,23 +1059,22 @@ public class SupervisorDashboardUI extends JFrame {
             });
             panel.add(viewDetailsBtn);
 
-            // Tentukan status yang tersedia untuk dropdown berdasarkan status saat ini
-            statusChooser.removeAllItems(); // Bersihkan item lama
+            statusChooser.removeAllItems();
             String[] availableStatusesForDropdown;
 
             if (currentStatusDb.equals("Delivered") || currentStatusDb.equals("Cancelled")) {
                 statusChooser.setEnabled(false);
                 availableStatusesForDropdown = new String[]{mapDbStatusToDisplayForSupervisor(currentStatusDb)};
-            } else if (currentStatusDb.equals("Processing")) { // Jika status "Dikemas"
+            } else if (currentStatusDb.equals("Processing")) {
                 statusChooser.setEnabled(true);
                 availableStatusesForDropdown = new String[]{"Dikemas", "Dikirim", "Dibatalkan"};
-            } else if (currentStatusDb.equals("Pending Payment")) { // Jika status "Menunggu Pembayaran"
+            } else if (currentStatusDb.equals("Pending Payment")) {
                 statusChooser.setEnabled(true);
                 availableStatusesForDropdown = new String[]{"Menunggu Pembayaran", "Dikemas", "Dibatalkan"};
-            } else if (currentStatusDb.equals("Shipped")) { // Jika status "Dikirim"
+            } else if (currentStatusDb.equals("Shipped")) {
                 statusChooser.setEnabled(true);
                 availableStatusesForDropdown = new String[]{"Dikirim", "Selesai"};
-            } else { // Status lain atau default
+            } else {
                 statusChooser.setEnabled(true);
                 availableStatusesForDropdown = new String[]{"Menunggu Pembayaran", "Dikemas", "Dikirim", "Selesai", "Dibatalkan"};
             }
@@ -1070,7 +1114,28 @@ public class SupervisorDashboardUI extends JFrame {
                 detailDialog.setLocationRelativeTo(parent);
                 detailDialog.setLayout(new BorderLayout());
 
-                OrderDetailUI orderDetailUIPanel = new OrderDetailUI(null, orderId);
+                // Membuat dummy ViewController khusus untuk OrderDetailUI dalam konteks ini,
+                // karena SupervisorDashboardUI tidak mengimplementasikan ViewController.
+                ViewController dummyVCForOrderDetail = new ViewController() {
+                    @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
+                    @Override public void showFavoritesView() { /* do nothing */ }
+                    @Override public void showDashboardView() { /* do nothing */ }
+                    @Override public void showCartView() { /* do nothing */ }
+                    @Override public void showProfileView() { /* do nothing */ }
+                    @Override public void showOrdersView() { /* do nothing */ }
+                    @Override public void showCheckoutView() { /* do nothing */ }
+                    @Override public void showAddressView() { /* do nothing */ }
+                    @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
+                    @Override public void showSuccessView(int orderId) { /* do nothing */ }
+                    @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
+                    @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
+                        // Membuka chat pop-up dari sini (melalui SupervisorDashboardUI parent)
+                        chatPopupUI.startChatWith(sellerId, sellerUsername);
+                    }
+                };
+
+                OrderDetailUI orderDetailUIPanel = new OrderDetailUI(dummyVCForOrderDetail, orderId);
+
                 detailDialog.add(orderDetailUIPanel, BorderLayout.CENTER);
 
                 JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -1093,7 +1158,7 @@ public class SupervisorDashboardUI extends JFrame {
 
     class StatusComboBox extends JComboBox<String> {
         public StatusComboBox(String currentStatus) {
-            super(); // Kosongkan super() karena item akan ditambahkan di editor
+            super();
             setSelectedItem(currentStatus);
             setBackground(Color.WHITE);
 
@@ -1145,7 +1210,29 @@ public class SupervisorDashboardUI extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
+            // Pengaturan currentUser harus dilakukan oleh mekanisme login yang sebenarnya.
+            // Baris ini sudah dihapus dari versi final.
             new SupervisorDashboardUI().setVisible(true);
         });
     }
+    
+    // Di dalam konstruktor SupervisorDashboardUI()
+    ViewController dummyVCForFloatingButton = new ViewController() {
+        @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
+        @Override public void showFavoritesView() { /* do nothing */ }
+        @Override public void showDashboardView() { /* do nothing */ }
+        @Override public void showCartView() { /* do nothing */ }
+        @Override public void showProfileView() { /* do nothing */ }
+        @Override public void showOrdersView() { /* do nothing */ }
+        @Override public void showCheckoutView() { /* do nothing */ }
+        @Override public void showAddressView() { /* do nothing */ }
+        @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
+        @Override public void showSuccessView(int orderId) { /* do nothing */ }
+        @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
+        @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
+            // Ketika floating button atau popup chat ingin membuka chat spesifik (e.g., dari daftar kontak)
+            // ia akan memanggil ini. Di sini kita memicu chatPopupUI.startChatWith().
+            chatPopupUI.startChatWith(sellerId, sellerUsername);
+        }
+    };
 }

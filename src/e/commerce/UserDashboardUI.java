@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.sql.SQLException;
+import e.commerce.ProductRepository.ChatMessage;
 
 // Import Address dan ShippingService dari AddressUI untuk tipe parameter
 import e.commerce.AddressUI.Address;
@@ -26,9 +27,11 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private FavoritesUI favoritesUI; // Deklarasi tetap
     private CheckoutUI checkoutUI;
     private User currentUser;
+    private ChatSellerUI chatSellerUI;
+    private ChatFloatingButton chatFloatingButton;
+    private ChatPopupUI chatPopupUI;
 
-    // Hapus inisialisasi ini di sini, akan diinisialisasi saat showView dipanggil
-    private AddressUI addressUI; // AddressUI masih bisa diinisialisasi di sini karena tidak butuh parameter dari view sebelumnya
+    private AddressUI addressUI; 
     private PaymentUI paymentUI;
     private SuccessUI successUI;
 
@@ -63,14 +66,16 @@ public class UserDashboardUI extends JFrame implements ViewController {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         IconUtil.setIcon(this);
-        setLayout(new BorderLayout());
+        setLayout(null);
 
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
+        //mainPanel.setBounds(0, 70, getWidth(), getHeight() - 70);
         checkoutUI = new CheckoutUI(this);
 
         JPanel headerPanel = createHeaderPanel(currentUser);
+        //headerPanel.setBounds(0, 0, getWidth(), 70);
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
         JPanel ordersPanel = createOrdersPanel();
@@ -87,11 +92,42 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(checkoutUI, "Checkout");
-        mainPanel.add(addressUI, "Address"); // Tambahkan AddressUI ke mainPanel
+        mainPanel.add(addressUI, "Address"); 
 
 
-        add(headerPanel, BorderLayout.NORTH);
-        add(mainPanel, BorderLayout.CENTER);
+        add(headerPanel);
+        add(mainPanel);
+        
+        chatFloatingButton = new ChatFloatingButton(this, this); 
+        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize()); 
+        chatFloatingButton.setLocation(getWidth() - chatFloatingButton.getWidth() - 30, getHeight() - chatFloatingButton.getHeight() - 30);
+        
+        // JLayeredPane untuk menempatkan floating button di atas semua komponen
+        JLayeredPane layeredPane = getRootPane().getLayeredPane();
+        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER); 
+
+        
+        chatPopupUI = new ChatPopupUI(this, this); 
+        chatPopupUI.pack(); 
+        chatPopupUI.setLocationRelativeTo(this); 
+
+
+        // Listener untuk mengatur ulang posisi floating button saat frame diubah ukurannya
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                headerPanel.setBounds(0, 0, getWidth(), 70);
+                mainPanel.setBounds(0, 70, getWidth(), getHeight() - 70);
+                chatFloatingButton.setLocationBasedOnParent(getWidth(), getHeight());
+                if (chatPopupUI.isVisible()) {
+                    int x = getX() + getWidth() - chatPopupUI.getWidth() - 20;
+                    int y = getY() + getHeight() - chatPopupUI.getHeight() - 20;
+                    chatPopupUI.setLocation(x, y);
+                }
+                revalidate();
+                repaint();
+            }
+        });
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -102,6 +138,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
             @Override
             public void windowClosing(WindowEvent e) {
                 stopBannerCarousel();
+                if (chatPopupUI != null) {
+                    chatPopupUI.stopRefreshTimer();
+                    chatPopupUI.dispose();
+                }
             }
         });
     }
@@ -124,25 +164,23 @@ public class UserDashboardUI extends JFrame implements ViewController {
         ProductDetailUI productDetailPanel = new ProductDetailUI(fullProductDetails, this);
         mainPanel.add(productDetailPanel, "ProductDetail");
         cardLayout.show(mainPanel, "ProductDetail");
+        chatFloatingButton.setVisible(true);
     }
 
     @Override
     public void showFavoritesView() {
-        // Opsional: Jika Anda ingin me-refresh daftar favorit setiap kali tampilan dibuka
-        // Anda perlu menambahkan metode publik di FavoritesUI (misalnya, refreshFavoritesData())
-        // untuk memicu pemuatan ulang dari database.
-        // favoritesUI.refreshFavoritesData(); // <--- Panggil jika metode ini ada di FavoritesUI
         cardLayout.show(mainPanel, "Favorites");
+        chatFloatingButton.setVisible(true); 
     }
 
     @Override
     public void showDashboardView() {
         cardLayout.show(mainPanel, "Dashboard");
+        chatFloatingButton.setVisible(true); 
     }
 
     @Override
     public void showCartView() {
-        // Hapus instance CartUI lama jika ada dan buat yang baru untuk refresh data
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof CartUI) {
                 mainPanel.remove(comp);
@@ -152,41 +190,45 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel newCartPanel = new CartUI(this);
         mainPanel.add(newCartPanel, "Cart");
         cardLayout.show(mainPanel, "Cart");
-        // Perbarui jumlah item keranjang di header setelah masuk ke CartUI
         updateHeaderCartAndFavCounts();
+        chatFloatingButton.setVisible(true);
     }
 
     @Override
     public void showProfileView() {
         cardLayout.show(mainPanel, "Profile");
+        chatFloatingButton.setVisible(true);
     }
 
     @Override
     public void showOrdersView() {
-        // Hapus instance OrderHistory lama jika ada untuk refresh data
-        // Ini penting agar data di OrderHistory diperbarui setiap kali ditampilkan
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof OrderHistory) {
-                mainPanel.remove(comp); // Hapus panel OrderHistory yang lama
+                mainPanel.remove(comp);
                 break;
             }
         }
-        // Buat instance OrderHistory yang baru (sekarang sebagai JPanel)
-        OrderHistory newOrdersPanel = new OrderHistory(this); // Teruskan ViewController
-        mainPanel.add(newOrdersPanel, "Order"); // Tambahkan ke CardLayout dengan nama "Order"
-        cardLayout.show(mainPanel, "Order"); // Tampilkan panel "Order"
+        OrderHistory newOrdersPanel = new OrderHistory(this);
+        mainPanel.add(newOrdersPanel, "Order");
+        cardLayout.show(mainPanel, "Order");
         System.out.println("Navigasi ke Halaman Riwayat Pesanan.");
+        chatFloatingButton.setVisible(true);
+    }
+
+    @Override
+    public void showChatWithSeller(int sellerId, String sellerUsername) {
+        // Panggil metode startChatWith di ChatPopupUI
+        chatPopupUI.startChatWith(sellerId, sellerUsername);
     }
 
     @Override
     public void showCheckoutView() {
         cardLayout.show(mainPanel, "Checkout");
+        chatFloatingButton.setVisible(false); 
     }
 
     @Override
     public void showAddressView() {
-        // Hapus instance AddressUI lama jika ada dan buat yang baru untuk refresh data
-        // Ini memastikan alamat dimuat ulang setiap kali kembali ke AddressUI
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof AddressUI) {
                 mainPanel.remove(comp);
@@ -197,58 +239,54 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(newAddressUI, "Address");
         cardLayout.show(mainPanel, "Address");
         System.out.println("Navigasi ke Halaman Alamat.");
+        chatFloatingButton.setVisible(false); 
     }
 
     @Override
     public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
-        // Hapus instance PaymentUI lama jika ada dan buat yang baru
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof PaymentUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        // Inisialisasi PaymentUI dengan alamat dan jasa pengiriman yang dipilih
         PaymentUI newPaymentUI = new PaymentUI(this, selectedAddress, selectedShippingService);
         mainPanel.add(newPaymentUI, "Payment");
         cardLayout.show(mainPanel, "Payment");
         System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman.");
+        chatFloatingButton.setVisible(false); 
     }
 
     @Override
     public void showSuccessView(int orderId) {
-        // Hapus instance SuccessUI lama jika ada dan buat yang baru
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof SuccessUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        // Inisialisasi SuccessUI dengan orderId yang baru dibuat
         SuccessUI newSuccessUI = new SuccessUI(this, orderId);
         mainPanel.add(newSuccessUI, "Success");
         cardLayout.show(mainPanel, "Success");
         System.out.println("Navigasi ke Halaman Sukses dengan ID Pesanan: " + orderId);
-        // Penting: Setelah order berhasil, perbarui tampilan keranjang dan favorit di header
         updateHeaderCartAndFavCounts();
+        chatFloatingButton.setVisible(false);
     }
 
     @Override
     public void showOrderDetailView(int orderId) {
-        // Hapus instance OrderDetailUI lama jika ada untuk refresh data
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof OrderDetailUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        // Buat instance OrderDetailUI baru dengan orderId
         OrderDetailUI orderDetailPanel = new OrderDetailUI(this, orderId);
-        mainPanel.add(orderDetailPanel, "OrderDetail"); // Tambahkan ke CardLayout
-        cardLayout.show(mainPanel, "OrderDetail"); // Tampilkan panel
+        mainPanel.add(orderDetailPanel, "OrderDetail");
+        cardLayout.show(mainPanel, "OrderDetail");
         System.out.println("Navigasi ke Halaman Detail Pesanan untuk ID: " + orderId);
+        chatFloatingButton.setVisible(false);
     }
-
 
     private JPanel createHeaderPanel(User currentUser) {
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -1294,9 +1332,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Pastikan Authentication.currentUser diatur sebelum membuat UserDashboardUI
-            // Ini biasanya dilakukan di LoginUI setelah login berhasil.
-            // Untuk pengujian mandiri:
             User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
             try {
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
@@ -1307,9 +1342,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 System.err.println("Gagal mengatur user dummy untuk pengujian di UserDashboardUI: " + e.getMessage());
             }
 
-            UserDashboardUI dashboard = new UserDashboardUI(); // Buat instance
-            dashboard.setVisible(true); // Tampilkan
-            dashboard.updateHeaderCartAndFavCounts(); // Panggil untuk memperbarui hitungan setelah UI terlihat
+            UserDashboardUI dashboard = new UserDashboardUI();
+            dashboard.setVisible(true);
+            dashboard.updateHeaderCartAndFavCounts();
+            dashboard.getComponentListeners()[0].componentResized(new ComponentEvent(dashboard, ComponentEvent.COMPONENT_RESIZED));
         });
     }
 }

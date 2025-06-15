@@ -1055,6 +1055,10 @@ public class PaymentUI extends JPanel {
                 public void showOrderDetailView(int orderId) {
                     System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
                 }
+                @Override
+                public void showChatWithSeller(int sellerId, String sellerUsername) { //
+                    System.out.println("Dummy: Tampilkan Chat dengan Penjual ID: " + sellerId + " (" + sellerUsername + ")");
+                }
             };
 
             PaymentUI paymentUI = new PaymentUI(dummyVC, dummyAddress, dummyShipping);

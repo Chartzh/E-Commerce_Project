@@ -8,6 +8,8 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.List;
 import java.util.ArrayList;
+import java.sql.SQLException; // <--- TAMBAH IMPORT INI
+import e.commerce.Authentication; // <--- TAMBAH IMPORT INI
 
 public class ProductDetailUI extends JPanel {
     private FavoritesUI.FavoriteItem currentProduct;
@@ -21,12 +23,26 @@ public class ProductDetailUI extends JPanel {
     private JButton buyNowBtn;
     private JButton wishlistBtn;
     private boolean isFavorite = false;
-    private ViewController viewController; // Referensi ke ViewController
+    private ViewController viewController;
 
     // Konstruktor utama yang menerima produk dan ViewController
     public ProductDetailUI(FavoritesUI.FavoriteItem product, ViewController viewController) {
         this.currentProduct = product;
-        this.viewController = viewController; // Simpan referensi ViewController
+        this.viewController = viewController;
+
+        // Periksa status favorit saat inisialisasi (di awal konstruktor)
+        if (Authentication.getCurrentUser() != null) {
+            try {
+                // Memeriksa apakah produk ini sudah ada di daftar favorit pengguna
+                isFavorite = ProductRepository.getFavoriteItemsForUser(Authentication.getCurrentUser().getId()) //
+                                             .stream()
+                                             .anyMatch(item -> item.getId() == currentProduct.getId());
+            } catch (SQLException e) {
+                System.err.println("Error checking favorite status: " + e.getMessage());
+                isFavorite = false; // Default ke false jika ada error database
+            }
+        }
+
         initializeUI();
         updateMainImageDisplay();
         updateThumbnailSelection();
@@ -193,7 +209,7 @@ public class ProductDetailUI extends JPanel {
                 if (currentProduct.getLoadedImages() != null && index < currentProduct.getLoadedImages().size()) {
                     thumbImage = currentProduct.getLoadedImages().get(index);
                 }
-                
+
                 if (thumbImage == null) {
                     g2d.setColor(currentProduct.getBgColor().darker());
                     g2d.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -429,12 +445,28 @@ public class ProductDetailUI extends JPanel {
         buyNowBtn.setFocusPainted(false);
         buyNowBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+        // --- REVISI: ActionListener untuk Add To Cart ---
         addToCartBtn.addActionListener(e -> {
+            User currentUser = Authentication.getCurrentUser();
+            if (currentUser == null) {
+                JOptionPane.showMessageDialog(this, "Anda harus login untuk menambahkan produk ke keranjang.", "Login Diperlukan", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int userId = currentUser.getId();
             int qty = (Integer) quantitySpinner.getValue();
-            JOptionPane.showMessageDialog(this,
-                qty + " item(s) added to cart!",
-                "Added to Cart",
-                JOptionPane.INFORMATION_MESSAGE);
+            try {
+                ProductRepository.addProductToCart(userId, currentProduct.getId(), qty);
+                JOptionPane.showMessageDialog(this,
+                    qty + " item(s) berhasil ditambahkan ke keranjang!",
+                    "Ditambahkan ke Keranjang",
+                    JOptionPane.INFORMATION_MESSAGE);
+                // Opsional: perbarui tampilan keranjang di header dashboard
+                // Ini akan membutuhkan metode di ViewController atau memanggil UserDashboardUI langsung
+                // Contoh: ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+            } catch (SQLException ex) {
+                System.err.println("Error menambahkan produk ke keranjang: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Gagal menambahkan produk ke keranjang. Silakan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         buyNowBtn.addActionListener(e -> {
@@ -446,6 +478,8 @@ public class ProductDetailUI extends JPanel {
                 "Proceeding to checkout with " + qty + " item(s)\nTotal: " + currencyFormat.format(total),
                 "Buy Now",
                 JOptionPane.INFORMATION_MESSAGE);
+            // Anda mungkin ingin mengarahkan ke checkout dengan produk ini
+            // viewController.showCheckoutView(currentProduct, qty); // Jika Anda punya metode showCheckoutView dengan parameter
         });
 
         actionPanel.add(addToCartBtn);
@@ -484,13 +518,91 @@ public class ProductDetailUI extends JPanel {
         shareBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         shareBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
+        // --- REVISI: ActionListener untuk Tombol Chat ---
+        chatBtn.addActionListener(e -> {
+            User currentUser = Authentication.getCurrentUser();
+            if (currentUser == null) {
+                JOptionPane.showMessageDialog(this, "Anda harus login untuk chat dengan penjual.", "Login Diperlukan", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Periksa apakah ini chat ke diri sendiri (penjual chat dengan dirinya sendiri)
+            if (currentProduct != null) {
+                try {
+                    // Ambil sellerId dari currentProduct (asumsi sudah ada di FavoriteItem)
+                    int sellerId = currentProduct.getSellerId(); // Ini memerlukan FavoriteItem di FavoritesUI.java memiliki getter getSellerId()
+
+                    // Jika FavoriteItem belum punya getSellerId(), Anda harus pakai:
+                    // int sellerId = ProductRepository.getSellerIdByProductId(currentProduct.getId());
+                    // Perlu diperhatikan bahwa memanggil ProductRepository.getSellerIdByProductId() di sini
+                    // akan melakukan query DB tambahan setiap kali tombol chat diklik.
+                    // Lebih efisien jika sellerId sudah ada di objek currentProduct.
+
+                    if (sellerId != -1) { // Pastikan sellerId valid
+                        if (currentUser.getId() == sellerId) { // Jika pembeli adalah penjual produk ini
+                            JOptionPane.showMessageDialog(this, "Anda tidak bisa chat dengan diri sendiri.", "Error Chat", JOptionPane.WARNING_MESSAGE);
+                            return;
+                        }
+                        String sellerUsername = ProductRepository.getUsernameById(sellerId); //
+                        if (!sellerUsername.equals("Unknown User") && viewController != null) {
+                            // Panggil metode showChatWithSeller di ViewController
+                            viewController.showChatWithSeller(sellerId, sellerUsername);
+                        } else {
+                            JOptionPane.showMessageDialog(this, "Informasi penjual tidak lengkap atau tidak ditemukan.", "Error Chat", JOptionPane.ERROR_MESSAGE);
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Informasi penjual tidak tersedia untuk produk ini.", "Error Chat", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (SQLException ex) {
+                    System.err.println("Error saat mencoba chat dengan penjual: " + ex.getMessage());
+                    JOptionPane.showMessageDialog(this, "Terjadi kesalahan saat memulai chat. Periksa koneksi database Anda.", "Error Chat", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Produk tidak valid untuk memulai chat.", "Error Chat", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+
+        // --- REVISI: ActionListener untuk Tombol Wishlist ---
         wishlistBtn.addActionListener(e -> {
-            isFavorite = !isFavorite;
-            wishlistBtn.setText((isFavorite ? "❤️" : "🤍") + " Wishlist");
-            JOptionPane.showMessageDialog(this,
-                isFavorite ? "Added to wishlist!" : "Removed from wishlist!",
-                "Wishlist",
-                JOptionPane.INFORMATION_MESSAGE);
+            User currentUser = Authentication.getCurrentUser();
+            if (currentUser == null) {
+                JOptionPane.showMessageDialog(this, "Anda harus login untuk menambahkan ke wishlist.", "Login Diperlukan", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            int userId = currentUser.getId();
+            int productId = currentProduct.getId();
+
+            try {
+                if (!isFavorite) {
+                    // Tambah ke wishlist
+                    boolean success = ProductRepository.addFavoriteItem(userId, productId);
+                    if (success) {
+                        isFavorite = true;
+                        wishlistBtn.setText("❤️ Wishlist");
+                        JOptionPane.showMessageDialog(this, "Ditambahkan ke wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
+                        // Opsional: perbarui jumlah favorit di header dashboard jika ada metode
+                        // ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Gagal menambahkan ke wishlist. Mungkin sudah ada atau ada error.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    // Hapus dari wishlist
+                    boolean success = ProductRepository.removeFavoriteItem(userId, productId);
+                    if (success) {
+                        isFavorite = false;
+                        wishlistBtn.setText("🤍 Wishlist");
+                        JOptionPane.showMessageDialog(this, "Dihapus dari wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
+                        // Opsional: perbarui jumlah favorit di header dashboard jika ada metode
+                        // ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Gagal menghapus dari wishlist.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } catch (SQLException ex) {
+                System.err.println("Error wishlist operation: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Terjadi kesalahan saat memproses wishlist. Periksa koneksi database Anda.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         additionalPanel.add(chatBtn);
