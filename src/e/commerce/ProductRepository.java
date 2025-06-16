@@ -7,18 +7,16 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.awt.Color;
-import java.awt.Image;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import javax.imageio.ImageIO;
+import java.awt.Color; // Digunakan untuk FavoriteItem
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Import untuk LocalDateTime
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
+import java.sql.Timestamp;
+
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
-import e.commerce.FavoritesUI.FavoriteItem; // Import FavoriteItem agar tidak perlu fully qualified name
+import e.commerce.FavoritesUI.FavoriteItem;
 
 /**
  * Kelas repositori untuk mengelola interaksi database terkait produk, keranjang, pesanan, dan pesan chat.
@@ -26,13 +24,16 @@ import e.commerce.FavoritesUI.FavoriteItem; // Import FavoriteItem agar tidak pe
  */
 public class ProductRepository {
 
+    private static final String DEFAULT_IMAGE_COLOR_HEX = "#FDF8E8";
+
+
     /**
      * Inner class publik dan statis untuk merepresentasikan item produk di keranjang.
      * Termasuk detail produk, data gambar BLOB, dan status pilihan dalam UI.
      * Ini dapat diakses langsung melalui `ProductRepository.CartItem`.
      */
     public static class CartItem {
-        private int id;
+        private int id; // ID Produk (sesuai products.product_id)
         private String name;
         private double price;
         private double originalPrice;
@@ -113,12 +114,12 @@ public class ProductRepository {
      * Inner class untuk merepresentasikan pesan chat.
      */
     public static class ChatMessage {
-        private int messageId;
-        private int senderId;
-        private int receiverId;
-        private String messageText;
-        private LocalDateTime timestamp;
-        private boolean isRead;
+        private int messageId; // messages.message_id
+        private int senderId; // messages.sender_id
+        private int receiverId; // messages.receiver_id
+        private String messageText; // messages.message_text
+        private LocalDateTime timestamp; // messages.timestamp
+        private boolean isRead; // messages.is_read
         private String senderUsername;
         private String receiverUsername;
 
@@ -147,6 +148,131 @@ public class ProductRepository {
         public void setRead(boolean read) { isRead = read; }
     }
 
+    /**
+     * Inner class untuk objek Order (representasi baris dari tabel 'orders').
+     * Direvisi agar sesuai dengan skema dan penggunaan di UI.
+     */
+    public static class Order {
+        private int id; // orders.id
+        private String orderNumber; // orders.order_number
+        private LocalDate orderDate; // orders.order_date
+        private double totalAmount; // orders.total_amount
+        private String orderStatus; // orders.order_status
+        private String deliveryEstimate; // orders.delivery_estimate
+        private String shippingServiceName; // orders.shipping_service_name
+        private double shippingCost; // orders.shipping_cost
+        private String fullShippingAddress; // Detail alamat digabung menjadi satu string
+        private String paymentMethod; // orders.payment_method
+        private int userId; // orders.user_id
+        private List<OrderItem> items; // Items dalam pesanan ini
+
+        public Order(int id, String orderNumber, LocalDate orderDate, double totalAmount, String orderStatus,
+                     String deliveryEstimate, String shippingServiceName, double shippingCost,
+                     String fullShippingAddress, String paymentMethod, int userId) {
+            this.id = id;
+            this.orderNumber = orderNumber;
+            this.orderDate = orderDate;
+            this.totalAmount = totalAmount;
+            this.orderStatus = orderStatus;
+            this.deliveryEstimate = deliveryEstimate;
+            this.shippingServiceName = shippingServiceName;
+            this.shippingCost = shippingCost;
+            this.fullShippingAddress = fullShippingAddress;
+            this.paymentMethod = paymentMethod;
+            this.userId = userId;
+            this.items = new ArrayList<>(); // Inisialisasi kosong, akan diisi nanti
+        }
+
+        // --- Getters ---
+        public int getId() { return id; }
+        public String getOrderNumber() { return orderNumber; }
+        public LocalDate getOrderDate() { return orderDate; }
+        public double getTotalAmount() { return totalAmount; }
+        public String getOrderStatus() { return orderStatus; }
+        public String getDeliveryEstimate() { return deliveryEstimate; }
+        public String getShippingServiceName() { return shippingServiceName; }
+        public double getShippingCost() { return shippingCost; }
+        public String getFullShippingAddress() { return fullShippingAddress; }
+        public List<OrderItem> getItems() { return items; }
+        public String getPaymentMethod() { return paymentMethod; }
+        public int getUserId() { return userId; }
+
+        // --- Setter ---
+        public void setItems(List<OrderItem> items) {
+            this.items = items;
+        }
+        public void setOrderStatus(String orderStatus) {
+            this.orderStatus = orderStatus;
+        }
+    }
+
+    /**
+     * Inner class untuk objek OrderItem (representasi baris dari tabel 'order_items').
+     * Direvisi agar sesuai dengan skema dan penggunaan di UI.
+     */
+    public static class OrderItem {
+        private int id; // order_items.id
+        private int productId; // order_items.product_id
+        private String productName; // order_items.product_name
+        private int quantity; // order_items.quantity
+        private double pricePerItem; // order_items.price_per_item
+        private double originalPricePerItem; // order_items.original_price_per_item
+        private byte[] imageData;
+        private String brand;
+        private String fileExtension;
+        private String sellerName; // Nama penjual produk ini
+
+        public OrderItem(int id, int productId, String productName, int quantity,
+                         double pricePerItem, double originalPricePerItem,
+                         byte[] imageData, String brand, String fileExtension, String sellerName) {
+            this.id = id;
+            this.productId = productId;
+            this.productName = productName;
+            this.quantity = quantity;
+            this.pricePerItem = pricePerItem;
+            this.originalPricePerItem = originalPricePerItem;
+            this.imageData = imageData;
+            this.brand = brand;
+            this.fileExtension = fileExtension;
+            this.sellerName = sellerName;
+        }
+
+        // --- Getters ---
+        public byte[] getImageData() { return imageData; }
+        public String getBrand() { return brand; }
+        public String getFileExtension() { return fileExtension; }
+        public String getSellerName() { return sellerName; }
+        public int getId() { return id; }
+        public int getProductId() { return productId; }
+        public String getProductName() { return productName; }
+        public int getQuantity() { return quantity; }
+        public double getPricePerItem() { return pricePerItem; }
+        public double getOriginalPricePerItem() { return originalPricePerItem; }
+    }
+
+    /**
+     * Inner class ChatUser
+     */
+    public static class ChatUser {
+        private int id; // users.id
+        private String username; // users.username
+
+        public ChatUser(int id, String username) {
+            this.id = id;
+            this.username = username;
+        }
+
+        public int getId() { return id; }
+        public String getUsername() { return username; }
+
+        @Override
+        public String toString() {
+            return username; // Digunakan oleh JList
+        }
+    }
+
+
+    // --- PRODUCT AND FAVORITES METHODS ---
 
     /**
      * Mengambil semua produk dari database.
@@ -155,9 +281,11 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang merepresentasikan semua produk.
      */
     public static List<FavoriteItem> getAllProducts() {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + // Tambah p.seller_id
+        // Menggunakan products.product_id, bukan p.id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
                      "pi.image_data, pi.file_extension FROM products p " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE";
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE"; //
 
         List<FavoriteItem> products = new ArrayList<>();
 
@@ -166,7 +294,7 @@ public class ProductRepository {
              ResultSet rs = pstmt.executeQuery()) {
 
             while (rs.next()) {
-                int id = rs.getInt("product_id");
+                int id = rs.getInt("product_id"); // Menggunakan 'product_id'
                 String name = rs.getString("name");
                 String description = rs.getString("description");
                 double price = rs.getDouble("price");
@@ -175,19 +303,19 @@ public class ProductRepository {
                 String condition = rs.getString("condition");
                 String minOrder = rs.getString("min_order");
                 String brand = rs.getString("brand");
-                int sellerId = rs.getInt("seller_id"); // Ambil seller_id
+                int sellerId = rs.getInt("seller_id");
+
+                // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
                 byte[] imageData = rs.getBytes("image_data");
                 String fileExtension = rs.getString("file_extension");
 
-                String hexColor = "#FDF8E8";
 
-                // PENTING: Pastikan konstruktor FavoriteItem di FavoritesUI.java
-                // sudah diperbarui untuk menerima parameter sellerId.
                 FavoriteItem product = new FavoriteItem(
                     id, name, description, price, originalPrice,
                     stock, condition, minOrder, brand,
-                    hexColor, null, sellerId // Teruskan sellerId
+                    hexColor, null, sellerId
                 );
 
                 if (imageData != null) {
@@ -213,8 +341,12 @@ public class ProductRepository {
      * @return Objek FavoriteItem dengan detail lengkap, gambar yang dimuat, dan seller_id, atau null jika tidak ditemukan.
      */
     public static FavoriteItem getProductById(int productId) {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + // Tambah p.seller_id
-                     "pi.image_data, pi.file_extension FROM products p LEFT JOIN product_images pi ON p.product_id = pi.product_id WHERE p.product_id = ?";
+        // Menggunakan products.product_id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+                     "pi.image_data, pi.file_extension FROM products p " +
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id " + //
+                     "WHERE p.product_id = ? ORDER BY pi.order_index ASC"; //
 
         FavoriteItem product = null;
 
@@ -225,49 +357,41 @@ public class ProductRepository {
             try (ResultSet rs = pstmt.executeQuery()) {
                 List<byte[]> imageDataList = new ArrayList<>();
                 List<String> fileExtensionList = new ArrayList<>();
+                boolean firstRow = true;
 
-                if (rs.next()) {
-                    int id = rs.getInt("product_id");
-                    String name = rs.getString("name");
-                    String description = rs.getString("description");
-                    double price = rs.getDouble("price");
-                    double originalPrice = rs.getDouble("original_price");
-                    int stock = rs.getInt("stock");
-                    String condition = rs.getString("condition");
-                    String minOrder = rs.getString("min_order");
-                    String brand = rs.getString("brand");
-                    int sellerId = rs.getInt("seller_id"); // Ambil seller_id
+                while (rs.next()) {
+                    if (firstRow) {
+                        int id = rs.getInt("product_id");
+                        String name = rs.getString("name");
+                        String description = rs.getString("description");
+                        double price = rs.getDouble("price");
+                        double originalPrice = rs.getDouble("original_price");
+                        int stock = rs.getInt("stock");
+                        String condition = rs.getString("condition");
+                        String minOrder = rs.getString("min_order");
+                        String brand = rs.getString("brand");
+                        int sellerId = rs.getInt("seller_id");
 
-                    String hexColor = "#FDF8E8";
+                        // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                        String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
-                    // PENTING: Pastikan konstruktor FavoriteItem di FavoritesUI.java
-                    // sudah diperbarui untuk menerima parameter sellerId.
-                    product = new FavoriteItem(
-                        id, name, description, price, originalPrice,
-                        stock, condition, minOrder, brand,
-                        hexColor, null, sellerId // Teruskan sellerId
-                    );
+                        product = new FavoriteItem(
+                            id, name, description, price, originalPrice,
+                            stock, condition, minOrder, brand,
+                            hexColor, null, sellerId
+                        );
+                        firstRow = false;
+                    }
 
-                    // Tambahkan gambar pertama yang ditemukan
                     byte[] imageData = rs.getBytes("image_data");
                     String fileExtension = rs.getString("file_extension");
                     if (imageData != null) {
                         imageDataList.add(imageData);
-                        fileExtensionList.add(fileExtension);
+                        fileExtensionList.add(fileExtension != null ? fileExtension : "jpg");
                     }
-
-                    // Tambahkan gambar-gambar lainnya untuk produk yang sama (jika ada)
-                    while (rs.next()) { // Melanjutkan dari baris pertama jika ada multiple images
-                        imageData = rs.getBytes("image_data");
-                        fileExtension = rs.getString("file_extension");
-                        if (imageData != null) {
-                            imageDataList.add(imageData);
-                            fileExtensionList.add(fileExtension);
-                        }
-                    }
-                    if (product != null) {
-                        product.setImageDataLists(imageDataList, fileExtensionList);
-                    }
+                }
+                if (product != null) {
+                    product.setImageDataLists(imageDataList, fileExtensionList);
                 }
             }
             return product;
@@ -286,10 +410,12 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang merepresentasikan produk-produk penjual.
      */
     public static List<FavoriteItem> getProductsBySeller(int sellerId) {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + // Tambah p.seller_id
+        // Menggunakan products.product_id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
                      "pi.image_data, pi.file_extension FROM products p " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
-                     "WHERE p.seller_id = ?";
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + //
+                     "WHERE p.seller_id = ?"; //
 
         List<FavoriteItem> products = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();
@@ -309,16 +435,15 @@ public class ProductRepository {
                     String condition = rs.getString("condition");
                     String minOrder = rs.getString("min_order");
                     String brand = rs.getString("brand");
-                    int foundSellerId = rs.getInt("seller_id"); // Ambil seller_id
+                    int foundSellerId = rs.getInt("seller_id");
 
-                    String hexColor = "#FDF8E8";
+                    // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                    String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
-                    // PENTING: Pastikan konstruktor FavoriteItem di FavoritesUI.java
-                    // sudah diperbarui untuk menerima parameter sellerId.
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, brand,
-                        hexColor, null, foundSellerId // Teruskan sellerId
+                        hexColor, null, foundSellerId
                     );
 
                     if (imageData != null) {
@@ -346,10 +471,12 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang direkomendasikan.
      */
     public static List<FavoriteItem> getProductsByBrand(String brand, int excludeProductId) {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + // Tambah p.seller_id
+        // Menggunakan products.product_id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
                      "pi.image_data, pi.file_extension FROM products p " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
-                     "WHERE p.`brand` = ? AND p.product_id != ? LIMIT 6";
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + //
+                     "WHERE p.`brand` = ? AND p.product_id != ? LIMIT 6"; //
 
         List<FavoriteItem> recommendedProducts = new ArrayList<>();
 
@@ -371,15 +498,15 @@ public class ProductRepository {
                     String condition = rs.getString("condition");
                     String minOrder = rs.getString("min_order");
                     String foundBrand = rs.getString("brand");
-                    int sellerId = rs.getInt("seller_id"); // Ambil seller_id
-                    String hexColor = "#FDF8E8";
+                    int sellerId = rs.getInt("seller_id");
+                    
+                    // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                    String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
-                    // PENTING: Pastikan konstruktor FavoriteItem di FavoritesUI.java
-                    // sudah diperbarui untuk menerima parameter sellerId.
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, foundBrand,
-                        hexColor, null, sellerId // Teruskan sellerId
+                        hexColor, null, sellerId
                     );
 
                     if (imageData != null) {
@@ -411,7 +538,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static int saveProductImage(int productId, byte[] imageData, String fileExtension, boolean isMainImage, int orderIndex) throws SQLException {
-        String sql = "INSERT INTO product_images (product_id, image_data, file_extension, is_main_image, order_index) VALUES (?, ?, ?, ?, ?)";
+        // Menggunakan product_images.product_id
+        String sql = "INSERT INTO product_images (product_id, image_data, file_extension, is_main_image, order_index) VALUES (?, ?, ?, ?, ?)"; //
         int generatedId = -1;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -427,11 +555,14 @@ public class ProductRepository {
             if (affectedRows > 0) {
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
-                        generatedId = rs.getInt(1);
+                        generatedId = rs.getInt(1); // Asumsi ID kolom gambar auto-increment adalah yang pertama (image_id)
                     }
                 }
             }
             System.out.println("Image saved for product ID: " + productId + ", Image ID: " + generatedId);
+        } catch (SQLException e) {
+            System.err.println("Error saving product image: " + e.getMessage());
+            throw e;
         }
         return generatedId;
     }
@@ -452,7 +583,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static int saveProduct(String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand, Integer sellerId) throws SQLException {
-        String sql = "INSERT INTO products (name, description, price, original_price, stock, `condition`, min_order, `brand`, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Menghapus referensi ke kolom image_color dari INSERT karena tidak ada di tabel products
+        String sql = "INSERT INTO products (name, description, price, original_price, stock, `condition`, min_order, `brand`, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"; //
         int generatedProductId = -1;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -476,60 +608,75 @@ public class ProductRepository {
             if (affectedRows > 0) {
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
-                        generatedProductId = rs.getInt(1);
+                        generatedProductId = rs.getInt(1); // Asumsi ID kolom produk auto-increment adalah yang pertama (product_id)
                     }
                 }
             }
             System.out.println("Product saved: " + name + ", Product ID: " + generatedProductId);
+        } catch (SQLException e) {
+            System.err.println("Error saving product: " + e.getMessage());
+            throw e;
         }
         return generatedProductId;
     }
 
     /**
-     * Menghapus produk dan gambar terkaitnya dari database.
+     * Menghapus produk dan data terkaitnya dari database.
      * Operasi ini bersifat transaksional (semua atau tidak sama sekali).
      * @param productId ID produk yang akan dihapus.
      * @throws SQLException Jika terjadi kesalahan database selama penghapusan atau manajemen transaksi.
      */
     public static void deleteProduct(int productId) throws SQLException {
-        String sqlDeleteImages = "DELETE FROM product_images WHERE product_id = ?";
-        String sqlDeleteProduct = "DELETE FROM products WHERE product_id = ?";
-
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); // Mulai transaksi
 
-            try (PreparedStatement pstmtImages = conn.prepareStatement(sqlDeleteImages)) {
-                pstmtImages.setInt(1, productId);
-                pstmtImages.executeUpdate();
+            // Hapus dari cart_items yang referensi produk ini
+            String deleteCartItemsSql = "DELETE FROM cart_items WHERE product_id = ?"; //
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteCartItemsSql)) {
+                pstmt.setInt(1, productId);
+                pstmt.executeUpdate();
             }
 
-            try (PreparedStatement pstmtProduct = conn.prepareStatement(sqlDeleteProduct)) {
-                pstmtProduct.setInt(1, productId);
-                pstmtProduct.executeUpdate();
+            // Hapus dari favorites yang referensi produk ini
+            String deleteFavoritesSql = "DELETE FROM favorites WHERE product_id = ?"; //
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteFavoritesSql)) {
+                pstmt.setInt(1, productId);
+                pstmt.executeUpdate();
+            }
+
+            // Hapus gambar terkait
+            String deleteImagesSql = "DELETE FROM product_images WHERE product_id = ?"; //
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteImagesSql)) {
+                pstmt.setInt(1, productId);
+                pstmt.executeUpdate();
+            }
+
+            // Hapus produk itu sendiri
+            String deleteProductSql = "DELETE FROM products WHERE product_id = ?"; // Menggunakan 'product_id'
+            try (PreparedStatement pstmt = conn.prepareStatement(deleteProductSql)) {
+                pstmt.setInt(1, productId);
+                pstmt.executeUpdate();
             }
 
             conn.commit(); // Commit transaksi
-            System.out.println("Product and its images deleted for product ID: " + productId);
+            System.out.println("Product and its related data deleted for product ID: " + productId);
         } catch (SQLException e) {
-            if (e != null && e.getMessage() != null && e.getMessage().contains("Cannot delete or update a parent row: a foreign key constraint fails")) {
-                 System.err.println("Attempted to delete product " + productId + " which might still be referenced elsewhere (e.g., order_items).");
-            }
             if (conn != null) {
                 try {
-                    conn.rollback(); // Rollback saat error
-                    System.err.println("Transaction rolled back for product deletion.");
+                    conn.rollback(); // Rollback jika ada kesalahan
+                    System.err.println("Transaction rolled back for product deletion for ID " + productId + ": " + e.getMessage());
                 } catch (SQLException rbex) {
                     System.err.println("Error rolling back transaction: " + rbex.getMessage());
                 }
             }
-            throw e; // Lemparkan kembali untuk penanganan pemanggil
+            throw e; // Lemparkan kembali SQLException
         } finally {
             if (conn != null) {
                 try {
-                    conn.setAutoCommit(true); // Reset auto-commit
-                    conn.close(); // Tutup koneksi
+                    conn.setAutoCommit(true); // Kembalikan auto-commit
+                    conn.close();
                 } catch (SQLException fe) {
                     System.err.println("Error setting auto commit or closing connection: " + fe.getMessage());
                 }
@@ -539,7 +686,6 @@ public class ProductRepository {
 
     /**
      * Memperbarui detail produk yang ada di tabel 'products'.
-     * Pembaruan gambar ditangani secara terpisah (dengan menghapus yang lama dan menyisipkan yang baru).
      * @param productId ID produk yang akan diperbarui.
      * @param name Nama produk baru.
      * @param description Deskripsi produk baru.
@@ -553,7 +699,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static boolean updateProduct(int productId, String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand) throws SQLException {
-        String sql = "UPDATE products SET name = ?, description = ?, price = ?, original_price = ?, stock = ?, `condition` = ?, min_order = ?, `brand` = ? WHERE product_id = ?";
+        // Menggunakan products.product_id
+        String sql = "UPDATE products SET name = ?, description = ?, price = ?, original_price = ?, stock = ?, `condition` = ?, min_order = ?, `brand` = ? WHERE product_id = ?"; // Menggunakan 'product_id'
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -575,22 +722,28 @@ public class ProductRepository {
                 System.out.println("No product found with ID: " + productId + " to update.");
                 return false;
             }
+        } catch (SQLException e) {
+            System.err.println("Error updating product: " + e.getMessage());
+            throw e;
         }
     }
 
     /**
      * Menghapus semua gambar yang terkait dengan produk tertentu dari tabel 'product_images'.
-     * Ini biasanya digunakan sebelum mengunggah ulang gambar baru untuk produk yang diedit.
      * @param productId ID produk yang gambarnya akan dihapus.
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void deleteProductImagesForProduct(int productId) throws SQLException {
-        String sql = "DELETE FROM product_images WHERE product_id = ?";
+        // Menggunakan product_images.product_id
+        String sql = "DELETE FROM product_images WHERE product_id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, productId);
             int affectedRows = pstmt.executeUpdate();
             System.out.println(affectedRows + " images deleted for product ID: " + productId);
+        } catch (SQLException e) {
+            System.err.println("Error deleting product images for product ID " + productId + ": " + e.getMessage());
+            throw e;
         }
     }
 
@@ -600,7 +753,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void deleteProductImageById(int imageId) throws SQLException {
-        String sql = "DELETE FROM product_images WHERE image_id = ?";
+        // Menggunakan product_images.image_id
+        String sql = "DELETE FROM product_images WHERE image_id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, imageId);
@@ -610,6 +764,9 @@ public class ProductRepository {
             } else {
                 System.out.println("Image ID " + imageId + " not found for deletion.");
             }
+        } catch (SQLException e) {
+            System.err.println("Error deleting product image by ID " + imageId + ": " + e.getMessage());
+            throw e;
         }
     }
 
@@ -628,21 +785,24 @@ public class ProductRepository {
             conn.setAutoCommit(false); // Mulai transaksi
 
             // 1. Atur semua gambar untuk produk ini menjadi bukan utama
-            String sqlResetMain = "UPDATE product_images SET is_main_image = FALSE WHERE product_id = ?";
+            String sqlResetMain = "UPDATE product_images SET is_main_image = FALSE WHERE product_id = ?"; //
             try (PreparedStatement pstmtReset = conn.prepareStatement(sqlResetMain)) {
                 pstmtReset.setInt(1, productId);
                 pstmtReset.executeUpdate();
             }
 
             // 2. Atur gambar yang ditentukan sebagai utama
-            String sqlSetMain = "UPDATE product_images SET is_main_image = TRUE WHERE image_id = ? AND product_id = ?";
+            String sqlSetMain = "UPDATE product_images SET is_main_image = TRUE WHERE image_id = ? AND product_id = ?"; //
             try (PreparedStatement pstmtSet = conn.prepareStatement(sqlSetMain)) {
                 pstmtSet.setInt(1, imageId);
                 pstmtSet.setInt(2, productId);
-                pstmtSet.executeUpdate();
+                int affectedRows = pstmtSet.executeUpdate();
+                if (affectedRows == 0) {
+                     System.err.println("Warning: setMainProductImage did not update any row. Image ID " + imageId + " might not belong to Product ID " + productId);
+                }
             }
 
-            conn.commit(); // Commit transaksi
+            conn.commit(); // Komit transaksi
             System.out.println("Image ID " + imageId + " set as main for Product ID " + productId);
         } catch (SQLException e) {
             if (conn != null) {
@@ -657,8 +817,8 @@ public class ProductRepository {
         } finally {
             if (conn != null) {
                 try {
-                    conn.setAutoCommit(true); // Reset auto-commit
-                    conn.close(); // Tutup koneksi
+                    conn.setAutoCommit(true); // Kembalikan auto-commit
+                    conn.close();
                 } catch (SQLException fe) {
                     System.err.println("Error setting auto commit or closing connection: " + fe.getMessage());
                 }
@@ -675,7 +835,8 @@ public class ProductRepository {
      */
     public static List<Object[]> getAllProductImagesDetails(int productId) throws SQLException {
         List<Object[]> images = new ArrayList<>();
-        String sql = "SELECT image_id, image_data, file_extension, is_main_image, order_index FROM product_images WHERE product_id = ? ORDER BY order_index ASC";
+        // Menggunakan product_images.product_id dan image_id
+        String sql = "SELECT image_id, image_data, file_extension, is_main_image, order_index FROM product_images WHERE product_id = ? ORDER BY order_index ASC"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, productId);
@@ -690,9 +851,192 @@ public class ProductRepository {
                     });
                 }
             }
+        } catch (SQLException e) {
+            System.err.println("Error fetching all product images details for product ID " + productId + ": " + e.getMessage());
+            throw e;
         }
         return images;
     }
+
+    /**
+     * Mengambil daftar produk yang ditandai sebagai favorit oleh pengguna tertentu.
+     * Menggabungkan tabel 'favorites', 'products', dan 'product_images' untuk mendapatkan
+     * detail lengkap produk favorit, termasuk gambar utama mereka.
+     * @param userId ID pengguna yang favoritnya akan diambil.
+     * @return Sebuah daftar objek FavoriteItem yang merepresentasikan produk favorit pengguna.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static List<FavoriteItem> getFavoriteItemsForUser(int userId) throws SQLException {
+        List<FavoriteItem> favoriteProducts = new ArrayList<>();
+        // Menggunakan products.product_id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + //
+                     "pi.image_data, pi.file_extension " + //
+                     "FROM favorites f " + //
+                     "JOIN products p ON f.product_id = p.product_id " + //
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + //
+                     "WHERE f.user_id = ?"; //
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int id = rs.getInt("product_id");
+                    String name = rs.getString("name");
+                    String description = rs.getString("description");
+                    double price = rs.getDouble("price");
+                    double originalPrice = rs.getDouble("original_price");
+                    int stock = rs.getInt("stock");
+                    String condition = rs.getString("condition");
+                    String minOrder = rs.getString("min_order");
+                    String brand = rs.getString("brand");
+                    int sellerId = rs.getInt("seller_id");
+                    byte[] imageData = rs.getBytes("image_data");
+                    String fileExtension = rs.getString("file_extension");
+
+                    // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                    String hexColor = DEFAULT_IMAGE_COLOR_HEX;
+
+                    FavoriteItem product = new FavoriteItem(
+                        id, name, description, price, originalPrice,
+                        stock, condition, minOrder, brand,
+                        hexColor, null, sellerId
+                    );
+
+                    if (imageData != null) {
+                        List<byte[]> singleImageList = new ArrayList<>();
+                        singleImageList.add(imageData);
+                        List<String> singleExtensionList = new ArrayList<>();
+                        singleExtensionList.add(fileExtension != null ? fileExtension : "jpg");
+                        product.setImageDataLists(singleImageList, singleExtensionList);
+                    }
+                    favoriteProducts.add(product);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching favorite items for user " + userId + ": " + e.getMessage());
+            throw e;
+        }
+        return favoriteProducts;
+    }
+
+    /**
+     * Menambahkan produk ke daftar favorit pengguna.
+     * Mencegah duplikasi entri favorit.
+     * @param userId ID pengguna.
+     * @param productId ID produk yang akan ditambahkan ke favorit.
+     * @return true jika berhasil ditambahkan, false jika sudah ada atau gagal.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean addFavoriteItem(int userId, int productId) throws SQLException {
+        // Menggunakan favorites.user_id dan favorites.product_id
+        String checkSql = "SELECT COUNT(*) FROM favorites WHERE user_id = ? AND product_id = ?"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            checkStmt.setInt(1, userId);
+            checkStmt.setInt(2, productId);
+            try (ResultSet rs = checkStmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    System.out.println("Product " + productId + " is already a favorite for user " + userId + ".");
+                    return false;
+                }
+            }
+        }
+
+        // Menggunakan favorites.user_id, favorites.product_id, favorites.favorited_at
+        String insertSql = "INSERT INTO favorites (user_id, product_id, favorited_at) VALUES (?, ?, NOW())"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error adding product " + productId + " to favorites for user " + userId + ": " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Menghapus produk dari daftar favorit pengguna.
+     * @param userId ID pengguna.
+     * @param productId ID produk yang akan dihapus dari favorit.
+     * @return true jika berhasil dihapus, false jika tidak ditemukan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean removeFavoriteItem(int userId, int productId) throws SQLException {
+        // Menggunakan favorites.user_id dan favorites.product_id
+        String sql = "DELETE FROM favorites WHERE user_id = ? AND product_id = ?"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                System.out.println("Product " + productId + " removed from favorites for user " + userId + ".");
+                return true;
+            } else {
+                System.out.println("Product " + productId + " not found in favorites for user " + userId + ".");
+                return false;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error removing product " + productId + " from favorites for user " + userId + ": " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Mengambil ID penjual (seller_id) berdasarkan ID produk.
+     * @param productId ID produk.
+     * @return ID penjual, atau -1 jika tidak ditemukan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static int getSellerIdByProductId(int productId) throws SQLException {
+        // Menggunakan products.product_id
+        String sql = "SELECT seller_id FROM products WHERE product_id = ?"; // Menggunakan 'product_id'
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, productId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("seller_id");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching seller ID by product ID: " + e.getMessage());
+            throw e;
+        }
+        return -1; // Return -1 if not found
+    }
+
+    /**
+     * Mengambil username pengguna berdasarkan ID-nya.
+     * @param userId ID pengguna.
+     * @return Username, atau "Unknown User" jika tidak ditemukan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static String getUsernameById(int userId) throws SQLException {
+        // Menggunakan users.id
+        String sql = "SELECT username FROM users WHERE id = ?"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching username by ID: " + e.getMessage());
+            throw e;
+        }
+        return "Unknown User";
+    }
+
+
+    // --- CART METHODS ---
 
     /**
      * Mengambil item keranjang untuk pengguna tertentu dari database.
@@ -703,13 +1047,15 @@ public class ProductRepository {
      */
     public static List<CartItem> getCartItemsForUser(int userId) {
         List<CartItem> cartItems = new ArrayList<>();
-        String sql = "SELECT ci.product_id, ci.quantity, " +
-                     "p.name, p.price, p.original_price, " +
-                     "pi.image_data, pi.file_extension " +
-                     "FROM cart_items ci " +
-                     "JOIN products p ON ci.product_id = p.product_id " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
-                     "WHERE ci.user_id = ?";
+        // Menggunakan cart_items.product_id, products.product_id
+        // Menghapus referensi ke kolom image_color dari SELECT karena tidak ada
+        String sql = "SELECT ci.product_id, ci.quantity, " + //
+                     "p.name, p.price, p.original_price, " + //
+                     "pi.image_data, pi.file_extension " + //
+                     "FROM cart_items ci " + //
+                     "JOIN products p ON ci.product_id = p.product_id " + //
+                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + //
+                     "WHERE ci.user_id = ?"; //
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -724,8 +1070,8 @@ public class ProductRepository {
                     double originalPrice = rs.getDouble("original_price");
                     byte[] imageData = rs.getBytes("image_data");
                     String fileExtension = rs.getString("file_extension");
-
-                    String imageColor = "#CCCCCC";
+                    // Menggunakan DEFAULT_IMAGE_COLOR_HEX karena kolom tidak ada di DB products
+                    String imageColor = DEFAULT_IMAGE_COLOR_HEX;
 
                     CartItem item = new CartItem(
                         productId, name, price, originalPrice, quantity,
@@ -750,9 +1096,10 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void addProductToCart(int userId, int productId, int quantity) throws SQLException {
-        String checkSql = "SELECT quantity FROM cart_items WHERE user_id = ? AND product_id = ?";
-        String updateSql = "UPDATE cart_items SET quantity = quantity + ? WHERE user_id = ? AND product_id = ?";
-        String insertSql = "INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?, ?, ?)";
+        // Menggunakan cart_items.user_id dan cart_items.product_id
+        String checkSql = "SELECT quantity FROM cart_items WHERE user_id = ? AND product_id = ?"; //
+        String updateSql = "UPDATE cart_items SET quantity = quantity + ? WHERE user_id = ? AND product_id = ?"; //
+        String insertSql = "INSERT INTO cart_items (user_id, product_id, quantity, added_at) VALUES (?, ?, ?, NOW())"; // Menambahkan added_at
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -792,7 +1139,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void updateCartItemQuantity(int userId, int productId, int newQuantity) throws SQLException {
-        String sql = "UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?";
+        // Menggunakan cart_items.user_id dan cart_items.product_id
+        String sql = "UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, newQuantity);
@@ -810,16 +1158,18 @@ public class ProductRepository {
      * Menghapus produk dari keranjang belanja pengguna.
      * @param userId ID pengguna.
      * @param productId ID produk yang akan dihapus.
+     * @return true jika berhasil dihapus, false jika tidak ditemukan.
      * @throws SQLException Jika terjadi kesalahan database.
      */
-    public static void removeProductFromCart(int userId, int productId) throws SQLException {
-        String sql = "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?";
+    public static boolean removeProductFromCart(int userId, int productId) throws SQLException {
+        // Menggunakan cart_items.user_id dan cart_items.product_id
+        String sql = "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
             pstmt.setInt(2, productId);
-            pstmt.executeUpdate();
-            System.out.println("Removed product " + productId + " from cart for user " + userId + ".");
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error removing product from cart: " + e.getMessage());
             throw e;
@@ -832,7 +1182,8 @@ public class ProductRepository {
      * @throws SQLException Jika terjadi kesalahan database.
      */
     public static void clearCart(int userId) throws SQLException {
-        String sql = "DELETE FROM cart_items WHERE user_id = ?";
+        // Menggunakan cart_items.user_id
+        String sql = "DELETE FROM cart_items WHERE user_id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
@@ -843,6 +1194,139 @@ public class ProductRepository {
             throw e;
         }
     }
+
+    // --- CHAT METHODS ---
+
+    /**
+     * Mengambil semua pesan antara dua pengguna tertentu, diurutkan berdasarkan waktu.
+     * @param userId1 ID pengguna pertama.
+     * @param userId2 ID pengguna kedua.
+     * @return Daftar objek ChatMessage.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static List<ChatMessage> getChatMessages(int userId1, int userId2) throws SQLException {
+        List<ChatMessage> messages = new ArrayList<>();
+        // Menggunakan messages.message_id, sender_id, receiver_id, message_text, timestamp, is_read
+        String sql = "SELECT m.message_id, m.sender_id, u1.username AS sender_username, " + //
+                     "m.receiver_id, u2.username AS receiver_username, m.message_text, m.timestamp, m.is_read " + //
+                     "FROM messages m " + //
+                     "JOIN users u1 ON m.sender_id = u1.id " + //
+                     "JOIN users u2 ON m.receiver_id = u2.id " + //
+                     "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " + //
+                     "ORDER BY m.timestamp ASC"; //
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId1);
+            pstmt.setInt(2, userId2);
+            pstmt.setInt(3, userId2);
+            pstmt.setInt(4, userId1);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int messageId = rs.getInt("message_id");
+                    int senderId = rs.getInt("sender_id");
+                    String senderUsername = rs.getString("sender_username");
+                    int receiverId = rs.getInt("receiver_id");
+                    String receiverUsername = rs.getString("receiver_username");
+                    String messageText = rs.getString("message_text");
+                    LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
+                    boolean isRead = rs.getBoolean("is_read");
+
+                    messages.add(new ChatMessage(messageId, senderId, senderUsername, receiverId, receiverUsername, messageText, timestamp, isRead));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching chat messages: " + e.getMessage());
+            throw e;
+        }
+        return messages;
+    }
+
+    /**
+     * Menyimpan pesan chat baru ke database.
+     * @param senderId ID pengirim.
+     * @param receiverId ID penerima.
+     * @param messageText Teks pesan.
+     * @return true jika pesan berhasil dikirim, false jika gagal.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean sendMessage(int senderId, int receiverId, String messageText) throws SQLException {
+        // Menggunakan messages.sender_id, receiver_id, message_text, timestamp, is_read
+        String sql = "INSERT INTO messages (sender_id, receiver_id, message_text, timestamp, is_read) VALUES (?, ?, ?, ?, ?)"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, senderId);
+            pstmt.setInt(2, receiverId);
+            pstmt.setString(3, messageText);
+            pstmt.setTimestamp(4, Timestamp.valueOf(LocalDateTime.now()));
+            pstmt.setBoolean(5, false); // Default: belum dibaca
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error sending message: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Memperbarui status 'is_read' pesan menjadi TRUE untuk semua pesan
+     * yang diterima oleh `receiverId` dari `senderId` yang belum dibaca.
+     * @param receiverId ID penerima pesan (pengguna yang sedang melihat chat).
+     * @param senderId ID pengirim pesan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static void markMessagesAsRead(int receiverId, int senderId) throws SQLException {
+        // Menggunakan messages.receiver_id, sender_id, is_read
+        String sql = "UPDATE messages SET is_read = TRUE WHERE receiver_id = ? AND sender_id = ? AND is_read = FALSE"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, receiverId);
+            pstmt.setInt(2, senderId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Error marking messages as read: " + e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Mengambil daftar pengguna yang pernah di-chat oleh `currentUserId` atau pernah chat `currentUserId`.
+     * Ini akan menjadi daftar "kontak" di pop-up chat.
+     * @param currentUserId ID pengguna yang sedang login.
+     * @return Daftar objek ChatUser (ID dan Username dari penjual/pembeli yang terlibat chat).
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static List<ChatUser> getRecentChatUsers(int currentUserId) throws SQLException {
+        List<ChatUser> users = new ArrayList<>();
+        // Menggunakan messages.sender_id, receiver_id
+        String sql = "SELECT DISTINCT u.id, u.username FROM users u " + //
+                     "WHERE u.id IN (" + //
+                     "    SELECT DISTINCT sender_id FROM messages WHERE receiver_id = ?" + //
+                     "    UNION " +
+                     "    SELECT DISTINCT receiver_id FROM messages WHERE sender_id = ?" + //
+                     ") AND u.id != ?"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, currentUserId);
+            pstmt.setInt(2, currentUserId);
+            pstmt.setInt(3, currentUserId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"))); //
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching recent chat users: " + e.getMessage());
+            throw e;
+        }
+        return users;
+    }
+
+    // --- ORDER METHODS ---
 
     /**
      * Membuat pesanan baru di database dan memindahkan item dari keranjang ke order_items.
@@ -860,8 +1344,6 @@ public class ProductRepository {
                                   Address shippingAddress, ShippingService shippingService,
                                   String paymentMethod) throws SQLException {
         Connection conn = null;
-        PreparedStatement orderStmt = null;
-        PreparedStatement itemStmt = null;
         int orderId = -1;
 
         try {
@@ -869,58 +1351,60 @@ public class ProductRepository {
             conn.setAutoCommit(false); // Mulai transaksi
 
             // 1. Insert ke tabel orders
-            String orderSql = "INSERT INTO orders (user_id, order_number, order_date, total_amount, " +
-                              "shipping_address_id, shipping_service_name, shipping_cost, payment_method, order_status, delivery_estimate) " +
-                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            orderStmt = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS);
+            String orderSql = "INSERT INTO orders (user_id, order_number, order_date, total_amount, " + //
+                              "shipping_address_id, shipping_service_name, shipping_cost, payment_method, order_status, delivery_estimate, created_at) " + // Menambahkan created_at
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"; //
+            try (PreparedStatement orderStmt = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS)) {
 
-            String orderNumber = generateUniqueOrderNumber(); // Metode untuk menghasilkan nomor pesanan unik
-            LocalDate orderDate = LocalDate.now();
+                String orderNumber = generateUniqueOrderNumber();
+                LocalDate orderDate = LocalDate.now();
 
-            orderStmt.setInt(1, userId);
-            orderStmt.setString(2, orderNumber);
-            orderStmt.setDate(3, java.sql.Date.valueOf(orderDate));
-            orderStmt.setDouble(4, totalAmount);
-            orderStmt.setInt(5, shippingAddress.getId());
-            orderStmt.setString(6, shippingService.name);
-            orderStmt.setDouble(7, shippingService.price);
-            orderStmt.setString(8, paymentMethod);
-            orderStmt.setString(9, "Processing"); // Status awal
-            orderStmt.setString(10, shippingService.arrivalEstimate);
+                orderStmt.setInt(1, userId);
+                orderStmt.setString(2, orderNumber);
+                orderStmt.setDate(3, java.sql.Date.valueOf(orderDate));
+                orderStmt.setDouble(4, totalAmount);
+                orderStmt.setInt(5, shippingAddress.getId()); // Asumsi Address object punya getId()
+                orderStmt.setString(6, shippingService.name);
+                orderStmt.setDouble(7, shippingService.price);
+                orderStmt.setString(8, paymentMethod);
+                orderStmt.setString(9, "Pending Payment"); // Status awal
+                orderStmt.setString(10, shippingService.arrivalEstimate);
 
-            int affectedRows = orderStmt.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Membuat pesanan gagal, tidak ada baris yang terpengaruh.");
-            }
+                int affectedRows = orderStmt.executeUpdate();
+                if (affectedRows == 0) {
+                    throw new SQLException("Membuat pesanan gagal, tidak ada baris yang terpengaruh.");
+                }
 
-            try (ResultSet generatedKeys = orderStmt.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    orderId = generatedKeys.getInt(1);
-                } else {
-                    throw new SQLException("Membuat pesanan gagal, tidak ada ID yang didapatkan.");
+                try (ResultSet generatedKeys = orderStmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        orderId = generatedKeys.getInt(1); // Asumsi ID kolom order auto-increment adalah yang pertama (orders.id)
+                    } else {
+                        throw new SQLException("Membuat pesanan gagal, tidak ada ID yang didapatkan.");
+                    }
                 }
             }
 
             // 2. Insert ke tabel order_items untuk setiap item keranjang
-            String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, price_per_item, original_price_per_item) VALUES (?, ?, ?, ?, ?, ?)";
-            itemStmt = conn.prepareStatement(itemSql);
-
-            for (CartItem item : cartItems) {
-                itemStmt.setInt(1, orderId);
-                itemStmt.setInt(2, item.getId()); // Asumsi CartItem.getId() mengembalikan product_id
-                itemStmt.setString(3, item.getName());
-                itemStmt.setInt(4, item.getQuantity());
-                itemStmt.setDouble(5, item.getPrice());
-                itemStmt.setDouble(6, item.getOriginalPrice());
-                itemStmt.addBatch();
+            String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, price_per_item, original_price_per_item) VALUES (?, ?, ?, ?, ?, ?)"; //
+            try (PreparedStatement itemStmt = conn.prepareStatement(itemSql)) {
+                for (CartItem item : cartItems) {
+                    itemStmt.setInt(1, orderId);
+                    itemStmt.setInt(2, item.getId()); // Item.getId() adalah product_id
+                    itemStmt.setString(3, item.getName());
+                    itemStmt.setInt(4, item.getQuantity());
+                    itemStmt.setDouble(5, item.getPrice());
+                    itemStmt.setDouble(6, item.getOriginalPrice());
+                    itemStmt.addBatch();
+                }
+                itemStmt.executeBatch();
             }
-            itemStmt.executeBatch();
+
 
             // 3. Mengosongkan keranjang pengguna setelah pesanan berhasil dibuat
-            clearCart(userId); // Menggunakan clearCart yang lebih umum
+            clearCart(userId);
 
-            conn.commit(); // Commit transaksi
-            System.out.println("Pesanan " + orderNumber + " berhasil dibuat dengan ID: " + orderId);
+            conn.commit(); // Komit transaksi
+            System.out.println("Pesanan " + orderId + " berhasil dibuat.");
             return orderId;
 
         } catch (SQLException e) {
@@ -934,9 +1418,13 @@ public class ProductRepository {
             }
             throw e; // Lemparkan kembali exception agar UI bisa menanganinya
         } finally {
-            DatabaseConnection.closeConnection(conn, orderStmt); // itemStmt akan ditutup saat orderStmt ditutup jika dibatch
-            if (itemStmt != null) {
-                itemStmt.close();
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true); // Reset auto-commit
+                    conn.close();
+                } catch (SQLException fe) {
+                    System.err.println("Error setting auto commit or closing connection: " + fe.getMessage());
+                }
             }
         }
     }
@@ -962,286 +1450,171 @@ public class ProductRepository {
      */
     public static List<Order> getOrdersForUser(int userId) throws SQLException {
         List<Order> orders = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " +
-                         "o.delivery_estimate, o.shipping_service_name, o.shipping_cost, o.user_id," +
-                         "a.full_address, a.city, a.province, a.postal_code, o.payment_method " +
-                         "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " +
-                         "WHERE o.user_id = ? ORDER BY o.order_date DESC, o.id DESC";
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, userId);
-            rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Order order = new Order(
-                    rs.getInt("id"),
-                    rs.getString("order_number"),
-                    rs.getDate("order_date").toLocalDate(),
-                    rs.getDouble("total_amount"),
-                    rs.getString("order_status"),
-                    rs.getString("delivery_estimate"),
-                    rs.getString("shipping_service_name"),
-                    rs.getDouble("shipping_cost"),
-                    rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"),
-                    rs.getString("payment_method"),
-                    rs.getInt("user_id")
-
-                );
-                order.setItems(getOrderItemsForOrder(order.getId()));
-                orders.add(order);
+        // Menggunakan orders.id, user_id, order_date, total_amount, order_status, delivery_estimate, shipping_service_name, shipping_cost, payment_method
+        // Menggunakan addresses.id, full_address, city, province, postal_code
+        String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " + //
+                     "o.delivery_estimate, o.shipping_service_name, o.shipping_cost, o.user_id," + //
+                     "a.full_address, a.city, a.province, a.postal_code, o.payment_method " + //
+                     "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " + //
+                     "WHERE o.user_id = ? ORDER BY o.order_date DESC, o.id DESC"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Order order = new Order(
+                        rs.getInt("id"),
+                        rs.getString("order_number"),
+                        rs.getDate("order_date").toLocalDate(),
+                        rs.getDouble("total_amount"),
+                        rs.getString("order_status"),
+                        rs.getString("delivery_estimate"),
+                        rs.getString("shipping_service_name"),
+                        rs.getDouble("shipping_cost"),
+                        rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"), //
+                        rs.getString("payment_method"),
+                        rs.getInt("user_id")
+                    );
+                    // Ambil item pesanan untuk setiap pesanan
+                    order.setItems(getOrderItemsForOrder(order.getId()));
+                    orders.add(order);
+                }
             }
-        } finally {
-            DatabaseConnection.closeConnection(conn, stmt, rs);
+        } catch (SQLException e) {
+            System.err.println("Error fetching orders for user " + userId + ": " + e.getMessage());
+            throw e;
         }
         return orders;
     }
 
+    /**
+     * Mengambil item-item pesanan untuk suatu pesanan.
+     *
+     * @param orderId ID pesanan.
+     * @return Daftar objek OrderItem.
+     * @throws SQLException jika terjadi kesalahan akses database.
+     */
     public static List<OrderItem> getOrderItemsForOrder(int orderId) throws SQLException {
         List<OrderItem> items = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            String sql = "SELECT oi.id, oi.product_id, oi.product_name, oi.quantity, oi.price_per_item, oi.original_price_per_item, " +
-                         "p.brand, " +
-                         "pi.image_data, pi.file_extension, " +
-                         "u.username AS seller_username " +
-                         "FROM order_items oi " +
-                         "JOIN products p ON oi.product_id = p.product_id " +
-                         "LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND pi.is_main_image = 1 " +
-                         "LEFT JOIN users u ON p.seller_id = u.id " +
-                         "WHERE oi.order_id = ?";
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, orderId);
-            rs = stmt.executeQuery();
+        // Menggunakan order_items.id, product_id, product_name, quantity, price_per_item, original_price_per_item
+        // Menggunakan products.brand
+        // Menggunakan product_images.image_data, file_extension, is_main_image
+        // Menggunakan users.username
+        String sql = "SELECT oi.id, oi.product_id, oi.product_name, oi.quantity, oi.price_per_item, oi.original_price_per_item, " + //
+                     "p.brand, " + //
+                     "pi.image_data, pi.file_extension, " + //
+                     "u.username AS seller_username " + //
+                     "FROM order_items oi " + //
+                     "JOIN products p ON oi.product_id = p.product_id " + //
+                     "LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND pi.is_main_image = 1 " + //
+                     "LEFT JOIN users u ON p.seller_id = u.id " + //
+                     "WHERE oi.order_id = ?"; //
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String sellerName = rs.getString("seller_username");
+                    if (sellerName == null) sellerName = "Penjual Tidak Dikenal";
 
-            while (rs.next()) {
-                String sellerName = rs.getString("seller_username");
-                if (sellerName == null) sellerName = "Penjual";
-
-                items.add(new OrderItem(
-                    rs.getInt("id"),
-                    rs.getInt("product_id"),
-                    rs.getString("product_name"),
-                    rs.getInt("quantity"),
-                    rs.getDouble("price_per_item"),
-                    rs.getDouble("original_price_per_item"),
-                    rs.getBytes("image_data"),
-                    rs.getString("brand"),
-                    rs.getString("file_extension"),
-                    sellerName
-                ));
+                    items.add(new OrderItem(
+                        rs.getInt("id"), // ID OrderItem
+                        rs.getInt("product_id"),
+                        rs.getString("product_name"),
+                        rs.getInt("quantity"),
+                        rs.getDouble("price_per_item"),
+                        rs.getDouble("original_price_per_item"),
+                        rs.getBytes("image_data"),
+                        rs.getString("brand"),
+                        rs.getString("file_extension"),
+                        sellerName
+                    ));
+                }
             }
-        } finally {
-            DatabaseConnection.closeConnection(conn, stmt, rs);
+        } catch (SQLException e) {
+            System.err.println("Error fetching order items for order ID " + orderId + ": " + e.getMessage());
+            throw e;
         }
         return items;
     }
 
     /**
-     * Memperbarui status pesanan di database.
+     * Mengambil pesanan yang mengandung produk-produk yang dijual oleh seller tertentu.
+     * Ini mencakup pesanan di mana setidaknya satu item pesanan dijual oleh seller ini.
      *
-     * @param orderId   ID pesanan yang akan diperbarui.
-     * @param newStatus Status baru (misalnya "Cancelled", "Delivered").
+     * @param sellerId ID seller (dari currentUser.getId()).
+     * @return Daftar objek Order yang relevan untuk seller ini.
      * @throws SQLException jika terjadi kesalahan akses database.
      */
-    public static void updateOrderStatus(int orderId, String newStatus) throws SQLException {
+    public static List<Order> getOrdersForSeller(int sellerId) throws SQLException {
+        List<Order> sellerOrders = new ArrayList<>();
         Connection conn = null;
-        PreparedStatement stmt = null;
         try {
             conn = DatabaseConnection.getConnection();
-            String sql = "UPDATE orders SET order_status = ? WHERE id = ?";
-            stmt = conn.prepareStatement(sql);
-            stmt.setString(1, newStatus);
-            stmt.setInt(2, orderId);
-            stmt.executeUpdate();
-            System.out.println("Status pesanan ID " + orderId + " diperbarui menjadi: " + newStatus);
-        } finally {
-            DatabaseConnection.closeConnection(conn, stmt);
-        }
-    }
+            // Menggunakan order_items.order_id, product_id, products.seller_id
+            String orderIdsSql = "SELECT DISTINCT oi.order_id FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE p.seller_id = ?"; //
 
+            try (PreparedStatement orderIdsStmt = conn.prepareStatement(orderIdsSql)) {
+                orderIdsStmt.setInt(1, sellerId);
+                try (ResultSet orderIdsRs = orderIdsStmt.executeQuery()) {
 
-    // Kelas inner untuk objek Order (representasi baris dari tabel 'orders')
-    public static class Order {
-        private int id;
-        private String orderNumber;
-        private LocalDate orderDate;
-        private double totalAmount;
-        private String orderStatus;
-        private String deliveryEstimate;
-        private String shippingServiceName;
-        private double shippingCost;
-        private String fullShippingAddress;
-        private List<OrderItem> items;
-        private String paymentMethod;
-        private int userId;
+                    List<Integer> distinctOrderIds = new ArrayList<>();
+                    while (orderIdsRs.next()) {
+                        distinctOrderIds.add(orderIdsRs.getInt("order_id"));
+                    }
 
-        public Order(int id, String orderNumber, LocalDate orderDate, double totalAmount, String orderStatus,
-                     String deliveryEstimate, String shippingServiceName, double shippingCost,
-                     String fullShippingAddress, String paymentMethod, int userId) {
-            this.id = id;
-            this.orderNumber = orderNumber;
-            this.orderDate = orderDate;
-            this.totalAmount = totalAmount;
-            this.orderStatus = orderStatus;
-            this.deliveryEstimate = deliveryEstimate;
-            this.shippingServiceName = shippingServiceName;
-            this.shippingCost = shippingCost;
-            this.fullShippingAddress = fullShippingAddress;
-            this.paymentMethod = paymentMethod;
-            this.userId = userId;
-            this.items = new ArrayList<>();
-        }
+                    if (distinctOrderIds.isEmpty()) {
+                        return sellerOrders;
+                    }
 
-        // --- Getters ---
-        public int getId() { return id; }
-        public String getOrderNumber() { return orderNumber; }
-        public LocalDate getOrderDate() { return orderDate; }
-        public double getTotalAmount() { return totalAmount; }
-        public String getOrderStatus() { return orderStatus; }
-        public String getDeliveryEstimate() { return deliveryEstimate; }
-        public String getShippingServiceName() { return shippingServiceName; }
-        public double getShippingCost() { return shippingCost; }
-        public String getFullShippingAddress() { return fullShippingAddress; }
-        public List<OrderItem> getItems() { return items; }
-        public String getPaymentMethod() { return paymentMethod; }
-        public int getUserId() { return userId; }
+                    StringBuilder inClause = new StringBuilder();
+                    for (int i = 0; i < distinctOrderIds.size(); i++) {
+                        inClause.append("?");
+                        if (i < distinctOrderIds.size() - 1) {
+                            inClause.append(",");
+                        }
+                    }
 
+                    // Menggunakan orders.id, order_number, order_date, total_amount, order_status, delivery_estimate, shipping_service_name, shipping_cost, user_id, payment_method
+                    // Menggunakan addresses.full_address, city, province, postal_code
+                    String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " + //
+                                 "o.delivery_estimate, o.shipping_service_name, o.shipping_cost, o.user_id," + //
+                                 "a.full_address, a.city, a.province, a.postal_code, o.payment_method " + //
+                                 "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " + //
+                                 "WHERE o.id IN (" + inClause.toString() + ") ORDER BY o.order_date DESC, o.id DESC"; //
 
-        // --- Setter ---
-        public void setItems(List<OrderItem> items) {
-            this.items = items;
-        }
-        public void setOrderStatus(String orderStatus) {
-            this.orderStatus = orderStatus;
-        }
-    }
-
-    // Kelas inner untuk objek OrderItem (representasi baris dari tabel 'order_items')
-     public static class OrderItem {
-        private int id;
-        private int productId;
-        private String productName;
-        private int quantity;
-        private double pricePerItem;
-        private double originalPricePerItem;
-        private byte[] imageData;
-        private String brand;
-        private String fileExtension;
-        private String sellerName;
-
-        public OrderItem(int id, int productId, String productName, int quantity,
-                         double pricePerItem, double originalPricePerItem,
-                         byte[] imageData, String brand, String fileExtension, String sellerName) {
-            this.id = id;
-            this.productId = productId;
-            this.productName = productName;
-            this.quantity = quantity;
-            this.pricePerItem = pricePerItem;
-            this.originalPricePerItem = originalPricePerItem;
-            this.imageData = imageData;
-            this.brand = brand;
-            this.fileExtension = fileExtension;
-            this.sellerName = sellerName;
-        }
-
-        // --- Getters ---
-        public byte[] getImageData() { return imageData; }
-        public String getBrand() { return brand; }
-        public String getFileExtension() { return fileExtension; }
-        public String getSellerName() { return sellerName; }
-        public int getId() { return id; }
-        public int getProductId() { return productId; }
-        public String getProductName() { return productName; }
-        public int getQuantity() { return quantity; }
-        public double getPricePerItem() { return pricePerItem; }
-        public double getOriginalPricePerItem() { return originalPricePerItem; }
-    }
-
-/**
- * Mengambil pesanan yang mengandung produk-produk yang dijual oleh seller tertentu.
- * Ini mencakup pesanan di mana setidaknya satu item pesanan dijual oleh seller ini.
- *
- * @param sellerId ID seller (dari currentUser.getId()).
- * @return Daftar objek Order yang relevan untuk seller ini.
- * @throws SQLException jika terjadi kesalahan akses database.
- */
-public static List<Order> getOrdersForSeller(int sellerId) throws SQLException {
-    List<Order> sellerOrders = new ArrayList<>();
-    Connection conn = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
-    try {
-        conn = DatabaseConnection.getConnection();
-        // Query untuk mendapatkan ID pesanan yang memiliki produk dari seller ini
-        String orderIdsSql = "SELECT DISTINCT oi.order_id FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE p.seller_id = ?";
-
-        try (PreparedStatement orderIdsStmt = conn.prepareStatement(orderIdsSql)) {
-            orderIdsStmt.setInt(1, sellerId);
-            ResultSet orderIdsRs = orderIdsStmt.executeQuery();
-
-            List<Integer> distinctOrderIds = new ArrayList<>();
-            while (orderIdsRs.next()) {
-                distinctOrderIds.add(orderIdsRs.getInt("order_id"));
-            }
-            orderIdsRs.close();
-
-            if (distinctOrderIds.isEmpty()) {
-                return sellerOrders; // Tidak ada pesanan untuk seller ini
-            }
-
-            // Sekarang ambil detail lengkap untuk setiap pesanan tersebut
-            // Membuat klausa IN untuk query SQL
-            StringBuilder inClause = new StringBuilder();
-            for (int i = 0; i < distinctOrderIds.size(); i++) {
-                inClause.append("?");
-                if (i < distinctOrderIds.size() - 1) {
-                    inClause.append(",");
+                    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                        for (int i = 0; i < distinctOrderIds.size(); i++) {
+                            stmt.setInt(i + 1, distinctOrderIds.get(i));
+                        }
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                Order order = new Order(
+                                    rs.getInt("id"),
+                                    rs.getString("order_number"),
+                                    rs.getDate("order_date").toLocalDate(),
+                                    rs.getDouble("total_amount"),
+                                    rs.getString("order_status"),
+                                    rs.getString("delivery_estimate"),
+                                    rs.getString("shipping_service_name"),
+                                    rs.getDouble("shipping_cost"),
+                                    rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"), //
+                                    rs.getString("payment_method"),
+                                    rs.getInt("user_id")
+                                );
+                                // Penting: Filter order items hanya untuk produk seller ini
+                                order.setItems(getSellerSpecificOrderItemsForOrder(order.getId(), sellerId));
+                                sellerOrders.add(order);
+                            }
+                        }
+                    }
                 }
             }
-
-            String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " +
-                         "o.delivery_estimate, o.shipping_service_name, o.shipping_cost, o.user_id," +
-                         "a.full_address, a.city, a.province, a.postal_code, o.payment_method " +
-                         "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " +
-                         "WHERE o.id IN (" + inClause.toString() + ") ORDER BY o.order_date DESC, o.id DESC";
-
-            stmt = conn.prepareStatement(sql);
-            for (int i = 0; i < distinctOrderIds.size(); i++) {
-                stmt.setInt(i + 1, distinctOrderIds.get(i));
-            }
-            rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Order order = new Order(
-                    rs.getInt("id"),
-                    rs.getString("order_number"),
-                    rs.getDate("order_date").toLocalDate(),
-                    rs.getDouble("total_amount"),
-                    rs.getString("order_status"),
-                    rs.getString("delivery_estimate"),
-                    rs.getString("shipping_service_name"),
-                    rs.getDouble("shipping_cost"),
-                    rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"),
-                    rs.getString("payment_method"),
-                    rs.getInt("user_id")
-                );
-                // Penting: Filter order items hanya untuk produk seller ini
-                order.setItems(getSellerSpecificOrderItemsForOrder(order.getId(), sellerId));
-                sellerOrders.add(order);
-            }
+        } finally {
+            if (conn != null) conn.close();
         }
-    } finally {
-        DatabaseConnection.closeConnection(conn, stmt, rs);
+        return sellerOrders;
     }
-    return sellerOrders;
-}
 
     /**
      * Mengambil item pesanan untuk suatu pesanan tertentu, difilter hanya untuk produk dari seller tertentu.
@@ -1253,44 +1626,45 @@ public static List<Order> getOrdersForSeller(int sellerId) throws SQLException {
      */
     public static List<OrderItem> getSellerSpecificOrderItemsForOrder(int orderId, int sellerId) throws SQLException {
         List<OrderItem> items = new ArrayList<>();
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        try {
-            conn = DatabaseConnection.getConnection();
-            String sql = "SELECT oi.id, oi.product_id, oi.product_name, oi.quantity, oi.price_per_item, oi.original_price_per_item, " +
-                         "p.brand, " +
-                         "pi.image_data, pi.file_extension, " +
-                         "u.username AS seller_username " +
-                         "FROM order_items oi " +
-                         "JOIN products p ON oi.product_id = p.product_id " +
-                         "LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND pi.is_main_image = 1 " +
-                         "LEFT JOIN users u ON p.seller_id = u.id " +
-                         "WHERE oi.order_id = ? AND p.seller_id = ?"; // FILTER BY SELLER_ID HERE
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, orderId);
-            stmt.setInt(2, sellerId);
-            rs = stmt.executeQuery();
+        // Menggunakan order_items.id, product_id, product_name, quantity, price_per_item, original_price_per_item
+        // Menggunakan products.brand, seller_id
+        // Menggunakan product_images.image_data, file_extension, is_main_image
+        // Menggunakan users.username
+        String sql = "SELECT oi.id, oi.product_id, oi.product_name, oi.quantity, oi.price_per_item, oi.original_price_per_item, " + //
+                     "p.brand, " + //
+                     "pi.image_data, pi.file_extension, " + //
+                     "u.username AS seller_username " + //
+                     "FROM order_items oi " + //
+                     "JOIN products p ON oi.product_id = p.product_id " + //
+                     "LEFT JOIN product_images pi ON oi.product_id = pi.product_id AND pi.is_main_image = 1 " + //
+                     "LEFT JOIN users u ON p.seller_id = u.id " + //
+                     "WHERE oi.order_id = ? AND p.seller_id = ?"; // FILTER BY SELLER_ID HERE
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, orderId);
+            pstmt.setInt(2, sellerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String sellerName = rs.getString("seller_username");
+                    if (sellerName == null) sellerName = "Penjual Tidak Dikenal";
 
-            while (rs.next()) {
-                String sellerName = rs.getString("seller_username");
-                if (sellerName == null) sellerName = "Penjual";
-
-                items.add(new OrderItem(
-                    rs.getInt("id"),
-                    rs.getInt("product_id"),
-                    rs.getString("product_name"),
-                    rs.getInt("quantity"),
-                    rs.getDouble("price_per_item"),
-                    rs.getDouble("original_price_per_item"),
-                    rs.getBytes("image_data"),
-                    rs.getString("brand"),
-                    rs.getString("file_extension"),
-                    sellerName
-                ));
+                    items.add(new OrderItem(
+                        rs.getInt("id"), // ID OrderItem
+                        rs.getInt("product_id"),
+                        rs.getString("product_name"),
+                        rs.getInt("quantity"),
+                        rs.getDouble("price_per_item"),
+                        rs.getDouble("original_price_per_item"),
+                        rs.getBytes("image_data"),
+                        rs.getString("brand"),
+                        rs.getString("file_extension"),
+                        sellerName
+                    ));
+                }
             }
-        } finally {
-            DatabaseConnection.closeConnection(conn, stmt, rs);
+        } catch (SQLException e) {
+            System.err.println("Error fetching seller-specific order items for order ID " + orderId + " and seller ID " + sellerId + ": " + e.getMessage());
+            throw e;
         }
         return items;
     }
@@ -1305,356 +1679,65 @@ public static List<Order> getOrdersForSeller(int sellerId) throws SQLException {
     * @throws SQLException jika terjadi kesalahan akses database.
     */
    public static Order getOrderById(int orderId) throws SQLException {
-       Connection conn = null;
-       PreparedStatement stmt = null;
-       ResultSet rs = null;
-       Order order = null;
-       try {
-           conn = DatabaseConnection.getConnection();
-           String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " +
-                        "o.delivery_estimate, o.shipping_service_name, o.shipping_cost,  o.user_id," +
-                        "a.full_address, a.city, a.province, a.postal_code, o.payment_method " +
-                        "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " +
-                        "WHERE o.id = ?";
-           stmt = conn.prepareStatement(sql);
-           stmt.setInt(1, orderId);
-           rs = stmt.executeQuery();
-
-           if (rs.next()) {
-               order = new Order(
-                   rs.getInt("id"),
-                   rs.getString("order_number"),
-                   rs.getDate("order_date").toLocalDate(),
-                   rs.getDouble("total_amount"),
-                   rs.getString("order_status"),
-                   rs.getString("delivery_estimate"),
-                   rs.getString("shipping_service_name"),
-                   rs.getDouble("shipping_cost"),
-                   rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"),
-                   rs.getString("payment_method"),
-                   rs.getInt("user_id")
-               );
-               order.setItems(getOrderItemsForOrder(order.getId()));
+       // Menggunakan orders.id, order_number, order_date, total_amount, order_status, delivery_estimate, shipping_service_name, shipping_cost, user_id, payment_method
+       // Menggunakan addresses.full_address, city, province, postal_code
+       String sql = "SELECT o.id, o.order_number, o.order_date, o.total_amount, o.order_status, " + //
+                    "o.delivery_estimate, o.shipping_service_name, o.shipping_cost,  o.user_id," + //
+                    "a.full_address, a.city, a.province, a.postal_code, o.payment_method " + //
+                    "FROM orders o JOIN addresses a ON o.shipping_address_id = a.id " + //
+                    "WHERE o.id = ?"; //
+       try (Connection conn = DatabaseConnection.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+           pstmt.setInt(1, orderId);
+           try (ResultSet rs = pstmt.executeQuery()) {
+               if (rs.next()) {
+                   Order order = new Order(
+                       rs.getInt("id"),
+                       rs.getString("order_number"),
+                       rs.getDate("order_date").toLocalDate(),
+                       rs.getDouble("total_amount"),
+                       rs.getString("order_status"),
+                       rs.getString("delivery_estimate"),
+                       rs.getString("shipping_service_name"),
+                       rs.getDouble("shipping_cost"),
+                       rs.getString("full_address") + ", " + rs.getString("city") + ", " + rs.getString("province") + ", " + rs.getString("postal_code"), //
+                       rs.getString("payment_method"),
+                       rs.getInt("user_id")
+                   );
+                   order.setItems(getOrderItemsForOrder(order.getId()));
+                   return order;
+               }
            }
-       } finally {
-           DatabaseConnection.closeConnection(conn, stmt, rs);
+       } catch (SQLException e) {
+           System.err.println("Error fetching order by ID " + orderId + ": " + e.getMessage());
+           throw e;
        }
-       return order;
+       return null;
    }
 
    /**
-    * Mengambil daftar produk yang ditandai sebagai favorit oleh pengguna tertentu.
-    * Menggabungkan tabel 'favorites', 'products', dan 'product_images' untuk mendapatkan
-    * detail lengkap produk favorit, termasuk gambar utama mereka.
-    * @param userId ID pengguna yang favoritnya akan diambil.
-    * @return Sebuah daftar objek FavoriteItem yang merepresentasikan produk favorit pengguna.
-    * @throws SQLException Jika terjadi kesalahan database.
-    */
-    public static List<FavoriteItem> getFavoriteItemsForUser(int userId) throws SQLException {
-        List<FavoriteItem> favoriteProducts = new ArrayList<>();
-        // Join favorites table with products and product_images to get full details
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " + // Tambah p.seller_id
-                     "pi.image_data, pi.file_extension " +
-                     "FROM favorites f " +
-                     "JOIN products p ON f.product_id = p.product_id " +
-                     "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " + // Hanya main image
-                     "WHERE f.user_id = ?";
-
+     * Memperbarui status pesanan di database.
+     *
+     * @param orderId   ID pesanan yang akan diperbarui.
+     * @param newStatus Status baru (misalnya "Cancelled", "Delivered").
+     * @throws SQLException jika terjadi kesalahan akses database.
+     */
+    public static void updateOrderStatus(int orderId, String newStatus) throws SQLException {
+        // Menggunakan orders.id
+        String sql = "UPDATE orders SET order_status = ? WHERE id = ?"; //
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, userId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    int id = rs.getInt("product_id");
-                    String name = rs.getString("name");
-                    String description = rs.getString("description");
-                    double price = rs.getDouble("price");
-                    double originalPrice = rs.getDouble("original_price");
-                    int stock = rs.getInt("stock");
-                    String condition = rs.getString("condition");
-                    String minOrder = rs.getString("min_order");
-                    String brand = rs.getString("brand");
-                    int sellerId = rs.getInt("seller_id"); // Ambil seller_id
-                    byte[] imageData = rs.getBytes("image_data");
-                    String fileExtension = rs.getString("file_extension");
-
-                    String hexColor = "#FDF8E8";
-
-                    // PENTING: Pastikan konstruktor FavoriteItem di FavoritesUI.java
-                    // sudah diperbarui untuk menerima parameter sellerId.
-                    FavoriteItem product = new FavoriteItem(
-                        id, name, description, price, originalPrice,
-                        stock, condition, minOrder, brand,
-                        hexColor, null, sellerId // Teruskan sellerId
-                    );
-
-                    if (imageData != null) {
-                        List<byte[]> singleImageList = new ArrayList<>();
-                        singleImageList.add(imageData);
-                        List<String> singleExtensionList = new ArrayList<>();
-                        singleExtensionList.add(fileExtension != null ? fileExtension : "jpg");
-                        product.setImageDataLists(singleImageList, singleExtensionList);
-                    }
-                    favoriteProducts.add(product);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching favorite items for user " + userId + ": " + e.getMessage());
-            throw e;
-        }
-        return favoriteProducts;
-    }
-
-    /**
-     * Menambahkan produk ke daftar favorit pengguna.
-     * Mencegah duplikasi entri favorit.
-     * @param userId ID pengguna.
-     * @param productId ID produk yang akan ditambahkan ke favorit.
-     * @return true jika berhasil ditambahkan, false jika sudah ada atau gagal.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static boolean addFavoriteItem(int userId, int productId) throws SQLException {
-        String checkSql = "SELECT COUNT(*) FROM favorites WHERE user_id = ? AND product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-            checkStmt.setInt(1, userId);
-            checkStmt.setInt(2, productId);
-            try (ResultSet rs = checkStmt.executeQuery()) {
-                if (rs.next() && rs.getInt(1) > 0) {
-                    System.out.println("Product " + productId + " is already a favorite for user " + userId + ".");
-                    return false;
-                }
-            }
-        }
-
-        String insertSql = "INSERT INTO favorites (user_id, product_id, favorited_at) VALUES (?, ?, NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setInt(2, productId);
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            System.err.println("Error adding product " + productId + " to favorites for user " + userId + ": " + e.getMessage());
-            throw e;
-        }
-    }
-
-    /**
-     * Menghapus produk dari daftar favorit pengguna.
-     * @param userId ID pengguna.
-     * @param productId ID produk yang akan dihapus dari favorit.
-     * @return true jika berhasil dihapus, false jika tidak ditemukan.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static boolean removeFavoriteItem(int userId, int productId) throws SQLException {
-        String sql = "DELETE FROM favorites WHERE user_id = ? AND product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            pstmt.setInt(2, productId);
+            pstmt.setString(1, newStatus);
+            pstmt.setInt(2, orderId);
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
-                System.out.println("Product " + productId + " removed from favorites for user " + userId + ".");
-                return true;
+                 System.out.println("Order status for ID " + orderId + " updated to: " + newStatus);
             } else {
-                System.out.println("Product " + productId + " not found in favorites for user " + userId + ".");
-                return false;
+                 System.out.println("No order found with ID " + orderId + " to update status.");
             }
         } catch (SQLException e) {
-            System.err.println("Error removing product " + productId + " from favorites for user " + userId + ": " + e.getMessage());
+            System.err.println("Error updating order status for ID " + orderId + ": " + e.getMessage());
             throw e;
         }
     }
-
-    /**
-     * Mengambil ID penjual (seller_id) berdasarkan ID produk.
-     * @param productId ID produk.
-     * @return ID penjual, atau -1 jika tidak ditemukan.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static int getSellerIdByProductId(int productId) throws SQLException {
-        String sql = "SELECT seller_id FROM products WHERE product_id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, productId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("seller_id");
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching seller ID by product ID: " + e.getMessage());
-            throw e;
-        }
-        return -1; // Return -1 if not found
-    }
-
-    /**
-     * Mengambil username pengguna berdasarkan ID-nya.
-     * @param userId ID pengguna.
-     * @return Username, atau "Unknown User" jika tidak ditemukan.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static String getUsernameById(int userId) throws SQLException {
-        String sql = "SELECT username FROM users WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, userId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("username");
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching username by ID: " + e.getMessage());
-            throw e;
-        }
-        return "Unknown User";
-    }
-
-    /**
-     * Mengambil semua pesan antara dua pengguna tertentu, diurutkan berdasarkan waktu.
-     * @param userId1 ID pengguna pertama.
-     * @param userId2 ID pengguna kedua.
-     * @return Daftar objek ChatMessage.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static List<ChatMessage> getChatMessages(int userId1, int userId2) throws SQLException {
-        List<ChatMessage> messages = new ArrayList<>();
-        // Query untuk mengambil pesan yang dikirim oleh userId1 ke userId2 ATAU userId2 ke userId1
-        String sql = "SELECT m.message_id, m.sender_id, u1.username AS sender_username, " +
-                     "m.receiver_id, u2.username AS receiver_username, m.message_text, m.timestamp, m.is_read " +
-                     "FROM messages m " +
-                     "JOIN users u1 ON m.sender_id = u1.id " +
-                     "JOIN users u2 ON m.receiver_id = u2.id " +
-                     "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
-                     "ORDER BY m.timestamp ASC";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, userId1);
-            pstmt.setInt(2, userId2);
-            pstmt.setInt(3, userId2);
-            pstmt.setInt(4, userId1);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    int messageId = rs.getInt("message_id");
-                    int senderId = rs.getInt("sender_id");
-                    String senderUsername = rs.getString("sender_username");
-                    int receiverId = rs.getInt("receiver_id");
-                    String receiverUsername = rs.getString("receiver_username");
-                    String messageText = rs.getString("message_text");
-                    LocalDateTime timestamp = rs.getTimestamp("timestamp").toLocalDateTime();
-                    boolean isRead = rs.getBoolean("is_read");
-
-                    messages.add(new ChatMessage(messageId, senderId, senderUsername, receiverId, receiverUsername, messageText, timestamp, isRead));
-                }
-            }
-        }
-        return messages;
-    }
-
-    /**
-     * Menyimpan pesan chat baru ke database.
-     * @param senderId ID pengirim.
-     * @param receiverId ID penerima.
-     * @param messageText Teks pesan.
-     * @return true jika pesan berhasil dikirim, false jika gagal.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static boolean sendMessage(int senderId, int receiverId, String messageText) throws SQLException {
-        String sql = "INSERT INTO messages (sender_id, receiver_id, message_text) VALUES (?, ?, ?)";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, senderId);
-            pstmt.setInt(2, receiverId);
-            pstmt.setString(3, messageText);
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            System.err.println("Error sending message: " + e.getMessage());
-            throw e;
-        }
-    }
-
-    /**
-     * Memperbarui status 'is_read' pesan menjadi TRUE untuk semua pesan
-     * yang diterima oleh `receiverId` dari `senderId` yang belum dibaca.
-     * @param receiverId ID penerima pesan (pengguna yang sedang melihat chat).
-     * @param senderId ID pengirim pesan.
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static void markMessagesAsRead(int receiverId, int senderId) throws SQLException {
-        String sql = "UPDATE messages SET is_read = TRUE WHERE receiver_id = ? AND sender_id = ? AND is_read = FALSE";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, receiverId);
-            pstmt.setInt(2, senderId);
-            pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.err.println("Error marking messages as read: " + e.getMessage());
-            throw e;
-        }
-    }
-    
-    /**
-     * Mengambil daftar pengguna yang pernah di-chat oleh `currentUserId` atau pernah chat `currentUserId`.
-     * Ini akan menjadi daftar "kontak" di pop-up chat.
-     * @param currentUserId ID pengguna yang sedang login.
-     * @return Daftar objek ChatUser (ID dan Username dari penjual/pembeli yang terlibat chat).
-     * @throws SQLException Jika terjadi kesalahan database.
-     */
-    public static List<ChatUser> getRecentChatUsers(int currentUserId) throws SQLException {
-        List<ChatUser> users = new ArrayList<>();
-        // Query untuk mendapatkan semua user_id yang pernah menjadi pengirim atau penerima pesan
-        // dengan currentUserId, dan kemudian mendapatkan detail username mereka.
-        String sql = "SELECT DISTINCT u.id, u.username FROM users u " +
-                     "WHERE u.id IN (" +
-                     "    SELECT DISTINCT sender_id FROM messages WHERE receiver_id = ?" +
-                     "    UNION " +
-                     "    SELECT DISTINCT receiver_id FROM messages WHERE sender_id = ?" +
-                     ") AND u.id != ?"; // Kecualikan diri sendiri
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, currentUserId);
-            pstmt.setInt(2, currentUserId);
-            pstmt.setInt(3, currentUserId);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username")));
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error fetching recent chat users: " + e.getMessage());
-            throw e;
-        }
-        return users;
-    }
-
-    // Inner class ChatUser (jika Anda menghapusnya, tambahkan kembali)
-    public static class ChatUser {
-        private int id;
-        private String username;
-
-        public ChatUser(int id, String username) {
-            this.id = id;
-            this.username = username;
-        }
-
-        public int getId() { return id; }
-        public String getUsername() { return username; }
-
-        @Override
-        public String toString() {
-            return username; // Digunakan oleh JList
-        }
-    }
-
 }

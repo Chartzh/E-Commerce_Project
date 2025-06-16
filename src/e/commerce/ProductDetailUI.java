@@ -8,8 +8,8 @@ import java.text.NumberFormat;
 import java.util.Locale;
 import java.util.List;
 import java.util.ArrayList;
-import java.sql.SQLException; // <--- TAMBAH IMPORT INI
-import e.commerce.Authentication; // <--- TAMBAH IMPORT INI
+import java.sql.SQLException;
+import e.commerce.Authentication;
 
 public class ProductDetailUI extends JPanel {
     private FavoritesUI.FavoriteItem currentProduct;
@@ -25,6 +25,8 @@ public class ProductDetailUI extends JPanel {
     private boolean isFavorite = false;
     private ViewController viewController;
 
+    private JScrollPane outerScrollPane;
+
     // Konstruktor utama yang menerima produk dan ViewController
     public ProductDetailUI(FavoritesUI.FavoriteItem product, ViewController viewController) {
         this.currentProduct = product;
@@ -33,13 +35,12 @@ public class ProductDetailUI extends JPanel {
         // Periksa status favorit saat inisialisasi (di awal konstruktor)
         if (Authentication.getCurrentUser() != null) {
             try {
-                // Memeriksa apakah produk ini sudah ada di daftar favorit pengguna
-                isFavorite = ProductRepository.getFavoriteItemsForUser(Authentication.getCurrentUser().getId()) //
+                isFavorite = ProductRepository.getFavoriteItemsForUser(Authentication.getCurrentUser().getId())
                                              .stream()
                                              .anyMatch(item -> item.getId() == currentProduct.getId());
             } catch (SQLException e) {
                 System.err.println("Error checking favorite status: " + e.getMessage());
-                isFavorite = false; // Default ke false jika ada error database
+                isFavorite = false;
             }
         }
 
@@ -74,7 +75,6 @@ public class ProductDetailUI extends JPanel {
         JPanel tabsSection = createTabsSection();
         mainContentPanel.add(tabsSection, BorderLayout.SOUTH);
 
-        // Tambahkan bagian Rekomendasi
         JPanel recommendationSection = createRecommendationSection();
         JPanel combinedContent = new JPanel();
         combinedContent.setLayout(new BoxLayout(combinedContent, BoxLayout.Y_AXIS));
@@ -82,13 +82,24 @@ public class ProductDetailUI extends JPanel {
         combinedContent.add(mainContentPanel);
         combinedContent.add(recommendationSection);
 
-        JScrollPane scrollPane = new JScrollPane(combinedContent);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(null);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        outerScrollPane = new JScrollPane(combinedContent);
+        outerScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        outerScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        outerScrollPane.setBorder(null);
+        outerScrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
-        add(scrollPane, BorderLayout.CENTER);
+        add(outerScrollPane, BorderLayout.CENTER);
+
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentShown(ComponentEvent e) {
+                SwingUtilities.invokeLater(() -> {
+                    if (outerScrollPane != null) {
+                        outerScrollPane.getVerticalScrollBar().setValue(0);
+                    }
+                });
+            }
+        });
     }
 
     private JPanel createHeaderPanel() {
@@ -96,26 +107,20 @@ public class ProductDetailUI extends JPanel {
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(new EmptyBorder(10, 20, 0, 20));
 
-        JPanel breadcrumbPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        breadcrumbPanel.setBackground(Color.WHITE);
-
-        String[] breadcrumbs = {"Home", "Komputer & Laptop", "Laptop", "Laptop 2 in 1"};
-        for (int i = 0; i < breadcrumbs.length; i++) {
-            JLabel breadcrumbLabel = new JLabel(breadcrumbs[i]);
-            breadcrumbLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-            breadcrumbLabel.setForeground(new Color(0, 150, 136));
-            breadcrumbLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            breadcrumbPanel.add(breadcrumbLabel);
-
-            if (i < breadcrumbs.length - 1) {
-                JLabel separator = new JLabel(" > ");
-                separator.setFont(new Font("Arial", Font.PLAIN, 12));
-                separator.setForeground(Color.GRAY);
-                breadcrumbPanel.add(separator);
+        JButton backButton = new JButton("← Back");
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.setForeground(new Color(50, 50, 50));
+        backButton.setBackground(Color.WHITE);
+        backButton.setBorderPainted(false);
+        backButton.setFocusPainted(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> {
+            if (viewController != null) {
+                viewController.showDashboardView();
             }
-        }
+        });
+        headerPanel.add(backButton, BorderLayout.WEST);
 
-        headerPanel.add(breadcrumbPanel, BorderLayout.WEST);
         return headerPanel;
     }
 
@@ -133,11 +138,20 @@ public class ProductDetailUI extends JPanel {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
+                int panelWidth = getWidth();
+                int panelHeight = getHeight();
+
+                int imageAreaSize = Math.min(panelWidth, panelHeight);
+                int imageAreaX = (panelWidth - imageAreaSize) / 2;
+                int imageAreaY = (panelHeight - imageAreaSize) / 2;
+
                 g2d.setColor(currentProduct.getBgColor());
-                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.fillRect(0, 0, panelWidth, panelHeight);
 
                 Image displayImage = null;
-                if (!currentProduct.getLoadedImages().isEmpty() && currentImageIndex < currentProduct.getLoadedImages().size()) {
+                if (currentProduct.getLoadedImages() != null &&
+                    !currentProduct.getLoadedImages().isEmpty() &&
+                    currentImageIndex < currentProduct.getLoadedImages().size()) {
                     displayImage = currentProduct.getLoadedImages().get(currentImageIndex);
                 }
 
@@ -145,30 +159,33 @@ public class ProductDetailUI extends JPanel {
                     g2d.setColor(currentProduct.getBgColor().darker());
                     g2d.setFont(new Font("Arial", Font.BOLD, 24));
                     FontMetrics fm = g2d.getFontMetrics();
-                    String text = "NO IMAGE"; // Placeholder jika tidak ada gambar
+                    String text = "NO IMAGE";
                     int textWidth = fm.stringWidth(text);
                     int textHeight = fm.getHeight();
-                    g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2);
+                    g2d.drawString(text, (panelWidth - textWidth) / 2, (panelHeight + textHeight / 2) / 2);
                 } else {
                     int originalWidth = displayImage.getWidth(null);
                     int originalHeight = displayImage.getHeight(null);
 
-                    double scaleX = (double) getWidth() / originalWidth;
-                    double scaleY = (double) getHeight() / originalHeight;
-                    double scale = Math.min(scaleX, scaleY);
+                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
+                    int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
+                    int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
 
-                    g2d.drawImage(displayImage, x, y, scaledWidth, scaledHeight, null);
+                    Shape oldClip = g2d.getClip();
+                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
+
+                    g2d.drawImage(displayImage, drawX, drawY, scaledWidth, scaledHeight, null);
+
+                    g2d.setClip(oldClip);
                 }
             }
         };
         mainImagePanel.setPreferredSize(new Dimension(400, 350));
-        mainImagePanel.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
+        mainImagePanel.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 0));
         mainImagePanel.setOpaque(true);
 
         thumbnailPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -181,7 +198,7 @@ public class ProductDetailUI extends JPanel {
                 thumbnailPanel.add(thumbnail);
             }
         } else {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 3; /* Limit to 3 placeholders */ i++) {
                 JPanel thumbnail = createThumbnail(i);
                 thumbnailPanel.add(thumbnail);
             }
@@ -202,13 +219,21 @@ public class ProductDetailUI extends JPanel {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
-                g2d.setColor(currentProduct.getBgColor());
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-
                 Image thumbImage = null;
                 if (currentProduct.getLoadedImages() != null && index < currentProduct.getLoadedImages().size()) {
                     thumbImage = currentProduct.getLoadedImages().get(index);
                 }
+
+                int panelWidth = getWidth();
+                int panelHeight = getHeight();
+
+                int imageAreaSize = Math.min(panelWidth, panelHeight);
+                int imageAreaX = (panelWidth - imageAreaSize) / 2;
+                int imageAreaY = (panelHeight - imageAreaSize) / 2;
+                
+                g2d.setColor(currentProduct.getBgColor());
+                g2d.fillRect(0, 0, panelWidth, panelHeight);
+
 
                 if (thumbImage == null) {
                     g2d.setColor(currentProduct.getBgColor().darker());
@@ -217,29 +242,32 @@ public class ProductDetailUI extends JPanel {
                     String text = "" + (index + 1);
                     int textWidth = fm.stringWidth(text);
                     int textHeight = fm.getHeight();
-                    g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2);
+                    g2d.drawString(text, (panelWidth - textWidth) / 2, (panelHeight + textHeight / 2) / 2);
                 } else {
                     int originalWidth = thumbImage.getWidth(null);
                     int originalHeight = thumbImage.getHeight(null);
 
-                    double scaleX = (double) getWidth() / originalWidth;
-                    double scaleY = (double) getHeight() / originalHeight;
-                    double scale = Math.min(scaleX, scaleY);
+                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
+                    int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
+                    int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
 
-                    g2d.drawImage(thumbImage, x, y, scaledWidth, scaledHeight, null);
+                    Shape oldClip = g2d.getClip();
+                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
+
+                    g2d.drawImage(thumbImage, drawX, drawY, scaledWidth, scaledHeight, null);
+
+                    g2d.setClip(oldClip);
                 }
             }
         };
         thumbnail.setPreferredSize(new Dimension(70, 60));
         thumbnail.setBorder(BorderFactory.createLineBorder(
                 index == currentImageIndex ? new Color(255, 89, 0) : new Color(240, 240, 240),
-                index == currentImageIndex ? 2 : 1
+                index == currentImageIndex ? 2 : 0
         ));
         thumbnail.setCursor(new Cursor(Cursor.HAND_CURSOR));
         thumbnail.setOpaque(true);
@@ -263,7 +291,7 @@ public class ProductDetailUI extends JPanel {
             JPanel thumb = (JPanel) thumbnails[i];
             thumb.setBorder(BorderFactory.createLineBorder(
                     i == currentImageIndex ? new Color(255, 89, 0) : new Color(240, 240, 240),
-                    i == currentImageIndex ? 2 : 1
+                    i == currentImageIndex ? 2 : 0
             ));
         }
         thumbnailPanel.repaint();
@@ -358,58 +386,82 @@ public class ProductDetailUI extends JPanel {
     }
 
     private JPanel createQuantityPanel() {
-        JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        JPanel quantityPanel = new JPanel(new GridBagLayout());
         quantityPanel.setBackground(Color.WHITE);
         quantityPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        quantityPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+        quantityPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        JLabel qtyLabel = new JLabel("Atur jumlah dan catatan");
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.anchor = GridBagConstraints.WEST;
+
+        // Label "Jumlah"
+        JLabel qtyLabel = new JLabel("Jumlah");
         qtyLabel.setFont(new Font("Arial", Font.BOLD, 14));
         qtyLabel.setForeground(Color.BLACK);
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        quantityPanel.add(qtyLabel, gbc);
 
-        JPanel qtyControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
-        qtyControlPanel.setBackground(Color.WHITE);
+        // Panel Kontrol Kuantitas (Spinner + Stock Label)
+        JPanel qtyControlSubPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        qtyControlSubPanel.setBackground(Color.WHITE);
 
         quantitySpinner = new JSpinner(new SpinnerNumberModel(1, 1, currentProduct.getStock(), 1));
-        quantitySpinner.setPreferredSize(new Dimension(80, 35));
+        // --- REVISI: Sesuaikan tinggi spinner agar tidak terpotong ---
+        quantitySpinner.setPreferredSize(new Dimension(80, 28)); // Mengurangi tinggi agar tidak terpotong
+        // --- AKHIR REVISI ---
         quantitySpinner.setFont(new Font("Arial", Font.PLAIN, 14));
 
         stockLabel = new JLabel("Stok Total: Sisa " + currentProduct.getStock());
         stockLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         stockLabel.setForeground(Color.GRAY);
 
+        quantitySpinner.addChangeListener(e -> updateSubtotal());
+
+        qtyControlSubPanel.add(quantitySpinner);
+        qtyControlSubPanel.add(stockLabel);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        quantityPanel.add(qtyControlSubPanel, gbc);
+
+        // --- REVISI: Tambah sedikit jarak vertikal untuk subtotal ---
+        gbc.insets = new Insets(8, 0, 0, 0); // Atur insets untuk baris subtotal
+        // --- AKHIR REVISI ---
+
+        // Label "Subtotal" dan nilainya
+        JLabel subtotalTextLabel = new JLabel("Subtotal");
+        subtotalTextLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        subtotalTextLabel.setForeground(Color.GRAY);
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.WEST;
+        quantityPanel.add(subtotalTextLabel, gbc);
+
         subtotalValueLabel = new JLabel();
         subtotalValueLabel.setFont(new Font("Arial", Font.BOLD, 16));
         subtotalValueLabel.setForeground(Color.BLACK);
         updateSubtotal();
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        gbc.gridwidth = 1;
+        // --- REVISI: Tambah jarak horizontal antara Subtotal dan nilai ---
+        gbc.insets = new Insets(8, 5, 0, 0); // insets(atas, kiri, bawah, kanan)
+        // --- AKHIR REVISI ---
+        gbc.weightx = 1.0;
+        gbc.anchor = GridBagConstraints.WEST; // Rata kiri
+        quantityPanel.add(subtotalValueLabel, gbc);
 
-        quantitySpinner.addChangeListener(e -> {
-            updateSubtotal();
-        });
-
-        qtyControlPanel.add(quantitySpinner);
-        qtyControlPanel.add(stockLabel);
-
-        JPanel subtotalDisplayPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        subtotalDisplayPanel.setBackground(Color.WHITE);
-        subtotalDisplayPanel.add(new JLabel("Subtotal"));
-        subtotalDisplayPanel.add(Box.createRigidArea(new Dimension(10, 0)));
-        subtotalDisplayPanel.add(subtotalValueLabel);
-
-        JPanel wrapper = new JPanel();
-        wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
-        wrapper.setBackground(Color.WHITE);
-        wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        qtyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        qtyControlPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        subtotalDisplayPanel.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        wrapper.add(qtyLabel);
-        wrapper.add(qtyControlPanel);
-        wrapper.add(subtotalDisplayPanel);
-
-        return wrapper;
+        return quantityPanel;
     }
 
     private void updateSubtotal() {
@@ -445,7 +497,6 @@ public class ProductDetailUI extends JPanel {
         buyNowBtn.setFocusPainted(false);
         buyNowBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // --- REVISI: ActionListener untuk Add To Cart ---
         addToCartBtn.addActionListener(e -> {
             User currentUser = Authentication.getCurrentUser();
             if (currentUser == null) {
@@ -460,9 +511,11 @@ public class ProductDetailUI extends JPanel {
                     qty + " item(s) berhasil ditambahkan ke keranjang!",
                     "Ditambahkan ke Keranjang",
                     JOptionPane.INFORMATION_MESSAGE);
-                // Opsional: perbarui tampilan keranjang di header dashboard
-                // Ini akan membutuhkan metode di ViewController atau memanggil UserDashboardUI langsung
-                // Contoh: ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+
+                if (viewController instanceof UserDashboardUI) {
+                    ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                }
+
             } catch (SQLException ex) {
                 System.err.println("Error menambahkan produk ke keranjang: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Gagal menambahkan produk ke keranjang. Silakan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -470,16 +523,32 @@ public class ProductDetailUI extends JPanel {
         });
 
         buyNowBtn.addActionListener(e -> {
+            User currentUser = Authentication.getCurrentUser();
+            if (currentUser == null) {
+                JOptionPane.showMessageDialog(this, "Anda harus login untuk melakukan pembelian.", "Login Diperlukan", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             int qty = (Integer) quantitySpinner.getValue();
             double total = currentProduct.getPrice() * qty;
             NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("in", "ID"));
             currencyFormat.setMinimumFractionDigits(0);
-            JOptionPane.showMessageDialog(this,
-                "Proceeding to checkout with " + qty + " item(s)\nTotal: " + currencyFormat.format(total),
-                "Buy Now",
-                JOptionPane.INFORMATION_MESSAGE);
-            // Anda mungkin ingin mengarahkan ke checkout dengan produk ini
-            // viewController.showCheckoutView(currentProduct, qty); // Jika Anda punya metode showCheckoutView dengan parameter
+
+            try {
+                ProductRepository.addProductToCart(currentUser.getId(), currentProduct.getId(), qty);
+                JOptionPane.showMessageDialog(this,
+                    qty + " item(s) berhasil ditambahkan ke keranjang. Melanjutkan ke halaman alamat...",
+                    "Beli Langsung",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+                if (viewController != null) {
+                    viewController.showAddressView();
+                }
+
+            } catch (SQLException ex) {
+                System.err.println("Error menambahkan produk ke keranjang untuk Beli Langsung: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Gagal memproses pembelian. Silakan coba lagi.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         });
 
         actionPanel.add(addToCartBtn);
@@ -494,31 +563,56 @@ public class ProductDetailUI extends JPanel {
         additionalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         additionalPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        JButton chatBtn = new JButton("💬 Chat");
+        // --- REVISI: Atur ukuran tombol Chat lebih baik ---
+        ImageIcon chatIcon = new ImageIcon("C:\\Users\\LENOVO\\Documents\\NetBeansProjects\\e-commerce\\src\\Resources\\Images\\chat_icon.png");
+        Image originalChatImage = chatIcon.getImage();
+        JButton chatBtn;
+        if (originalChatImage == null || chatIcon.getIconWidth() <= 0) {
+            chatBtn = new JButton("💬 Chat");
+            chatBtn.setPreferredSize(new Dimension(90, 28)); // Menambah tinggi dan lebar
+        } else {
+            Image resizedChatImage = originalChatImage.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            chatIcon = new ImageIcon(resizedChatImage);
+            chatBtn = new JButton("Chat");
+            chatBtn.setIcon(chatIcon);
+            chatBtn.setHorizontalTextPosition(SwingConstants.RIGHT);
+            chatBtn.setPreferredSize(new Dimension(80, 28)); // Menambah tinggi dan lebar
+        }
         chatBtn.setBackground(Color.WHITE);
         chatBtn.setForeground(Color.GRAY);
         chatBtn.setBorderPainted(false);
         chatBtn.setFocusPainted(false);
         chatBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         chatBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // --- AKHIR REVISI ---
 
-        wishlistBtn = new JButton((isFavorite ? "❤️" : "🤍") + " Wishlist");
+        // --- REVISI: Atur ukuran tombol Wishlist lebih baik ---
+        ImageIcon favIcon = new ImageIcon("C:\\Users\\LENOVO\\Documents\\NetBeansProjects\\e-commerce\\src\\Resources\\Images\\fav_icon.png");
+        Image originalFavImage = favIcon.getImage();
+        if (originalFavImage == null || favIcon.getIconWidth() <= 0) {
+            favIcon = null;
+        } else {
+            Image resizedFavImage = originalFavImage.getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            favIcon = new ImageIcon(resizedFavImage);
+        }
+        
+        if (favIcon != null) {
+            wishlistBtn = new JButton("Wishlist");
+            wishlistBtn.setIcon(favIcon);
+            wishlistBtn.setHorizontalTextPosition(SwingConstants.RIGHT);
+            wishlistBtn.setPreferredSize(new Dimension(100, 28)); // Menambah tinggi dan lebar
+        } else {
+            wishlistBtn = new JButton((isFavorite ? "❤️" : "🤍") + " Wishlist");
+            wishlistBtn.setPreferredSize(new Dimension(110, 28)); // Menambah tinggi dan lebar
+        }
         wishlistBtn.setBackground(Color.WHITE);
         wishlistBtn.setForeground(Color.GRAY);
         wishlistBtn.setBorderPainted(false);
         wishlistBtn.setFocusPainted(false);
         wishlistBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         wishlistBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // --- AKHIR REVISI ---
 
-        JButton shareBtn = new JButton("📤 Share");
-        shareBtn.setBackground(Color.WHITE);
-        shareBtn.setForeground(Color.GRAY);
-        shareBtn.setBorderPainted(false);
-        shareBtn.setFocusPainted(false);
-        shareBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-        shareBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        // --- REVISI: ActionListener untuk Tombol Chat ---
         chatBtn.addActionListener(e -> {
             User currentUser = Authentication.getCurrentUser();
             if (currentUser == null) {
@@ -526,26 +620,17 @@ public class ProductDetailUI extends JPanel {
                 return;
             }
 
-            // Periksa apakah ini chat ke diri sendiri (penjual chat dengan dirinya sendiri)
             if (currentProduct != null) {
                 try {
-                    // Ambil sellerId dari currentProduct (asumsi sudah ada di FavoriteItem)
-                    int sellerId = currentProduct.getSellerId(); // Ini memerlukan FavoriteItem di FavoritesUI.java memiliki getter getSellerId()
+                    int sellerId = currentProduct.getSellerId();
 
-                    // Jika FavoriteItem belum punya getSellerId(), Anda harus pakai:
-                    // int sellerId = ProductRepository.getSellerIdByProductId(currentProduct.getId());
-                    // Perlu diperhatikan bahwa memanggil ProductRepository.getSellerIdByProductId() di sini
-                    // akan melakukan query DB tambahan setiap kali tombol chat diklik.
-                    // Lebih efisien jika sellerId sudah ada di objek currentProduct.
-
-                    if (sellerId != -1) { // Pastikan sellerId valid
-                        if (currentUser.getId() == sellerId) { // Jika pembeli adalah penjual produk ini
+                    if (sellerId != -1) {
+                        if (currentUser.getId() == sellerId) {
                             JOptionPane.showMessageDialog(this, "Anda tidak bisa chat dengan diri sendiri.", "Error Chat", JOptionPane.WARNING_MESSAGE);
                             return;
                         }
-                        String sellerUsername = ProductRepository.getUsernameById(sellerId); //
+                        String sellerUsername = ProductRepository.getUsernameById(sellerId);
                         if (!sellerUsername.equals("Unknown User") && viewController != null) {
-                            // Panggil metode showChatWithSeller di ViewController
                             viewController.showChatWithSeller(sellerId, sellerUsername);
                         } else {
                             JOptionPane.showMessageDialog(this, "Informasi penjual tidak lengkap atau tidak ditemukan.", "Error Chat", JOptionPane.ERROR_MESSAGE);
@@ -563,7 +648,6 @@ public class ProductDetailUI extends JPanel {
         });
 
 
-        // --- REVISI: ActionListener untuk Tombol Wishlist ---
         wishlistBtn.addActionListener(e -> {
             User currentUser = Authentication.getCurrentUser();
             if (currentUser == null) {
@@ -575,26 +659,24 @@ public class ProductDetailUI extends JPanel {
 
             try {
                 if (!isFavorite) {
-                    // Tambah ke wishlist
                     boolean success = ProductRepository.addFavoriteItem(userId, productId);
                     if (success) {
                         isFavorite = true;
-                        wishlistBtn.setText("❤️ Wishlist");
                         JOptionPane.showMessageDialog(this, "Ditambahkan ke wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
-                        // Opsional: perbarui jumlah favorit di header dashboard jika ada metode
-                        // ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                        if (viewController instanceof UserDashboardUI) {
+                            ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                        }
                     } else {
                         JOptionPane.showMessageDialog(this, "Gagal menambahkan ke wishlist. Mungkin sudah ada atau ada error.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
                     }
                 } else {
-                    // Hapus dari wishlist
                     boolean success = ProductRepository.removeFavoriteItem(userId, productId);
                     if (success) {
                         isFavorite = false;
-                        wishlistBtn.setText("🤍 Wishlist");
                         JOptionPane.showMessageDialog(this, "Dihapus dari wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
-                        // Opsional: perbarui jumlah favorit di header dashboard jika ada metode
-                        // ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                        if (viewController instanceof UserDashboardUI) {
+                            ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
+                        }
                     } else {
                         JOptionPane.showMessageDialog(this, "Gagal menghapus dari wishlist.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
                     }
@@ -607,8 +689,6 @@ public class ProductDetailUI extends JPanel {
 
         additionalPanel.add(chatBtn);
         additionalPanel.add(wishlistBtn);
-        additionalPanel.add(shareBtn);
-
         return additionalPanel;
     }
 
@@ -742,30 +822,45 @@ public class ProductDetailUI extends JPanel {
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                
+                int panelWidth = getWidth();
+                int panelHeight = getHeight();
+
+                int imageAreaSize = Math.min(panelWidth, panelHeight);
+                int imageAreaX = (panelWidth - imageAreaSize) / 2;
+                int imageAreaY = (panelHeight - imageAreaSize) / 2;
+
                 g2d.setColor(item.getBgColor());
-                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.fillRect(0, 0, panelWidth, panelHeight);
 
                 Image mainImage = null;
                 if (!item.getLoadedImages().isEmpty()) {
                     mainImage = item.getLoadedImages().get(0);
                 }
-                if (mainImage != null) {
-                    int originalWidth = mainImage.getWidth(null);
-                    int originalHeight = mainImage.getHeight(null);
-                    double scale = Math.min((double) getWidth() / originalWidth, (double) getHeight() / originalHeight);
-                    int scaledWidth = (int) (originalWidth * scale);
-                    int scaledHeight = (int) (originalHeight * scale);
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
-                    g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null);
-                } else {
+                if (mainImage == null) {
                      g2d.setColor(item.getBgColor().darker());
                      g2d.setFont(new Font("Arial", Font.BOLD, 16));
                      FontMetrics fm = g2d.getFontMetrics();
                      String text = "NO IMAGE";
                      int textWidth = fm.stringWidth(text);
                      int textHeight = fm.getHeight();
-                     g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2);
+                     g2d.drawString(text, (panelWidth - textWidth) / 2, (panelHeight + textHeight) / 2);
+                } else {
+                    int originalWidth = mainImage.getWidth(null);
+                    int originalHeight = mainImage.getHeight(null);
+
+                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
+
+                    int scaledWidth = (int) (originalWidth * scale);
+                    int scaledHeight = (int) (originalHeight * scale);
+
+                    int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
+                    int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
+
+                    Shape originalClip = g2d.getClip();
+                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
+                    g2d.drawImage(mainImage, drawX, drawY, scaledWidth, scaledHeight, null);
+                    g2d.setClip(originalClip);
                 }
             }
         };

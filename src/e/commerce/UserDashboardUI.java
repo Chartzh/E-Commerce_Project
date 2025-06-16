@@ -27,13 +27,13 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private FavoritesUI favoritesUI; // Deklarasi tetap
     private CheckoutUI checkoutUI;
     private User currentUser;
-    private ChatSellerUI chatSellerUI;
+    private ChatSellerUI chatSellerUI; // Tidak digunakan di sini, tetapi tetap ada
     private ChatFloatingButton chatFloatingButton;
     private ChatPopupUI chatPopupUI;
 
-    private AddressUI addressUI; 
-    private PaymentUI paymentUI;
-    private SuccessUI successUI;
+    private AddressUI addressUI;
+    private PaymentUI paymentUI; // Tidak diinisialisasi atau digunakan langsung di sini, tapi di showPaymentView
+    private SuccessUI successUI; // Tidak diinisialisasi atau digunakan langsung di sini, tapi di showSuccessView
 
     // --- Banner Image Paths ---
     private static final String BANNER_1_PATH = "/Resources/Images/Banner1.png";
@@ -71,45 +71,50 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
-        //mainPanel.setBounds(0, 70, getWidth(), getHeight() - 70);
+        //mainPanel.setBounds(0, 70, getWidth(), getHeight() - 70); // Akan diatur di componentResized
         checkoutUI = new CheckoutUI(this);
 
         JPanel headerPanel = createHeaderPanel(currentUser);
-        //headerPanel.setBounds(0, 0, getWidth(), 70);
+        //headerPanel.setBounds(0, 0, getWidth(), 70); // Akan diatur di componentResized
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
-        JPanel ordersPanel = createOrdersPanel();
+        JPanel ordersPanel = createOrdersPanel(); // Ini akan jadi placeholder karena OrderHistory adalah JFrame
 
-        JPanel cartPanel = new CartUI(this);
+        // --- REVISI: Inisialisasi awal panel UI.
+        // CartUI dan FavoritesUI akan dibuat ulang (atau di-refresh) saat di-show
+        // untuk memastikan data terbaru. AddressUI juga bisa direfresh.
+        // Panel-panel ini akan ditambahkan ke mainPanel secara dinamis saat show...View() dipanggil
+        // agar data selalu segar.
+        // Jika Anda ingin panel ini tetap ada di CardLayout sejak awal (meskipun dengan data lama),
+        // Anda bisa mengembalikan baris mainPanel.add(...) seperti sebelumnya.
+        // Untuk tujuan refresh data, pendekatan membuat ulang/refresh adalah yang terbaik.
 
-        favoritesUI = new FavoritesUI(this, currentUser.getId()); //
-
-        AddressUI addressUI = new AddressUI(this);
+        // mainPanel.add(new CartUI(this), "Cart"); // Dihapus, akan dibuat ulang di showCartView
+        // mainPanel.add(new FavoritesUI(this, currentUser.getId()), "Favorites"); // Dihapus, akan dibuat ulang di showFavoritesView
+        // mainPanel.add(new AddressUI(this), "Address"); // Dihapus, akan dibuat ulang di showAddressView
+        // --- AKHIR REVISI ---
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
-        mainPanel.add(ordersPanel, "Order");
-        mainPanel.add(cartPanel, "Cart");
-        mainPanel.add(favoritesUI, "Favorites");
+        mainPanel.add(ordersPanel, "Order"); // Placeholder
         mainPanel.add(checkoutUI, "Checkout");
-        mainPanel.add(addressUI, "Address"); 
 
 
         add(headerPanel);
         add(mainPanel);
-        
-        chatFloatingButton = new ChatFloatingButton(this, this); 
-        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize()); 
-        chatFloatingButton.setLocation(getWidth() - chatFloatingButton.getWidth() - 30, getHeight() - chatFloatingButton.getHeight() - 30);
-        
+
+        chatFloatingButton = new ChatFloatingButton(this, this);
+        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize());
+        // chatFloatingButton.setLocation akan diatur oleh componentResized
+
         // JLayeredPane untuk menempatkan floating button di atas semua komponen
         JLayeredPane layeredPane = getRootPane().getLayeredPane();
-        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER); 
+        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER);
 
-        
-        chatPopupUI = new ChatPopupUI(this, this); 
-        chatPopupUI.pack(); 
-        chatPopupUI.setLocationRelativeTo(this); 
+
+        chatPopupUI = new ChatPopupUI(this, this);
+        chatPopupUI.pack();
+        // chatPopupUI.setLocation akan diatur oleh componentResized
 
 
         // Listener untuk mengatur ulang posisi floating button saat frame diubah ukurannya
@@ -133,6 +138,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
             @Override
             public void windowOpened(WindowEvent e) {
                 startBannerCarousel();
+                // --- REVISI: Perbarui hitungan saat jendela dibuka ---
+                updateHeaderCartAndFavCounts();
+                // --- AKHIR REVISI ---
             }
 
             @Override
@@ -144,106 +152,142 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 }
             }
         });
+
+        // Set initial view to Dashboard
+        showDashboardView();
     }
 
     @Override
     public void showProductDetail(FavoritesUI.FavoriteItem product) {
+        // --- REVISI: Pastikan panel dihapus sebelum menambah yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof ProductDetailUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
+        // --- AKHIR REVISI ---
 
-        FavoritesUI.FavoriteItem fullProductDetails = ProductRepository.getProductById(product.getId());
-        if (fullProductDetails == null) {
-            JOptionPane.showMessageDialog(this, "Detail produk tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+        FavoritesUI.FavoriteItem fullProductDetails = ProductRepository.getProductById(product.getId()); //
+        if (fullProductDetails == null) { //
+            JOptionPane.showMessageDialog(this, "Detail produk tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE); //
+            return; //
         }
 
-        ProductDetailUI productDetailPanel = new ProductDetailUI(fullProductDetails, this);
-        mainPanel.add(productDetailPanel, "ProductDetail");
-        cardLayout.show(mainPanel, "ProductDetail");
-        chatFloatingButton.setVisible(true);
+        ProductDetailUI productDetailPanel = new ProductDetailUI(fullProductDetails, this); //
+        mainPanel.add(productDetailPanel, "ProductDetail"); //
+        cardLayout.show(mainPanel, "ProductDetail"); //
+        chatFloatingButton.setVisible(true); //
     }
 
     @Override
     public void showFavoritesView() {
-        cardLayout.show(mainPanel, "Favorites");
-        chatFloatingButton.setVisible(true); 
+        // --- REVISI: Hapus FavoritesUI lama dan buat/inisialisasi ulang yang baru ---
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof FavoritesUI) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        // Pastikan favoritesUI selalu diinisialisasi ulang atau di-refresh
+        favoritesUI = new FavoritesUI(this, currentUser.getId()); //
+        mainPanel.add(favoritesUI, "Favorites");
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Favorites"); //
+        chatFloatingButton.setVisible(true); //
+        // --- REVISI: Pastikan jumlah favorit di header diperbarui ---
+        updateHeaderCartAndFavCounts();
+        // --- AKHIR REVISI ---
     }
 
     @Override
     public void showDashboardView() {
-        cardLayout.show(mainPanel, "Dashboard");
-        chatFloatingButton.setVisible(true); 
+        cardLayout.show(mainPanel, "Dashboard"); //
+        chatFloatingButton.setVisible(true); //
+        // --- REVISI: Perbarui jumlah di header saat kembali ke Dashboard ---
+        updateHeaderCartAndFavCounts();
+        // --- AKHIR REVISI ---
     }
 
     @Override
     public void showCartView() {
+        // --- REVISI: Hapus CartUI lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof CartUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        JPanel newCartPanel = new CartUI(this);
+        JPanel newCartPanel = new CartUI(this); //
         mainPanel.add(newCartPanel, "Cart");
-        cardLayout.show(mainPanel, "Cart");
-        updateHeaderCartAndFavCounts();
-        chatFloatingButton.setVisible(true);
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Cart"); //
+        updateHeaderCartAndFavCounts(); //
+        chatFloatingButton.setVisible(true); //
     }
 
     @Override
     public void showProfileView() {
-        cardLayout.show(mainPanel, "Profile");
-        chatFloatingButton.setVisible(true);
+        cardLayout.show(mainPanel, "Profile"); //
+        chatFloatingButton.setVisible(true); //
     }
 
     @Override
     public void showOrdersView() {
+        // --- REVISI: Hapus OrderHistory lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof OrderHistory) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        OrderHistory newOrdersPanel = new OrderHistory(this);
+        // OrderHistory diasumsikan sebagai JPanel yang menerima ViewController
+        // Jika OrderHistory Anda adalah JFrame, Anda harus memanggil new OrderHistory(this).setVisible(true);
+        // dan tidak menambahkannya ke mainPanel.
+        OrderHistory newOrdersPanel = new OrderHistory(this); //
         mainPanel.add(newOrdersPanel, "Order");
-        cardLayout.show(mainPanel, "Order");
-        System.out.println("Navigasi ke Halaman Riwayat Pesanan.");
-        chatFloatingButton.setVisible(true);
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Order"); //
+        System.out.println("Navigasi ke Halaman Riwayat Pesanan."); //
+        chatFloatingButton.setVisible(true); //
     }
 
     @Override
     public void showChatWithSeller(int sellerId, String sellerUsername) {
         // Panggil metode startChatWith di ChatPopupUI
-        chatPopupUI.startChatWith(sellerId, sellerUsername);
+        chatPopupUI.startChatWith(sellerId, sellerUsername); //
     }
 
     @Override
     public void showCheckoutView() {
-        cardLayout.show(mainPanel, "Checkout");
-        chatFloatingButton.setVisible(false); 
+        cardLayout.show(mainPanel, "Checkout"); //
+        chatFloatingButton.setVisible(false); //
     }
 
     @Override
     public void showAddressView() {
+        // --- REVISI: Hapus AddressUI lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof AddressUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        AddressUI newAddressUI = new AddressUI(this);
+        AddressUI newAddressUI = new AddressUI(this); //
         mainPanel.add(newAddressUI, "Address");
-        cardLayout.show(mainPanel, "Address");
-        System.out.println("Navigasi ke Halaman Alamat.");
-        chatFloatingButton.setVisible(false); 
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Address"); //
+        System.out.println("Navigasi ke Halaman Alamat."); //
+        chatFloatingButton.setVisible(false); //
     }
 
     @Override
     public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
+        // --- REVISI: Hapus PaymentUI lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof PaymentUI) {
                 mainPanel.remove(comp);
@@ -252,40 +296,48 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
         PaymentUI newPaymentUI = new PaymentUI(this, selectedAddress, selectedShippingService);
         mainPanel.add(newPaymentUI, "Payment");
-        cardLayout.show(mainPanel, "Payment");
-        System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman.");
-        chatFloatingButton.setVisible(false); 
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Payment"); //
+        System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman."); //
+        chatFloatingButton.setVisible(false); //
     }
 
     @Override
     public void showSuccessView(int orderId) {
+        // --- REVISI: Hapus SuccessUI lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof SuccessUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        SuccessUI newSuccessUI = new SuccessUI(this, orderId);
+        SuccessUI newSuccessUI = new SuccessUI(this, orderId); //
         mainPanel.add(newSuccessUI, "Success");
-        cardLayout.show(mainPanel, "Success");
-        System.out.println("Navigasi ke Halaman Sukses dengan ID Pesanan: " + orderId);
-        updateHeaderCartAndFavCounts();
-        chatFloatingButton.setVisible(false);
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "Success"); //
+        System.out.println("Navigasi ke Halaman Sukses dengan ID Pesanan: " + orderId); //
+        updateHeaderCartAndFavCounts(); //
+        chatFloatingButton.setVisible(false); //
     }
 
     @Override
     public void showOrderDetailView(int orderId) {
+        // --- REVISI: Hapus OrderDetailUI lama dan buat yang baru ---
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof OrderDetailUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        OrderDetailUI orderDetailPanel = new OrderDetailUI(this, orderId);
+        OrderDetailUI orderDetailPanel = new OrderDetailUI(this, orderId); //
         mainPanel.add(orderDetailPanel, "OrderDetail");
-        cardLayout.show(mainPanel, "OrderDetail");
-        System.out.println("Navigasi ke Halaman Detail Pesanan untuk ID: " + orderId);
-        chatFloatingButton.setVisible(false);
+        // --- AKHIR REVISI ---
+
+        cardLayout.show(mainPanel, "OrderDetail"); //
+        System.out.println("Navigasi ke Halaman Detail Pesanan untuk ID: " + orderId); //
+        chatFloatingButton.setVisible(false); //
     }
 
     private JPanel createHeaderPanel(User currentUser) {
@@ -340,7 +392,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         ImageIcon resizedCartIcon = new ImageIcon(resizedCartImage);
 
         JLabel lblCart = new JLabel(resizedCartIcon);
-        lblCart.setText(" " + getCartItemCount());
+        lblCart.setText(" " + getCartItemCount()); //
         lblCart.setFont(new Font("Arial", Font.BOLD, 14));
         lblCart.setHorizontalTextPosition(SwingConstants.RIGHT);
         lblCart.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -878,6 +930,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             @Override
             protected Void doInBackground() throws Exception {
                 while (bannerImagePanel.getWidth() == 0 || bannerImagePanel.getHeight() == 0) {
+                    // Tunggu hingga panel banner memiliki ukuran yang valid
                     Thread.sleep(50);
                 }
                 for (int i = 0; i < bannerLabels.size(); i++) {
@@ -927,7 +980,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
     }
 
-    private JPanel createDashboardPanel() { /* ... isi metode ini tidak berubah ... */
+    private JPanel createDashboardPanel() {
         JPanel dashboardPanel = new JPanel();
         dashboardPanel.setLayout(new BoxLayout(dashboardPanel, BoxLayout.Y_AXIS));
         dashboardPanel.setBackground(Color.WHITE);
@@ -987,269 +1040,268 @@ public class UserDashboardUI extends JFrame implements ViewController {
         bestSellerProducts.setBackground(Color.WHITE);
 
         List<FavoritesUI.FavoriteItem> allProducts = ProductRepository.getAllProducts(); //
-        System.out.println("DEBUG UserDashboardUI: Jumlah produk yang diambil dari database: " + allProducts.size());
+        System.out.println("DEBUG UserDashboardUI: Jumlah produk yang diambil dari database: " + allProducts.size()); //
 
-        int productsToShow = Math.min(allProducts.size(), 8);
+        int productsToShow = Math.min(allProducts.size(), 8); //
 
-        if (productsToShow == 0) {
-            System.out.println("DEBUG UserDashboardUI: Tidak ada produk untuk ditampilkan di Produk Terlaris.");
-            JLabel noProductsLabel = new JLabel("Belum ada produk terlaris saat ini.", SwingConstants.CENTER);
-            noProductsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-            noProductsLabel.setForeground(Color.GRAY);
-            bestSellerProducts.add(noProductsLabel);
+        if (productsToShow == 0) { //
+            System.out.println("DEBUG UserDashboardUI: Tidak ada produk untuk ditampilkan di Produk Terlaris."); //
+            JLabel noProductsLabel = new JLabel("Belum ada produk terlaris saat ini.", SwingConstants.CENTER); //
+            noProductsLabel.setFont(new Font("Arial", Font.PLAIN, 16)); //
+            noProductsLabel.setForeground(Color.GRAY); //
+            bestSellerProducts.add(noProductsLabel); //
         } else {
-            for (int i = 0; i < productsToShow; i++) {
-                FavoritesUI.FavoriteItem product = allProducts.get(i);
-                System.out.println("DEBUG UserDashboardUI: Membuat kartu untuk produk: " + product.getName() + " (ID: " + product.getId() + ")");
-                JPanel productCard = createDashboardProductCard(product);
-                bestSellerProducts.add(productCard);
+            for (int i = 0; i < productsToShow; i++) { //
+                FavoritesUI.FavoriteItem product = allProducts.get(i); //
+                System.out.println("DEBUG UserDashboardUI: Membuat kartu untuk produk: " + product.getName() + " (ID: " + product.getId() + ")"); //
+                JPanel productCard = createDashboardProductCard(product); //
+                bestSellerProducts.add(productCard); //
             }
         }
 
-         bestSellerPanel.add(bestSellerProducts, BorderLayout.CENTER);
+         bestSellerPanel.add(bestSellerProducts, BorderLayout.CENTER); //
 
-        contentPanel.add(categoriesPanel);
-        contentPanel.add(featuresPanel);
-        contentPanel.add(bestSellerPanel);
+        contentPanel.add(categoriesPanel); //
+        contentPanel.add(featuresPanel); //
+        contentPanel.add(bestSellerPanel); //
 
-        dashboardPanel.add(contentPanel);
+        dashboardPanel.add(contentPanel); //
 
-        JScrollPane scrollPane = new JScrollPane(dashboardPanel);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(null);
+        JScrollPane scrollPane = new JScrollPane(dashboardPanel); //
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); //
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED); //
+        scrollPane.setBorder(null); //
 
-        JPanel wrapperPanel = new JPanel(new BorderLayout());
-        wrapperPanel.add(scrollPane, BorderLayout.CENTER);
-        return wrapperPanel;
+        JPanel wrapperPanel = new JPanel(new BorderLayout()); //
+        wrapperPanel.add(scrollPane, BorderLayout.CENTER); //
+        return wrapperPanel; //
     }
 
-    private JPanel createDashboardProductCard(FavoritesUI.FavoriteItem item) { /* ... isi metode ini tidak berubah ... */
-        JPanel card = new JPanel();
-        card.setLayout(new BorderLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
-        card.setPreferredSize(new Dimension(180, 320));
+    private JPanel createDashboardProductCard(FavoritesUI.FavoriteItem item) {
+        JPanel card = new JPanel(); //
+        card.setLayout(new BorderLayout()); //
+        card.setBackground(Color.WHITE); //
+        card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1)); //
+        card.setPreferredSize(new Dimension(180, 320)); //
 
-        JPanel imagePanel = new JPanel() {
+        JPanel imagePanel = new JPanel() { //
             @Override
-            protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            Graphics2D g2d = (Graphics2D) g;
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            protected void paintComponent(Graphics g) { //
+            super.paintComponent(g); //
+            Graphics2D g2d = (Graphics2D) g; //
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); //
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR); //
 
-            g2d.setColor(item.getBgColor());
-            g2d.fillRect(0, 0, getWidth(), getHeight());
+            g2d.setColor(item.getBgColor()); //
+            g2d.fillRect(0, 0, getWidth(), getHeight()); //
 
-            Image mainImage = null;
-            if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) {
-                mainImage = item.getLoadedImages().get(0);
+            Image mainImage = null; //
+            if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) { //
+                mainImage = item.getLoadedImages().get(0); //
             }
 
-            if (mainImage == null) {
-                g2d.setColor(item.getBgColor().darker());
-                g2d.setFont(new Font("Arial", Font.BOLD, 12));
-                FontMetrics fm = g2d.getFontMetrics();
-                String text = "NO IMAGE";
-                int textWidth = fm.stringWidth(text);
-                int textHeight = fm.getHeight();
-                g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight / 2) / 2 - fm.getDescent());
-                System.out.println("DEBUG UserDashboardUI (ImagePanel): Gambar TIDAK ditemukan untuk produk: " + item.getName());
+            if (mainImage == null) { //
+                g2d.setColor(item.getBgColor().darker()); //
+                g2d.setFont(new Font("Arial", Font.BOLD, 12)); //
+                FontMetrics fm = g2d.getFontMetrics(); //
+                String text = "NO IMAGE"; //
+                int textWidth = fm.stringWidth(text); //
+                int textHeight = fm.getHeight(); //
+                g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight / 2) / 2 - fm.getDescent()); //
+                System.out.println("DEBUG UserDashboardUI (ImagePanel): Gambar TIDAK ditemukan untuk produk: " + item.getName()); //
             } else {
-                int originalWidth = mainImage.getWidth(null);
-                int originalHeight = mainImage.getHeight(null);
+                int originalWidth = mainImage.getWidth(null); //
+                int originalHeight = mainImage.getHeight(null); //
 
-                double scaleX = (double) getWidth() / originalWidth;
-                double scaleY = (double) getHeight() / originalHeight;
-                double scale = Math.min(scaleX, scaleY);
+                double scaleX = (double) getWidth() / originalWidth; //
+                double scaleY = (double) getHeight() / originalHeight; //
+                double scale = Math.min(scaleX, scaleY); //
 
-                int scaledWidth = (int) (originalWidth * scale);
-                int scaledHeight = (int) (originalHeight * scale);
+                int scaledWidth = (int) (originalWidth * scale); //
+                int scaledHeight = (int) (originalHeight * scale); //
 
-                int x = (getWidth() - scaledWidth) / 2;
-                int y = (getHeight() - scaledHeight) / 2;
+                int x = (getWidth() - scaledWidth) / 2; //
+                int y = (getHeight() - scaledHeight) / 2; //
 
-                g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null);
-                System.out.println("DEBUG UserDashboardUI (ImagePanel): Menggambar gambar untuk produk: " + item.getName() + " (Ukuran: " + originalWidth + "x" + originalHeight + ")");
+                g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null); //
+                System.out.println("DEBUG UserDashboardUI (ImagePanel): Menggambar gambar untuk produk: " + item.getName() + " (Ukuran: " + originalWidth + "x" + originalHeight + ")"); //
             }
         }
 
             @Override
-            public Dimension getPreferredSize() {
-                return new Dimension(180, 180);
+            public Dimension getPreferredSize() { //
+                return new Dimension(180, 180); //
             }
 
             @Override
-            public Dimension getMinimumSize() {
-                return new Dimension(50, 50);
+            public Dimension getMinimumSize() { //
+                return new Dimension(50, 50); //
             }
 
             @Override
-            public Dimension getMaximumSize() {
-                return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE);
+            public Dimension getMaximumSize() { //
+                return new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE); //
             }
         };
-        imagePanel.setOpaque(true);
+        imagePanel.setOpaque(true); //
 
-        JPanel imageContainer = new JPanel();
-        imageContainer.setLayout(new OverlayLayout(imageContainer));
-        imageContainer.add(imagePanel);
+        JPanel imageContainer = new JPanel(); //
+        imageContainer.setLayout(new OverlayLayout(imageContainer)); //
+        imageContainer.add(imagePanel); //
 
-        JPanel infoPanel = new JPanel();
-        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-        infoPanel.setBackground(Color.WHITE);
-        infoPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        JPanel infoPanel = new JPanel(); //
+        infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS)); //
+        infoPanel.setBackground(Color.WHITE); //
+        infoPanel.setBorder(new EmptyBorder(10, 10, 10, 10)); //
 
-        JLabel nameLabel = new JLabel("<html><div style='text-align: center;'>" + item.getName() + "</div></html>");
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        nameLabel.setForeground(Color.BLACK);
-        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel nameLabel = new JLabel("<html><div style='text-align: center;'>" + item.getName() + "</div></html>"); //
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 13)); //
+        nameLabel.setForeground(Color.BLACK); //
+        nameLabel.setAlignmentX(Component.CENTER_ALIGNMENT); //
 
-        JLabel stockLabel = new JLabel("<html><div style='text-align: center;'>Stok: " + item.getStock() + "</div></html>");
-        stockLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        stockLabel.setForeground(Color.GRAY);
-        stockLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel stockLabel = new JLabel("<html><div style='text-align: center;'>Stok: " + item.getStock() + "</div></html>"); //
+        stockLabel.setFont(new Font("Arial", Font.PLAIN, 11)); //
+        stockLabel.setForeground(Color.GRAY); //
+        stockLabel.setAlignmentX(Component.CENTER_ALIGNMENT); //
 
-        JLabel priceLabel = new JLabel("<html><div style='text-align: center;'><b>Rp " + String.format("%,.0f", item.getPrice()) + "</b></div></html>");
-        priceLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        priceLabel.setForeground(new Color(255, 89, 0));
-        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel priceLabel = new JLabel("<html><div style='text-align: center;'><b>Rp " + String.format("%,.0f", item.getPrice()) + "</b></div></html>"); //
+        priceLabel.setFont(new Font("Arial", Font.BOLD, 14)); //
+        priceLabel.setForeground(new Color(255, 89, 0)); //
+        priceLabel.setAlignmentX(Component.CENTER_ALIGNMENT); //
 
-        JLabel originalPriceLabel = null;
-        if (item.getOriginalPrice() > item.getPrice()) {
-            originalPriceLabel = new JLabel("<html><div style='text-align: center;'><strike>Rp " + String.format("%,.0f", item.getOriginalPrice()) + "</strike></div></html>");
-            originalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-            originalPriceLabel.setForeground(Color.GRAY);
-            originalPriceLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel originalPriceLabel = null; //
+        if (item.getOriginalPrice() > item.getPrice()) { //
+            originalPriceLabel = new JLabel("<html><div style='text-align: center;'><strike>Rp " + String.format("%,.0f", item.getOriginalPrice()) + "</strike></div></html>"); //
+            originalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 11)); //
+            originalPriceLabel.setForeground(Color.GRAY); //
+            originalPriceLabel.setAlignmentX(Component.CENTER_ALIGNMENT); //
         }
 
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 5));
-        buttonPanel.setBackground(Color.WHITE);
-        buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 5)); //
+        buttonPanel.setBackground(Color.WHITE); //
+        buttonPanel.setAlignmentX(Component.CENTER_ALIGNMENT); //
 
-        JButton addToCartButton = new JButton("Tambah ke Keranjang");
-        addToCartButton.setBackground(new Color(255, 89, 0));
-        addToCartButton.setForeground(Color.WHITE);
-        addToCartButton.setBorderPainted(false);
-        addToCartButton.setFocusPainted(false);
-        addToCartButton.setFont(new Font("Arial", Font.BOLD, 10));
-        addToCartButton.setBorder(new EmptyBorder(6, 12, 6, 12));
-        addToCartButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton addToCartButton = new JButton("Tambah ke Keranjang"); //
+        addToCartButton.setBackground(new Color(255, 89, 0)); //
+        addToCartButton.setForeground(Color.WHITE); //
+        addToCartButton.setBorderPainted(false); //
+        addToCartButton.setFocusPainted(false); //
+        addToCartButton.setFont(new Font("Arial", Font.BOLD, 10)); //
+        addToCartButton.setBorder(new EmptyBorder(6, 12, 6, 12)); //
+        addToCartButton.setCursor(new Cursor(Cursor.HAND_CURSOR)); //
 
-        addToCartButton.addActionListener(e -> {
-            if (currentUser == null) {
-                JOptionPane.showMessageDialog(UserDashboardUI.this,
-                    "Anda harus login untuk menambahkan produk ke keranjang.",
-                    "Error", JOptionPane.ERROR_MESSAGE);
-                return;
+        addToCartButton.addActionListener(e -> { //
+            if (currentUser == null) { //
+                JOptionPane.showMessageDialog(UserDashboardUI.this, //
+                    "Anda harus login untuk menambahkan produk ke keranjang.", //
+                    "Error", JOptionPane.ERROR_MESSAGE); //
+                return; //
             }
 
-            int userId = currentUser.getId();
-            int productId = item.getId();
-            int quantity = 1;
+            int userId = currentUser.getId(); //
+            int productId = item.getId(); //
+            int quantity = 1; //
 
             try {
                 ProductRepository.addProductToCart(userId, productId, quantity); //
-                JOptionPane.showMessageDialog(UserDashboardUI.this,
-                    "'" + item.getName() + "' berhasil ditambahkan ke keranjang!",
-                    "Berhasil Ditambahkan",
-                    JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(UserDashboardUI.this, //
+                    "'" + item.getName() + "' berhasil ditambahkan ke keranjang!", //
+                    "Berhasil Ditambahkan", //
+                    JOptionPane.INFORMATION_MESSAGE); //
                 // Setelah menambahkan ke keranjang, perbarui jumlah di header
-                updateHeaderCartAndFavCounts();
+                updateHeaderCartAndFavCounts(); //
             } catch (SQLException ex) {
-                System.err.println("Error menambahkan produk ke keranjang: " + ex.getMessage());
-                JOptionPane.showMessageDialog(UserDashboardUI.this,
-                    "Gagal menambahkan produk ke keranjang. Silakan coba lagi.",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                System.err.println("Error menambahkan produk ke keranjang: " + ex.getMessage()); //
+                JOptionPane.showMessageDialog(UserDashboardUI.this, //
+                    "Gagal menambahkan produk ke keranjang. Silakan coba lagi.", //
+                    "Error", JOptionPane.ERROR_MESSAGE); //
             }
         });
 
-        buttonPanel.add(addToCartButton);
+        buttonPanel.add(addToCartButton); //
 
-        infoPanel.add(nameLabel);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 2)));
-        infoPanel.add(stockLabel);
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 4)));
-        infoPanel.add(priceLabel);
-        if (originalPriceLabel != null) {
-            infoPanel.add(Box.createRigidArea(new Dimension(0, 2)));
-            infoPanel.add(originalPriceLabel);
+        infoPanel.add(nameLabel); //
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 2))); //
+        infoPanel.add(stockLabel); //
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 4))); //
+        infoPanel.add(priceLabel); //
+        if (originalPriceLabel != null) { //
+            infoPanel.add(Box.createRigidArea(new Dimension(0, 2))); //
+            infoPanel.add(originalPriceLabel); //
         }
-        infoPanel.add(Box.createRigidArea(new Dimension(0, 6)));
-        infoPanel.add(buttonPanel);
+        infoPanel.add(Box.createRigidArea(new Dimension(0, 6))); //
+        infoPanel.add(buttonPanel); //
 
-        card.add(imageContainer, BorderLayout.NORTH);
-        card.add(infoPanel, BorderLayout.CENTER);
+        card.add(imageContainer, BorderLayout.NORTH); //
+        card.add(infoPanel, BorderLayout.CENTER); //
 
-        card.addMouseListener(new MouseAdapter() {
+        card.addMouseListener(new MouseAdapter() { //
             @Override
-            public void mouseClicked(MouseEvent e) {
-                // Pastikan klik tidak berasal dari tombol "Tambah ke Keranjang" atau "♥"
-                // Heart button sudah ditangani di FavoritesUI.java
-                if (e.getSource() != addToCartButton) {
-                    showProductDetail(item);
+            public void mouseClicked(MouseEvent e) { //
+                // Pastikan klik tidak berasal dari tombol "Tambah ke Keranjang"
+                if (e.getSource() != addToCartButton) { //
+                    showProductDetail(item); //
                 }
             }
 
             @Override
-            public void mouseEntered(MouseEvent e) {
-                card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                card.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2));
+            public void mouseEntered(MouseEvent e) { //
+                card.setCursor(new Cursor(Cursor.HAND_CURSOR)); //
+                card.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2)); //
             }
 
             @Override
-            public void mouseExited(MouseEvent e) {
-                card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1));
+            public void mouseExited(MouseEvent e) { //
+                card.setBorder(BorderFactory.createLineBorder(new Color(240, 240, 240), 1)); //
             }
         });
 
-        return card;
+        return card; //
     }
 
     private JPanel createCategoryCard(String name, Color bgColor) { /* ... isi metode ini tidak berubah ... */
-        JPanel card = new JPanel() {
+        JPanel card = new JPanel() { //
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(bgColor);
-                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+            protected void paintComponent(Graphics g) { //
+                super.paintComponent(g); //
+                Graphics2D g2d = (Graphics2D) g; //
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); //
+                g2d.setColor(bgColor); //
+                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20); //
             }
         };
-        card.setLayout(new BorderLayout());
-        card.setPreferredSize(new Dimension(200, 200));
+        card.setLayout(new BorderLayout()); //
+        card.setPreferredSize(new Dimension(200, 200)); //
 
-        JLabel lblName = new JLabel(name.toUpperCase());
-        lblName.setFont(new Font("Arial", Font.BOLD, 20));
-        lblName.setForeground(Color.WHITE);
-        lblName.setBorder(new EmptyBorder(20, 20, 0, 0));
-        card.add(lblName, BorderLayout.NORTH);
+        JLabel lblName = new JLabel(name.toUpperCase()); //
+        lblName.setFont(new Font("Arial", Font.BOLD, 20)); //
+        lblName.setForeground(Color.WHITE); //
+        lblName.setBorder(new EmptyBorder(20, 20, 0, 0)); //
+        card.add(lblName, BorderLayout.NORTH); //
 
-        JButton browseButton = new JButton("Jelajahi");
-        browseButton.setBackground(Color.WHITE);
-        browseButton.setForeground(Color.BLACK);
-        browseButton.setBorderPainted(false);
-        browseButton.setFocusPainted(false);
-        browseButton.setFont(new Font("Arial", Font.BOLD, 12));
-        browseButton.setBorder(new EmptyBorder(10, 20, 10, 20));
-        browseButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setBorder(new EmptyBorder(0, 20, 20, 0));
-        buttonPanel.add(browseButton);
-        card.add(buttonPanel, BorderLayout.SOUTH);
+        JButton browseButton = new JButton("Jelajahi"); //
+        browseButton.setBackground(Color.WHITE); //
+        browseButton.setForeground(Color.BLACK); //
+        browseButton.setBorderPainted(false); //
+        browseButton.setFocusPainted(false); //
+        browseButton.setFont(new Font("Arial", Font.BOLD, 12)); //
+        browseButton.setBorder(new EmptyBorder(10, 20, 10, 20)); //
+        browseButton.setCursor(new Cursor(Cursor.HAND_CURSOR)); //
+        JPanel buttonPanel = new JPanel(); //
+        buttonPanel.setOpaque(false); //
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT)); //
+        buttonPanel.setBorder(new EmptyBorder(0, 20, 20, 0)); //
+        buttonPanel.add(browseButton); //
+        card.add(buttonPanel, BorderLayout.SOUTH); //
 
-        card.addMouseListener(new MouseAdapter() {
+        card.addMouseListener(new MouseAdapter() { //
             @Override
-            public void mouseEntered(MouseEvent e) {
-                card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            public void mouseEntered(MouseEvent e) { //
+                card.setCursor(new Cursor(Cursor.HAND_CURSOR)); //
             }
         });
 
-        return card;
+        return card; //
     }
 
     private JPanel createOrdersPanel() {
@@ -1260,72 +1312,89 @@ public class UserDashboardUI extends JFrame implements ViewController {
         // Jika Anda ingin OrderHistory sebagai JPanel, Anda perlu memodifikasi OrderHistory.java agar meng-extend JPanel,
         // dan memiliki konstruktor yang sesuai (misalnya, OrderHistory(ViewController vc)).
         // Untuk saat ini, kita akan mengembalikan JPanel kosong sebagai placeholder.
-        JPanel ordersPanel = new JPanel(new BorderLayout());
-        ordersPanel.setBackground(Color.WHITE);
+        JPanel ordersPanel = new JPanel(new BorderLayout()); //
+        ordersPanel.setBackground(Color.WHITE); //
 
-        JLabel lblNotAvailable = new JLabel("Silakan klik 'Pesanan' di header untuk melihat riwayat pesanan.", SwingConstants.CENTER);
-        lblNotAvailable.setFont(new Font("Arial", Font.BOLD, 18));
-        ordersPanel.add(lblNotAvailable, BorderLayout.CENTER);
+        JLabel lblNotAvailable = new JLabel("Silakan klik 'Pesanan' di header untuk melihat riwayat pesanan.", SwingConstants.CENTER); //
+        lblNotAvailable.setFont(new Font("Arial", Font.BOLD, 18)); //
+        ordersPanel.add(lblNotAvailable, BorderLayout.CENTER); //
 
-        return ordersPanel;
+        return ordersPanel; //
     }
 
     private int getCartItemCount() {
-        if (currentUser != null) {
+        if (currentUser != null) { //
             try {
                 // Panggil ProductRepository untuk mendapatkan item keranjang
                 List<ProductRepository.CartItem> items = ProductRepository.getCartItemsForUser(currentUser.getId()); //
-                return items.stream().mapToInt(ProductRepository.CartItem::getQuantity).sum();
+                return items.stream().mapToInt(ProductRepository.CartItem::getQuantity).sum(); //
             } catch (Exception e) {
-                System.err.println("Error mengambil jumlah item keranjang dari database: " + e.getMessage());
-                return 0;
+                System.err.println("Error mengambil jumlah item keranjang dari database: " + e.getMessage()); //
+                return 0; //
             }
         }
-        return 0;
+        return 0; //
     }
 
     private int getFavItemCount() {
-        if (currentUser != null) {
+        if (currentUser != null) { //
             try {
                 // Panggil ProductRepository untuk mendapatkan jumlah item favorit
                 return ProductRepository.getFavoriteItemsForUser(currentUser.getId()).size(); //
             } catch (SQLException e) {
-                System.err.println("Error mengambil jumlah item favorit dari database: " + e.getMessage());
-                return 0;
+                System.err.println("Error mengambil jumlah item favorit dari database: " + e.getMessage()); //
+                return 0; //
             }
         }
-        return 0;
+        return 0; //
     }
 
     // TAMBAHKAN METODE BARU INI untuk memperbarui hitungan di header
-    private void updateHeaderCartAndFavCounts() {
+    public void updateHeaderCartAndFavCounts() { // Ubah akses menjadi public agar bisa diakses dari luar
         SwingUtilities.invokeLater(() -> {
-            // Temukan label favorit dan keranjang di headerPanel
-            Component[] components = ((JPanel) this.getContentPane().getComponent(0)).getComponents(); // Assuming headerPanel is at BorderLayout.NORTH
-            for (Component comp : components) {
-                if (comp instanceof JPanel && ((JPanel)comp).getLayout() instanceof FlowLayout) { // This is likely the rightPanel
-                    JPanel rightPanel = (JPanel)comp;
-                    for (Component innerComp : rightPanel.getComponents()) {
-                        if (innerComp instanceof JLabel) {
-                            JLabel label = (JLabel) innerComp;
-                            if (label.getIcon() != null) { // Check if it has an icon to identify fav/cart
-                                String iconDescription = ((ImageIcon)label.getIcon()).getDescription();
-                                if (iconDescription != null) {
-                                    if (iconDescription.contains("fav_icon.png")) {
-                                        label.setText(" " + getFavItemCount());
-                                    } else if (iconDescription.contains("cart_icon.png")) {
-                                        label.setText(" " + getCartItemCount());
+            // Dapatkan referensi ke JLabel lblFav dan lblCart di headerPanel
+            // Ini adalah pendekatan yang lebih robust daripada mencari berdasarkan indeks komponen
+            JLabel lblFav = null;
+            JLabel lblCart = null;
+
+            // HeaderPanel adalah komponen pertama di JFrame
+            JPanel headerPanel = (JPanel) this.getContentPane().getComponent(0);
+            if (headerPanel != null) {
+                // rightPanel adalah komponen di BorderLayout.EAST dari headerPanel
+                Component[] headerComponents = headerPanel.getComponents();
+                for (Component comp : headerComponents) {
+                    if (comp instanceof JPanel && ((BorderLayout)headerPanel.getLayout()).getConstraints(comp) == BorderLayout.EAST) {
+                        JPanel rightPanel = (JPanel) comp;
+                        for (Component innerComp : rightPanel.getComponents()) {
+                            if (innerComp instanceof JLabel) {
+                                JLabel label = (JLabel) innerComp;
+                                // Identifikasi label berdasarkan ikonnya (asumsi nama file ikon unik)
+                                ImageIcon icon = (ImageIcon) label.getIcon();
+                                if (icon != null && icon.getDescription() != null) {
+                                    if (icon.getDescription().contains("fav_icon.png")) {
+                                        lblFav = label;
+                                    } else if (icon.getDescription().contains("cart_icon.png")) {
+                                        lblCart = label;
                                     }
                                 }
                             }
                         }
+                        break; // rightPanel ditemukan
                     }
-                    break; // Found the right panel, no need to continue
                 }
             }
-            // revalidate and repaint the header to ensure changes are drawn
-            ((JPanel) this.getContentPane().getComponent(0)).revalidate();
-            ((JPanel) this.getContentPane().getComponent(0)).repaint();
+
+            // Perbarui teks label jika ditemukan
+            if (lblFav != null) {
+                lblFav.setText(" " + getFavItemCount());
+                lblFav.revalidate();
+                lblFav.repaint();
+            }
+            if (lblCart != null) {
+                lblCart.setText(" " + getCartItemCount());
+                lblCart.revalidate();
+                lblCart.repaint();
+            }
         });
     }
 
@@ -1334,6 +1403,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         SwingUtilities.invokeLater(() -> {
             User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
             try {
+                // Menggunakan refleksi untuk mengatur currentUser di Authentication
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
                 field.setAccessible(true);
                 field.set(null, dummyUser);
@@ -1345,6 +1415,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             UserDashboardUI dashboard = new UserDashboardUI();
             dashboard.setVisible(true);
             dashboard.updateHeaderCartAndFavCounts();
+            // Memanggil listener resize untuk mengatur layout awal
             dashboard.getComponentListeners()[0].componentResized(new ComponentEvent(dashboard, ComponentEvent.COMPONENT_RESIZED));
         });
     }
