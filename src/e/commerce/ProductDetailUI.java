@@ -81,6 +81,7 @@ public class ProductDetailUI extends JPanel {
         combinedContent.setBackground(Color.WHITE);
         combinedContent.add(mainContentPanel);
         combinedContent.add(recommendationSection);
+        // combinedContent.add(Box.createVerticalGlue()); // Ini sudah ditambahkan sebelumnya
 
         outerScrollPane = new JScrollPane(combinedContent);
         outerScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
@@ -361,6 +362,7 @@ public class ProductDetailUI extends JPanel {
         detailPanel.add(actionPanel);
         detailPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         detailPanel.add(additionalActionPanel);
+        detailPanel.add(Box.createVerticalGlue());
 
         return detailPanel;
     }
@@ -410,9 +412,7 @@ public class ProductDetailUI extends JPanel {
         qtyControlSubPanel.setBackground(Color.WHITE);
 
         quantitySpinner = new JSpinner(new SpinnerNumberModel(1, 1, currentProduct.getStock(), 1));
-        // --- REVISI: Sesuaikan tinggi spinner agar tidak terpotong ---
-        quantitySpinner.setPreferredSize(new Dimension(80, 28)); // Mengurangi tinggi agar tidak terpotong
-        // --- AKHIR REVISI ---
+        quantitySpinner.setPreferredSize(new Dimension(80, 28)); 
         quantitySpinner.setFont(new Font("Arial", Font.PLAIN, 14));
 
         stockLabel = new JLabel("Stok Total: Sisa " + currentProduct.getStock());
@@ -431,10 +431,7 @@ public class ProductDetailUI extends JPanel {
         gbc.fill = GridBagConstraints.HORIZONTAL;
         quantityPanel.add(qtyControlSubPanel, gbc);
 
-        // --- REVISI: Tambah sedikit jarak vertikal untuk subtotal ---
-        gbc.insets = new Insets(8, 0, 0, 0); // Atur insets untuk baris subtotal
-        // --- AKHIR REVISI ---
-
+        gbc.insets = new Insets(8, 0, 0, 0); 
         // Label "Subtotal" dan nilainya
         JLabel subtotalTextLabel = new JLabel("Subtotal");
         subtotalTextLabel.setFont(new Font("Arial", Font.PLAIN, 14));
@@ -454,11 +451,9 @@ public class ProductDetailUI extends JPanel {
         gbc.gridx = 1;
         gbc.gridy = 2;
         gbc.gridwidth = 1;
-        // --- REVISI: Tambah jarak horizontal antara Subtotal dan nilai ---
-        gbc.insets = new Insets(8, 5, 0, 0); // insets(atas, kiri, bawah, kanan)
-        // --- AKHIR REVISI ---
+        gbc.insets = new Insets(8, 5, 0, 0);
         gbc.weightx = 1.0;
-        gbc.anchor = GridBagConstraints.WEST; // Rata kiri
+        gbc.anchor = GridBagConstraints.WEST; 
         quantityPanel.add(subtotalValueLabel, gbc);
 
         return quantityPanel;
@@ -584,9 +579,7 @@ public class ProductDetailUI extends JPanel {
         chatBtn.setFocusPainted(false);
         chatBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         chatBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        // --- AKHIR REVISI ---
 
-        // --- REVISI: Atur ukuran tombol Wishlist lebih baik ---
         ImageIcon favIcon = new ImageIcon("C:\\Users\\LENOVO\\Documents\\NetBeansProjects\\e-commerce\\src\\Resources\\Images\\fav_icon.png");
         Image originalFavImage = favIcon.getImage();
         if (originalFavImage == null || favIcon.getIconWidth() <= 0) {
@@ -597,12 +590,12 @@ public class ProductDetailUI extends JPanel {
         }
         
         if (favIcon != null) {
-            wishlistBtn = new JButton("Wishlist");
+            wishlistBtn = new JButton("Favorit");
             wishlistBtn.setIcon(favIcon);
             wishlistBtn.setHorizontalTextPosition(SwingConstants.RIGHT);
             wishlistBtn.setPreferredSize(new Dimension(100, 28)); // Menambah tinggi dan lebar
         } else {
-            wishlistBtn = new JButton((isFavorite ? "❤️" : "🤍") + " Wishlist");
+            wishlistBtn = new JButton((isFavorite ? "❤️" : "🤍") + " Favorit");
             wishlistBtn.setPreferredSize(new Dimension(110, 28)); // Menambah tinggi dan lebar
         }
         wishlistBtn.setBackground(Color.WHITE);
@@ -826,10 +819,7 @@ public class ProductDetailUI extends JPanel {
                 int panelWidth = getWidth();
                 int panelHeight = getHeight();
 
-                int imageAreaSize = Math.min(panelWidth, panelHeight);
-                int imageAreaX = (panelWidth - imageAreaSize) / 2;
-                int imageAreaY = (panelHeight - imageAreaSize) / 2;
-
+                // --- START REVISION for "full" image display in recommendation card ---
                 g2d.setColor(item.getBgColor());
                 g2d.fillRect(0, 0, panelWidth, panelHeight);
 
@@ -849,19 +839,22 @@ public class ProductDetailUI extends JPanel {
                     int originalWidth = mainImage.getWidth(null);
                     int originalHeight = mainImage.getHeight(null);
 
-                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
+                    // Penskalaan yang mengisi seluruh area panel (fill mode)
+                    double scaleX = (double) panelWidth / originalWidth;
+                    double scaleY = (double) panelHeight / originalHeight;
+                    double scale = Math.max(scaleX, scaleY); // Pilih skala yang lebih besar
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
-                    int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
+                    // Posisi gambar agar terpusat
+                    int drawX = (panelWidth - scaledWidth) / 2;
+                    int drawY = (panelHeight - scaledHeight) / 2;
 
-                    Shape originalClip = g2d.getClip();
-                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
+                    // Gambar di panel. Clipping tidak diperlukan jika gambar sudah discale untuk memenuhi.
                     g2d.drawImage(mainImage, drawX, drawY, scaledWidth, scaledHeight, null);
-                    g2d.setClip(originalClip);
                 }
+                // --- AKHIR REVISI ---
             }
         };
         imagePanel.setPreferredSize(new Dimension(180, 150));
@@ -876,7 +869,7 @@ public class ProductDetailUI extends JPanel {
         nameLabel.setForeground(Color.BLACK);
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel priceLabel = new JLabel("<b>Rp " + String.format("%,.0f", item.getPrice()) + "</b>");
+        JLabel priceLabel = new JLabel("Rp " + String.format("%,.0f", item.getPrice()) + "");
         priceLabel.setFont(new Font("Arial", Font.BOLD, 13));
         priceLabel.setForeground(new Color(255, 89, 0));
         priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);

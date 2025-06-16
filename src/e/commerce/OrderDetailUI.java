@@ -217,23 +217,16 @@ public class OrderDetailUI extends JPanel {
         imageLabel.setHorizontalAlignment(SwingConstants.CENTER);
         imageLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        if (item.getImageData() != null && item.getImageData().length > 0) {
-            try (ByteArrayInputStream bis = new ByteArrayInputStream(item.getImageData())) {
-                BufferedImage bImage = ImageIO.read(bis);
-                if (bImage != null) {
-                    Image scaledImage = bImage.getScaledInstance(
-                            imageLabel.getPreferredSize().width,
-                            imageLabel.getPreferredSize().height,
-                            Image.SCALE_SMOOTH);
-                    imageLabel.setIcon(new ImageIcon(scaledImage));
-                }
-            } catch (IOException e) {
-                System.err.println("Error memuat gambar produk di detail: " + e.getMessage());
-            }
+        if (item.getLoadedImage() != null) {
+            Image mainImage = item.getLoadedImage();
+            Image scaledImage = mainImage.getScaledInstance(
+                    imageLabel.getPreferredSize().width,
+                    imageLabel.getPreferredSize().height,
+                    Image.SCALE_SMOOTH);
+            imageLabel.setIcon(new ImageIcon(scaledImage));
         } else {
+            imageLabel.setIcon(null);
             imageLabel.setText("No Image");
-            imageLabel.setFont(new Font("Arial", Font.ITALIC, 10));
-            imageLabel.setForeground(SUBTEXT_GRAY);
         }
         itemPanel.add(imageLabel, BorderLayout.WEST);
 

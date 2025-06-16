@@ -11,8 +11,8 @@ import java.awt.event.ActionListener;
 import java.util.List;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.LocalDateTime; // Import LocalDateTime
-import java.time.Duration;      // Import Duration
+import java.time.LocalDateTime; 
+import java.time.Duration;      
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.Locale;
@@ -21,10 +21,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.sql.Connection; // Pastikan ini diimport
-import java.sql.PreparedStatement; // Pastikan ini diimport
-import java.sql.ResultSet;       // Pastikan ini diimport
-import java.sql.Timestamp;       // Pastikan ini diimport
+import java.sql.Connection; 
+import java.sql.PreparedStatement; 
+import java.sql.ResultSet;       
+import java.sql.Timestamp;       
 
 import e.commerce.ProductRepository.Order;
 import e.commerce.ProductRepository.OrderItem;
@@ -54,7 +54,7 @@ public class OrderHistory extends JPanel {
     private ViewController viewController;
 
     // PATH UNTUK IKON KALENDER
-    private static final String CALENDAR_ICON_PATH = "/Resources/Images/calendar_icon.png"; // ASUMSI: Anda punya file ini
+    private static final String CALENDAR_ICON_PATH = "/Resources/Images/calendar_icon.png"; 
 
     public OrderHistory(ViewController viewController) {
         this.viewController = viewController;
@@ -69,7 +69,7 @@ public class OrderHistory extends JPanel {
         }
 
         initializeComponents();
-        populateData(); // Panggil pertama kali saat UI dibuat
+        populateData(); 
     }
 
     private void initializeComponents() {
@@ -156,15 +156,15 @@ public class OrderHistory extends JPanel {
         try {
             ImageIcon originalIcon = new ImageIcon(getClass().getResource(CALENDAR_ICON_PATH));
             if (originalIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
-                Image scaledImage = originalIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH); // Sesuaikan ukuran
+                Image scaledImage = originalIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH); 
                 calendarIcon.setIcon(new ImageIcon(scaledImage));
             } else {
-                calendarIcon.setText("📅"); // Fallback jika gambar gagal dimuat
+                calendarIcon.setText("📅"); 
                 calendarIcon.setFont(new Font("Arial", Font.PLAIN, 14));
             }
         } catch (Exception e) {
             System.err.println("Error loading calendar icon: " + e.getMessage());
-            calendarIcon.setText("📅"); // Fallback jika ada exception
+            calendarIcon.setText("📅"); 
             calendarIcon.setFont(new Font("Arial", Font.PLAIN, 14));
         }
 
@@ -203,12 +203,12 @@ public class OrderHistory extends JPanel {
                 populateData(filterText);
             });
 
-            if (i == 0) { // Default "Semua Pesanan" aktif saat inisialisasi
+            if (i == 0) { 
                 filterBtn.setSelected(true);
-                filterBtn.setBackground(ORANGE_PRIMARY); // Latar belakang ORANGE
-                filterBtn.setForeground(WHITE); // Teks PUTIH
+                filterBtn.setBackground(ORANGE_PRIMARY); 
+                filterBtn.setForeground(WHITE); 
                 filterBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 3, 0, ORANGE_PRIMARY), // Garis bawah ORANGE
+                    BorderFactory.createMatteBorder(0, 0, 3, 0, ORANGE_PRIMARY), 
                     BorderFactory.createEmptyBorder(12, 20, 9, 20)
                 ));
             } else {
@@ -324,7 +324,7 @@ public class OrderHistory extends JPanel {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftPanel.setBackground(WHITE);
 
-        leftPanel.add(Box.createHorizontalStrut(20)); // Tetap ada strut untuk spasi
+        leftPanel.add(Box.createHorizontalStrut(20)); 
 
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -361,11 +361,10 @@ public class OrderHistory extends JPanel {
                     LocalDateTime orderCreatedAt = getOrderCreatedAtFromDb(order.getId());
                     if (orderCreatedAt != null) {
                         Duration duration = Duration.between(orderCreatedAt, LocalDateTime.now());
-                        if (duration.toDays() >= 10) { // Jika sudah 10 hari atau lebih
-                            // Ubah status di database dan perbarui objek order
+                        if (duration.toDays() >= 10) { 
                             ProductRepository.updateOrderStatus(order.getId(), "Delivered");
-                            order.setOrderStatus("Delivered"); // Perbarui objek Order di memori
-                            dbOrderStatus = "Delivered"; // Perbarui status untuk tampilan
+                            order.setOrderStatus("Delivered"); 
+                            dbOrderStatus = "Delivered"; 
                             System.out.println("DEBUG: Pesanan ID " + order.getId() + " otomatis menjadi Selesai karena sudah lebih dari 10 hari.");
                         }
                     }
@@ -518,34 +517,22 @@ public class OrderHistory extends JPanel {
             if (items != null && !items.isEmpty()) {
                 OrderItem firstItem = items.get(0);
 
-                if (firstItem.getImageData() != null && firstItem.getImageData().length > 0) {
-                     ImageIcon originalIcon = null;
-                     try (ByteArrayInputStream bis = new ByteArrayInputStream(firstItem.getImageData())) {
-                         BufferedImage bImage = ImageIO.read(bis);
-                         if (bImage != null) {
-                             originalIcon = new ImageIcon(bImage);
-                         }
-                     } catch (IOException e) {
-                         System.err.println("Error memuat gambar produk untuk renderer: " + e.getMessage());
-                     }
+                // --- START REVISION ---
+                // Menggunakan item.getLoadedImage() yang sudah berupa java.awt.Image
+                Image mainImage = firstItem.getLoadedImage(); 
 
-                    if (originalIcon != null) {
-                        Image originalImage = originalIcon.getImage();
-                        Image scaledImage = originalImage.getScaledInstance(
-                                imageLabel.getPreferredSize().width,
-                                imageLabel.getPreferredSize().height,
-                                Image.SCALE_SMOOTH);
-                        imageLabel.setIcon(new ImageIcon(scaledImage));
-                    } else {
-                         imageLabel.setText("N/A");
-                         imageLabel.setFont(new Font("Arial", Font.ITALIC, 10));
-                         imageLabel.setForeground(GRAY_TEXT_COLOR);
-                    }
+                if (mainImage != null) {
+                    Image scaledImage = mainImage.getScaledInstance(
+                            imageLabel.getPreferredSize().width,
+                            imageLabel.getPreferredSize().height,
+                            Image.SCALE_SMOOTH);
+                    imageLabel.setIcon(new ImageIcon(scaledImage));
                 } else {
                     imageLabel.setText("N/A");
                     imageLabel.setFont(new Font("Arial", Font.ITALIC, 10));
                     imageLabel.setForeground(GRAY_TEXT_COLOR);
                 }
+                // --- AKHIR REVISI ---
 
                 JLabel firstProductInfoLabel = new JLabel(String.format(
                     "<html><b>%s</b><br>" +
@@ -666,7 +653,7 @@ public class OrderHistory extends JPanel {
         private JButton buyNowBtn;
         private JButton cancelOrderBtn;
         private JButton confirmPaymentBtn;
-        private JButton orderReceivedBtn; // Tombol baru: Pesanan Diterima
+        private JButton orderReceivedBtn; 
 
         public ActionCellRenderer() {
             setLayout(new FlowLayout(FlowLayout.LEFT, 5, 15));
@@ -700,9 +687,9 @@ public class OrderHistory extends JPanel {
             confirmPaymentBtn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
             confirmPaymentBtn.setFocusPainted(false);
 
-            orderReceivedBtn = new JButton("Pesanan Diterima"); // Inisialisasi tombol baru
+            orderReceivedBtn = new JButton("Pesanan Diterima"); 
             orderReceivedBtn.setFont(new Font("Arial", Font.BOLD, 11));
-            orderReceivedBtn.setBackground(SUCCESS_GREEN); // Warna hijau
+            orderReceivedBtn.setBackground(SUCCESS_GREEN); 
             orderReceivedBtn.setForeground(WHITE);
             orderReceivedBtn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
             orderReceivedBtn.setFocusPainted(false);
@@ -712,7 +699,7 @@ public class OrderHistory extends JPanel {
             add(buyNowBtn);
             add(cancelOrderBtn);
             add(confirmPaymentBtn);
-            add(orderReceivedBtn); // Tambahkan tombol baru
+            add(orderReceivedBtn); 
         }
 
         @Override
@@ -720,16 +707,16 @@ public class OrderHistory extends JPanel {
                 boolean isSelected, boolean hasFocus, int row, int column) {
             String status = (String) value;
 
-            detailButton.setVisible(true); // Default sembunyikan semua
+            detailButton.setVisible(true); 
             buyNowBtn.setVisible(false);
             cancelOrderBtn.setVisible(false);
             confirmPaymentBtn.setVisible(false);
-            orderReceivedBtn.setVisible(false); // Sembunyikan default
+            orderReceivedBtn.setVisible(false); 
 
-            if ("Selesai".equalsIgnoreCase(status)) { // HANYA "Selesai" (Delivered)
+            if ("Selesai".equalsIgnoreCase(status)) { 
                 buyNowBtn.setVisible(true);
-            } else if ("Dikirim".equalsIgnoreCase(status)) { // Jika "Dikirim"
-                orderReceivedBtn.setVisible(true); // Tampilkan tombol "Pesanan Diterima"
+            } else if ("Dikirim".equalsIgnoreCase(status)) { 
+                orderReceivedBtn.setVisible(true); 
             } else if ("Dikemas".equalsIgnoreCase(status)) {
                 cancelOrderBtn.setVisible(true);
             } else if ("Belum Bayar".equalsIgnoreCase(status)) {
@@ -815,7 +802,7 @@ public class OrderHistory extends JPanel {
                             }
 
                             Duration duration = Duration.between(orderCreatedAt, LocalDateTime.now());
-                            if (duration.toHours() >= 1) { // Lebih dari atau sama dengan 1 jam
+                            if (duration.toHours() >= 1) { 
                                 JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan tidak dapat dibatalkan. Pembatalan hanya diperbolehkan dalam 1 jam setelah pesanan masuk status 'Dikemas'.", "Pembatasan Pembatalan", JOptionPane.WARNING_MESSAGE);
                                 fireEditingStopped();
                                 return;
@@ -880,8 +867,8 @@ public class OrderHistory extends JPanel {
                         }
 
                         if (orderIdToComplete != -1) {
-                            ProductRepository.updateOrderStatus(orderIdToComplete, "Delivered"); // Ubah status menjadi Delivered (Selesai)
-                            populateData(); // Refresh data tabel
+                            ProductRepository.updateOrderStatus(orderIdToComplete, "Delivered"); 
+                            populateData(); 
                             JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " telah ditandai sebagai diterima.", "Penerimaan Pesanan", JOptionPane.INFORMATION_MESSAGE);
                         } else {
                             JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);

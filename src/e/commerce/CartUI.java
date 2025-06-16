@@ -11,7 +11,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayInputStream; // Masih diperlukan jika ada fallback ImagePanel yang pakai BLOB
 import java.sql.SQLException;
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
@@ -37,11 +37,6 @@ public class CartUI extends JPanel {
     private ViewController viewController;
     private JLabel myCartTitle;
 
-    // Menghilangkan referensi ke alamat karena akan diurus di halaman terpisah
-    // private JLabel currentAddressLabel;
-    // private List<Address> savedAddresses;
-    // private Address selectedAddress;
-
     private User currentUser;
 
     private static final Color ORANGE_THEME = new Color(255, 69, 0);
@@ -49,24 +44,6 @@ public class CartUI extends JPanel {
     private static final Color BORDER_COLOR = new Color(230, 230, 230);
     private static final Color DARK_TEXT_COLOR = new Color(50, 50, 50);
     private static final Color GRAY_TEXT_COLOR = new Color(120, 120, 120);
-
-    // Menghilangkan inner class Address karena tidak lagi dibutuhkan di UI ini
-    /*
-    private static class Address {
-        String label;
-        String fullAddress;
-
-        public Address(String label, String fullAddress) {
-            this.label = label;
-            this.fullAddress = fullAddress;
-        }
-
-        @Override
-        public String toString() {
-            return label + ": " + fullAddress;
-        }
-    }
-    */
 
     public CartUI(ViewController viewController) {
         this.viewController = viewController;
@@ -80,7 +57,6 @@ public class CartUI extends JPanel {
         }
 
         loadCartItemsFromDatabase();
-        // initAddresses(); // Tidak perlu menginisialisasi alamat lagi
         createComponents();
         updateTotals();
     }
@@ -95,20 +71,6 @@ public class CartUI extends JPanel {
         }
         cartItems.forEach(item -> item.setSelected(true));
     }
-
-    // Menghilangkan metode initAddresses()
-    /*
-    private void initAddresses() {
-        savedAddresses = new ArrayList<>();
-        savedAddresses.add(new Address("Rumah", "Jl. Kenangan Indah No. 12, Bekasi, Jawa Barat 17111"));
-        savedAddresses.add(new Address("Kantor", "Perkantoran ABC, Tower 3, Lt. 15, Jakarta Pusat 10220"));
-        savedAddresses.add(new Address("Ruang Kreatif", "Jl. Seni Rupa No. 5, Bandung, Jawa Barat 40132"));
-
-        if (!savedAddresses.isEmpty()) {
-            selectedAddress = savedAddresses.get(0);
-        }
-    }
-    */
 
     private void createComponents() {
         JPanel topHeaderPanel = createTopHeaderPanel();
@@ -162,31 +124,24 @@ public class CartUI extends JPanel {
 
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.weightx = 0.7; // Sesuaikan bobot agar kolom kiri lebih dominan jika kolom kanan menyusut
+        gbc.weightx = 0.7; 
         gbc.weighty = 1.0;
         mainContentPanel.add(leftColumnPanel, gbc);
 
-        // Right Column (Hanya Payment Summary)
         JPanel rightColumnPanel = new JPanel();
         rightColumnPanel.setLayout(new BoxLayout(rightColumnPanel, BoxLayout.Y_AXIS));
         rightColumnPanel.setBackground(LIGHT_GRAY_BACKGROUND);
 
-        // Menghilangkan panel Delivery Address
-        // JPanel deliveryAddressPanel = createDeliveryAddressPanel();
-        // rightColumnPanel.add(deliveryAddressPanel);
-        // rightColumnPanel.add(Box.createVerticalStrut(15));
-
         JPanel paymentSummaryPanel = createPaymentSummaryPanel();
-        // Set maximum size for payment summary to control its height
         paymentSummaryPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
-        paymentSummaryPanel.setMinimumSize(new Dimension(300, 280)); // Ensure it has a minimum width and height
-        paymentSummaryPanel.setPreferredSize(new Dimension(350, 280)); // A preferred size for initial layout
+        paymentSummaryPanel.setMinimumSize(new Dimension(300, 280)); 
+        paymentSummaryPanel.setPreferredSize(new Dimension(350, 280)); 
         rightColumnPanel.add(paymentSummaryPanel);
-        rightColumnPanel.add(Box.createVerticalGlue()); // Push payment summary to top if room allows
+        rightColumnPanel.add(Box.createVerticalGlue()); 
 
         gbc.gridx = 1;
         gbc.gridy = 0;
-        gbc.weightx = 0.3; // Kolom kanan mengambil 30% sisa ruang
+        gbc.weightx = 0.3; 
         gbc.weighty = 1.0;
         mainContentPanel.add(rightColumnPanel, gbc);
 
@@ -260,7 +215,6 @@ public class CartUI extends JPanel {
         }
         headerPanel.add(navStepsPanel, BorderLayout.CENTER);
 
-        // Empty placeholder for right section
         JPanel rightPlaceholderPanel = new JPanel();
         rightPlaceholderPanel.setBackground(Color.WHITE);
         headerPanel.add(rightPlaceholderPanel, BorderLayout.EAST);
@@ -488,7 +442,11 @@ public class CartUI extends JPanel {
         gbc.gridx = 0;
         gbc.weightx = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        JPanel imagePanel = new ImagePanel(item.getImageData(), item.getFileExtension(), item.getImageColor());
+        // --- START REVISION ---
+        // Panggil ImagePanel dengan Image dan colorHex yang sudah ada di CartItem
+        // Menggunakan item.getLoadedImage() yang mengembalikan java.awt.Image
+        JPanel imagePanel = new ImagePanel(item.getLoadedImage(), item.getImageColor());
+        // --- AKHIR REVISI ---
         imagePanel.setPreferredSize(new Dimension(80, 80));
         itemPanel.add(imagePanel, gbc);
 
@@ -647,37 +605,37 @@ public class CartUI extends JPanel {
 
         // Column 3: Price and Discount
         gbc.gridx = 3;
-        gbc.weightx = 0.25; // Sisa ruang untuk harga dan diskon
-        gbc.anchor = GridBagConstraints.EAST; // Rata kanan di dalam sel
-        gbc.fill = GridBagConstraints.NONE; // Tidak mengisi sel
+        gbc.weightx = 0.25; 
+        gbc.anchor = GridBagConstraints.EAST; 
+        gbc.fill = GridBagConstraints.NONE; 
 
         JPanel priceDiscountPanel = new JPanel();
-        priceDiscountPanel.setLayout(new BoxLayout(priceDiscountPanel, BoxLayout.Y_AXIS)); // Stack vertikal
+        priceDiscountPanel.setLayout(new BoxLayout(priceDiscountPanel, BoxLayout.Y_AXIS)); 
         priceDiscountPanel.setBackground(Color.WHITE);
-        priceDiscountPanel.setAlignmentX(Component.RIGHT_ALIGNMENT); // Pastikan panel rata kanan
+        priceDiscountPanel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
         JLabel currentPriceLabel = new JLabel(formatCurrency(item.getPrice() * item.getQuantity()));
         currentPriceLabel.setFont(new Font("Arial", Font.BOLD, 14));
         currentPriceLabel.setForeground(DARK_TEXT_COLOR);
-        currentPriceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); // Teks di label rata kanan
+        currentPriceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
         if (item.getPrice() < item.getOriginalPrice()) {
             JLabel originalPriceLabel = new JLabel("<html><strike>" + formatCurrency(item.getOriginalPrice() * item.getQuantity()) + "</strike></html>");
             originalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 12));
             originalPriceLabel.setForeground(GRAY_TEXT_COLOR);
-            originalPriceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); // Teks di label rata kanan
+            originalPriceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
             double discountPercentage = (1 - (item.getPrice() / item.getOriginalPrice())) * 100;
             JLabel discountPercentageLabel = new JLabel(String.format(" %.0f%% off", discountPercentage));
             discountPercentageLabel.setFont(new Font("Arial", Font.BOLD, 12));
             discountPercentageLabel.setForeground(new Color(76, 175, 80));
-            discountPercentageLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); // Teks di label rata kanan
+            discountPercentageLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
-            JPanel priceAndDiscountFlowPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0)); // Rata kanan untuk FlowLayout
+            JPanel priceAndDiscountFlowPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0)); 
             priceAndDiscountFlowPanel.setBackground(Color.WHITE);
             priceAndDiscountFlowPanel.add(originalPriceLabel);
             priceAndDiscountFlowPanel.add(discountPercentageLabel);
-            priceAndDiscountFlowPanel.setAlignmentX(Component.RIGHT_ALIGNMENT); // Pastikan panel flow layout rata kanan
+            priceAndDiscountFlowPanel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
             priceDiscountPanel.add(currentPriceLabel);
             priceDiscountPanel.add(Box.createVerticalStrut(3));
@@ -718,7 +676,6 @@ public class CartUI extends JPanel {
 
     private void updateCheckoutButtonState() {
         if (checkoutButton != null) {
-            // Tombol diaktifkan jika ada item dalam keranjang. Pemilihan alamat akan diurus di halaman selanjutnya.
             checkoutButton.setEnabled(!cartItems.isEmpty());
             checkoutButton.setBackground(cartItems.isEmpty() ? new Color(200, 200, 200) : ORANGE_THEME);
         }
@@ -738,32 +695,37 @@ public class CartUI extends JPanel {
         return String.format("Rp %,.2f", amount);
     }
 
+    // --- START REVISION: ImagePanel class ---
     static class ImagePanel extends JPanel {
         private String colorHex;
-        private BufferedImage image;
+        private Image image; // Sekarang menyimpan objek Image langsung
         private boolean hasImage;
 
-        public ImagePanel(String colorHex) {
-            this.colorHex = colorHex;
-            this.hasImage = false;
+        // Konstruktor baru yang menerima Image dan String hex color
+        public ImagePanel(Image imageToDisplay, String hexColor) {
+            this.image = imageToDisplay;
+            this.colorHex = hexColor;
+            this.hasImage = (imageToDisplay != null);
             setPreferredSize(new Dimension(80, 80));
+            setOpaque(true); // Penting agar latar belakang digambar
         }
 
+        // Konstruktor lama yang menerima byte[] imageData (jika masih ada yang memanggilnya)
+        // Saya pertahankan untuk kompatibilitas mundur jika ada kode lain yang belum direvisi
+        // Namun idealnya, semua panggilan harus beralih ke konstruktor baru.
         public ImagePanel(byte[] imageData, String fileExtension, String fallbackColor) {
-            this.colorHex = fallbackColor;
-            this.hasImage = false;
-            setPreferredSize(new Dimension(80, 80));
-
+            this(null, fallbackColor); // Panggil konstruktor baru dengan image null
             if (imageData != null && imageData.length > 0) {
                 try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData)) {
-                    image = ImageIO.read(bis);
-                    if (image != null) {
-                        hasImage = true;
+                    BufferedImage bImage = ImageIO.read(bis);
+                    if (bImage != null) {
+                        this.image = bImage; // Set image yang dimuat
+                        this.hasImage = true;
                     } else {
-                        System.err.println("ImageIO.read returned null for BLOB image for colorHex: " + fallbackColor);
+                        System.err.println("ImageIO.read returned null for BLOB image for fallbackColor: " + fallbackColor);
                     }
                 } catch (IOException e) {
-                    System.err.println("Error loading image from BLOB for colorHex: " + fallbackColor + ": " + e.getMessage());
+                    System.err.println("Error loading image from BLOB for fallbackColor: " + fallbackColor + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
@@ -776,39 +738,63 @@ public class CartUI extends JPanel {
             super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR); // Tambah ini untuk kualitas scaling
 
             if (hasImage && image != null) {
-                int width = getWidth();
-                int height = getHeight();
+                int panelWidth = getWidth();
+                int panelHeight = getHeight();
+                
+                // Penskalaan gambar agar pas di dalam panel sambil mempertahankan aspek rasio
+                int originalWidth = image.getWidth(null);
+                int originalHeight = image.getHeight(null);
 
-                g2d.drawImage(image, 0, 0, width, height, null);
+                if (originalWidth > 0 && originalHeight > 0) {
+                    double scaleX = (double) panelWidth / originalWidth;
+                    double scaleY = (double) panelHeight / originalHeight;
+                    double scale = Math.min(scaleX, scaleY); // Skala agar gambar pas di dalam panel
 
-            } else {
-                int width = getWidth() - 10;
-                int height = getHeight() - 10;
+                    int scaledWidth = (int) (originalWidth * scale);
+                    int scaledHeight = (int) (originalHeight * scale);
 
-                Color color;
-                try {
-                    color = Color.decode(colorHex);
-                } catch (NumberFormatException e) {
-                    color = new Color(200, 200, 200);
+                    int drawX = (panelWidth - scaledWidth) / 2;
+                    int drawY = (panelHeight - scaledHeight) / 2;
+
+                    g2d.drawImage(image, drawX, drawY, scaledWidth, scaledHeight, null);
+                } else {
+                     // Fallback ke "NO IMAGE" jika gambar tidak valid meskipun hasImage true
+                     drawNoImagePlaceholder(g2d);
                 }
 
-                Shape roundedRect = new java.awt.geom.RoundRectangle2D.Float(5, 5, width, height, 10, 10);
-
-                g2d.setColor(color);
-                g2d.fill(roundedRect);
-
-                g2d.setColor(color.darker());
-                g2d.setFont(new Font("Arial", Font.BOLD, 10));
-                String text = "NO IMAGE";
-                FontMetrics fm = g2d.getFontMetrics();
-                int textWidth = fm.stringWidth(text);
-                int textHeight = fm.getHeight();
-                g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight / 2) / 2 - fm.getDescent());
+            } else {
+                // Gambar placeholder "NO IMAGE" jika tidak ada gambar atau hasImage false
+                drawNoImagePlaceholder(g2d);
             }
         }
+
+        private void drawNoImagePlaceholder(Graphics2D g2d) {
+            int width = getWidth();
+            int height = getHeight();
+
+            Color color;
+            try {
+                color = Color.decode(colorHex);
+            } catch (NumberFormatException e) {
+                color = new Color(200, 200, 200); // Warna default jika colorHex tidak valid
+            }
+
+            g2d.setColor(color);
+            g2d.fillRect(0, 0, width, height); // Isi seluruh panel dengan warna
+
+            g2d.setColor(color.darker());
+            g2d.setFont(new Font("Arial", Font.BOLD, 10));
+            String text = "NO IMAGE";
+            FontMetrics fm = g2d.getFontMetrics();
+            int textWidth = fm.stringWidth(text);
+            int textHeight = fm.getHeight();
+            g2d.drawString(text, (width - textWidth) / 2, (height + textHeight) / 2 - fm.getDescent());
+        }
     }
+    // --- AKHIR REVISI: ImagePanel class ---
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -842,7 +828,7 @@ public class CartUI extends JPanel {
                     System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
                 }
                 @Override
-                public void showChatWithSeller(int sellerId, String sellerUsername) { //
+                public void showChatWithSeller(int sellerId, String sellerUsername) { 
                     System.out.println("Dummy: Tampilkan Chat dengan Penjual ID: " + sellerId + " (" + sellerUsername + ")");
                 }
             };

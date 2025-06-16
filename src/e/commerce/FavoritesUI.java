@@ -11,18 +11,19 @@ import java.util.ArrayList;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.sql.SQLException; // Import SQLException
+import java.sql.SQLException; 
+import java.awt.Image; 
 
 public class FavoritesUI extends JPanel {
-    private List<FavoriteItem> favoriteItems; // This will now be populated from DB
+    private List<FavoriteItem> favoriteItems; 
     private JPanel favoriteProductsPanel;
     private ViewController viewController;
-    private int currentUserId; // To store the ID of the logged-in user
+    private int currentUserId; 
 
-    public FavoritesUI(ViewController viewController, int userId) { // Added userId parameter
+    public FavoritesUI(ViewController viewController, int userId) { 
         this.viewController = viewController;
-        this.currentUserId = userId; // Store the user ID
-        loadFavoriteData(); // Load data from the database
+        this.currentUserId = userId; 
+        loadFavoriteData(); 
         initializeUI();
     }
 
@@ -32,7 +33,7 @@ public class FavoritesUI extends JPanel {
         } catch (SQLException e) {
             System.err.println("Error loading favorite items from database: " + e.getMessage());
             e.printStackTrace();
-            favoriteItems = new ArrayList<>(); // Initialize as empty list on error
+            favoriteItems = new ArrayList<>(); 
             JOptionPane.showMessageDialog(this,
                     "Error loading your favorite items. Please try again later.",
                     "Database Error",
@@ -61,7 +62,6 @@ public class FavoritesUI extends JPanel {
         titleLabel.setForeground(Color.BLACK);
         headerPanel.add(titleLabel, BorderLayout.WEST);
 
-        // Update countLabel to reflect actual number of favorite items
         JLabel countLabel = new JLabel(favoriteItems.size() + " item");
         countLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         countLabel.setForeground(Color.GRAY);
@@ -98,13 +98,22 @@ public class FavoritesUI extends JPanel {
             JPanel emptyPanel = createEmptyStatePanel();
             contentPanel.add(emptyPanel, BorderLayout.CENTER);
         } else {
-            favoriteProductsPanel = new JPanel(new GridLayout(0, 6, 15, 20));
+            JPanel productsWrapperPanel = new JPanel();
+            productsWrapperPanel.setLayout(new BoxLayout(productsWrapperPanel, BoxLayout.Y_AXIS));
+            productsWrapperPanel.setBackground(Color.WHITE);
+            productsWrapperPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
+            //productsWrapperPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100)); 
+
+            favoriteProductsPanel = new JPanel (new FlowLayout(FlowLayout.LEFT, 15, 20)); 
             favoriteProductsPanel.setBackground(Color.WHITE);
-            favoriteProductsPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
+            favoriteProductsPanel.setAlignmentX(Component.LEFT_ALIGNMENT); 
+
+            productsWrapperPanel.add(favoriteProductsPanel);
+            productsWrapperPanel.add(Box.createVerticalGlue()); 
 
             refreshFavoritesList();
 
-            JScrollPane scrollPane = new JScrollPane(favoriteProductsPanel);
+            JScrollPane scrollPane = new JScrollPane(productsWrapperPanel); 
             scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
             scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
             scrollPane.setBorder(null);
@@ -161,6 +170,30 @@ public class FavoritesUI extends JPanel {
 
         favoriteProductsPanel.revalidate();
         favoriteProductsPanel.repaint();
+        
+        // Memastikan update countLabel di header saat refresh
+        // Akses kembali label count
+        Component[] headerComponents = ((JPanel)getComponent(0)).getComponents(); 
+        for (Component comp : headerComponents) {
+            if (comp instanceof JPanel && ((JPanel)comp).getLayout() instanceof FlowLayout) { 
+                for (Component innerComp : ((JPanel)comp).getComponents()) {
+                    if (innerComp instanceof JLabel) {
+                        JLabel label = (JLabel) innerComp;
+                        if (label.getText().contains(" item")) { 
+                            label.setText(favoriteItems.size() + " item");
+                            label.revalidate();
+                            label.repaint();
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        // Juga panggil updateHeaderCartAndFavCounts di UserDashboardUI jika FavoriteUI adalah childnya
+        if (viewController instanceof UserDashboardUI) {
+             ((UserDashboardUI)viewController).updateHeaderCartAndFavCounts();
+        }
     }
 
     private JPanel createFavoriteProductCard(FavoriteItem item) {
@@ -178,11 +211,14 @@ public class FavoritesUI extends JPanel {
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
+                int panelWidth = getWidth();
+                int panelHeight = getHeight();
+
                 g2d.setColor(item.getBgColor());
-                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.fillRect(0, 0, panelWidth, panelHeight);
 
                 Image mainImage = null;
-                if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) { // Check for null list
+                if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) { 
                     mainImage = item.getLoadedImages().get(0);
                 }
 
@@ -193,23 +229,26 @@ public class FavoritesUI extends JPanel {
                     String text = "NO IMAGE";
                     int textWidth = fm.stringWidth(text);
                     int textHeight = fm.getHeight();
-                    g2d.drawString(text, (getWidth() - textWidth) / 2, (getHeight() + textHeight) / 2 - fm.getDescent());
+                    g2d.drawString(text, (panelWidth - textWidth) / 2, (panelHeight + textHeight / 2) / 2 - fm.getDescent());
                 } else {
                     int originalWidth = mainImage.getWidth(null);
                     int originalHeight = mainImage.getHeight(null);
 
-                    double scaleX = (double) getWidth() / originalWidth;
-                    double scaleY = (double) getHeight() / originalHeight;
-                    double scale = Math.min(scaleX, scaleY);
+                    // Penskalaan yang mengisi seluruh area panel (fill mode)
+                    double scaleX = (double) panelWidth / originalWidth;
+                    double scaleY = (double) panelHeight / originalHeight;
+                    double scale = Math.max(scaleX, scaleY); // Pilih skala yang lebih besar
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
+                    // Posisi gambar agar terpusat
+                    int x = (panelWidth - scaledWidth) / 2;
+                    int y = (panelHeight - scaledHeight) / 2;
 
                     g2d.drawImage(mainImage, x, y, scaledWidth, scaledHeight, null);
                 }
+
             }
 
             @Override
@@ -269,8 +308,8 @@ public class FavoritesUI extends JPanel {
 
                 if (result == JOptionPane.YES_OPTION) {
                     try {
-                        ProductRepository.removeFavoriteItem(currentUserId, item.getId()); // Call DB method
-                        removeFavoriteItem(item); // Update UI
+                        ProductRepository.removeFavoriteItem(currentUserId, item.getId()); 
+                        removeFavoriteItem(item); 
                         JOptionPane.showMessageDialog(FavoritesUI.this,
                                 "'" + item.getName() + "' berhasil dihapus dari favorit.",
                                 "Hapus Berhasil",
@@ -335,10 +374,10 @@ public class FavoritesUI extends JPanel {
         addToCartButton.setFont(new Font("Arial", Font.BOLD, 10));
         addToCartButton.setBorder(new EmptyBorder(6, 12, 6, 12));
         addToCartButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        
 
         addToCartButton.addActionListener(e -> {
             try {
-                // Assuming you want to add 1 quantity by default
                 ProductRepository.addProductToCart(currentUserId, item.getId(), 1);
                 JOptionPane.showMessageDialog(
                         FavoritesUI.this,
@@ -425,15 +464,15 @@ public class FavoritesUI extends JPanel {
         private Color bgColor;
         private int sellerId;
         
-
-        private List<byte[]> rawImageDataList;
-        private List<String> rawFileExtensionList;
+        // --- DIHAPUS: rawImageDataList dan rawFileExtensionList
+        // private List<byte[]> rawImageDataList;
+        // private List<String> rawFileExtensionList;
 
         protected List<Image> loadedImages;
 
         public FavoriteItem(int id, String name, String description, double price, double originalPrice,
                             int stock, String condition, String minOrder, String brand,
-                            String hexColor, List<String> imagePaths, int sellerId) { // imagePaths is still here but will be null from ProductRepository
+                            String hexColor, List<String> imagePaths, int sellerId) { 
             this.id = id;
             this.name = name;
             this.description = description;
@@ -444,39 +483,12 @@ public class FavoritesUI extends JPanel {
             this.minOrder = minOrder;
             this.brand = brand;
             this.bgColor = Color.decode(hexColor);
-            this.loadedImages = new ArrayList<>();
+            this.loadedImages = new ArrayList<>(); // Inisialisasi list kosong
             this.sellerId = sellerId;
         }
 
-        public void setImageDataLists(List<byte[]> imageDataList, List<String> fileExtensionList) {
-            this.rawImageDataList = imageDataList;
-            this.rawFileExtensionList = fileExtensionList;
-            loadImageFromBytes(); // Call to load images after data is received
-        }
-
-        private void loadImageFromBytes() {
-            loadedImages.clear();
-            if (rawImageDataList != null && !rawImageDataList.isEmpty()) {
-                for (int i = 0; i < rawImageDataList.size(); i++) {
-                    byte[] imageData = rawImageDataList.get(i);
-                    if (imageData != null) {
-                        try (ByteArrayInputStream bis = new ByteArrayInputStream(imageData)) {
-                            Image img = ImageIO.read(bis);
-                            if (img != null) {
-                                loadedImages.add(img);
-                            } else {
-                                System.err.println("ImageIO.read returned null for product ID " + this.id);
-                                loadedImages.add(null);
-                            }
-                        } catch (IOException e) {
-                            System.err.println("Failed to convert byte[] to Image for product ID " + this.id + ": " + e.getMessage());
-                            loadedImages.add(null);
-                        }
-                    } else {
-                        loadedImages.add(null);
-                    }
-                }
-            }
+        public void setLoadedImages(List<Image> images) {
+            this.loadedImages = images;
         }
 
         public int getId() { return id; }
