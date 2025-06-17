@@ -968,7 +968,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }
     }
 
-    private JPanel createDashboardPanel() {
+     private JPanel createDashboardPanel() {
         JPanel dashboardPanel = new JPanel();
         dashboardPanel.setLayout(new BoxLayout(dashboardPanel, BoxLayout.Y_AXIS));
         dashboardPanel.setBackground(Color.WHITE);
@@ -985,17 +985,28 @@ public class UserDashboardUI extends JFrame implements ViewController {
         categoriesPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         String[] categoryNames = {"Earphone", "Wear Gadget", "Laptop", "Gaming Console", "VR Oculus", "Speaker"};
+        
         Color[] backgroundColors = {
-                new Color(255, 69, 0),
+                new Color(255, 89, 0),
                 new Color(255, 215, 0),
                 new Color(255, 99, 71),
-                new Color(240, 248, 255),
+                new Color(80, 71, 173),
                 new Color(50, 205, 50),
                 new Color(135, 206, 250)
         };
 
+        String[] categoryImagePaths = {
+            "/Resources/Images/earphone_category.png",
+            "/Resources/Images/wear_category.png", 
+            "/Resources/Images/laptop_category.png",
+            "/Resources/Images/console_category.png",
+            "/Resources/Images/vr_category.png",
+            "/Resources/Images/speaker_category.png"
+        };
+
+
         for (int i = 0; i < categoryNames.length; i++) {
-            JPanel categoryCard = createCategoryCard(categoryNames[i], backgroundColors[i]);
+            JPanel categoryCard = createCategoryCard(categoryNames[i], backgroundColors[i], categoryImagePaths[i]);
             categoriesPanel.add(categoryCard);
         }
 
@@ -1320,52 +1331,149 @@ public class UserDashboardUI extends JFrame implements ViewController {
         return card;
     }
 
-    private JPanel createCategoryCard(String name, Color bgColor) { /* ... isi metode ini tidak berubah ... */
-        JPanel card = new JPanel() {
+  private JPanel createCategoryCard(String name, Color bgColor, String imagePath) {
+    JPanel card = new JPanel(new BorderLayout()) {
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setColor(bgColor);
+            g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+        }
+    };
+    card.setPreferredSize(new Dimension(200, 200));
+    card.setOpaque(false);
+
+    JLabel lblName = new JLabel(name.toUpperCase());
+    lblName.setFont(new Font("Arial", Font.BOLD, 20));
+    lblName.setForeground(Color.WHITE);
+    lblName.setBorder(new EmptyBorder(20, 20, 0, 0));
+    lblName.setHorizontalAlignment(SwingConstants.LEFT);
+    card.add(lblName, BorderLayout.NORTH);
+
+    JPanel contentContainer = new JPanel(new GridBagLayout());
+    contentContainer.setOpaque(false);
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.fill = GridBagConstraints.BOTH;
+    gbc.insets = new Insets(0, 0, 0, 0);
+
+    JPanel leftContentPanel = new JPanel();
+    leftContentPanel.setOpaque(false);
+    leftContentPanel.setLayout(new BoxLayout(leftContentPanel, BoxLayout.Y_AXIS));
+    leftContentPanel.setBorder(new EmptyBorder(0, 20, 20, 0));
+
+    JButton browseButton = new JButton("Jelajahi");
+    browseButton.setBackground(Color.WHITE);
+    browseButton.setForeground(Color.BLACK);
+    browseButton.setBorderPainted(false);
+    browseButton.setFocusPainted(false);
+    browseButton.setFont(new Font("Arial", Font.BOLD, 12));
+    browseButton.setBorder(new EmptyBorder(10, 20, 10, 20));
+    browseButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    browseButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+    leftContentPanel.add(Box.createVerticalGlue());
+    leftContentPanel.add(browseButton);
+    leftContentPanel.add(Box.createVerticalGlue());
+
+    gbc.gridx = 0;
+    // Berikan bobot yang lebih kecil untuk teks/tombol, agar gambar mendapatkan lebih banyak ruang
+    gbc.weightx = 0.6; // Coba 20%
+    contentContainer.add(leftContentPanel, gbc);
+
+    if (imagePath != null) {
+        JPanel imageRenderPanel = new JPanel() {
+            private Image cachedImage = null;
+
+            @Override
+            public void addNotify() {
+                super.addNotify();
+                if (cachedImage == null) {
+                    try {
+                        ImageIcon originalIcon = new ImageIcon(getClass().getResource(imagePath));
+                        cachedImage = originalIcon.getImage();
+                        if (cachedImage == null) {
+                            System.err.println("Gagal memuat gambar: " + imagePath);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Error memuat gambar untuk kategori " + name + ": " + e.getMessage());
+                    }
+                    SwingUtilities.invokeLater(() -> repaint());
+                }
+            }
+
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
                 g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(bgColor);
-                g2d.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20);
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+
+                if (cachedImage != null) {
+                    int panelWidth = getWidth();
+                    int panelHeight = getHeight();
+                    int originalWidth = cachedImage.getWidth(null);
+                    int originalHeight = cachedImage.getHeight(null);
+
+                    if (panelWidth <= 0 || panelHeight <= 0 || originalWidth <= 0 || originalHeight <= 0) {
+                        return;
+                    }
+
+                    double scaleY = (double) panelHeight / originalHeight;
+                    int scaledWidth = (int) (originalWidth * scaleY);
+                    int scaledHeight = panelHeight;
+                    int drawX = panelWidth - scaledWidth;
+                    int offsetPixelsLeft = 30; 
+                                               
+                    drawX += offsetPixelsLeft;
+                                             
+                    int finalDrawX;
+                    if (scaledWidth > panelWidth) {
+                        float cropRatioFromLeft = 0.2f; 
+                        int pixelsToCutFromLeft = (int) ((scaledWidth - panelWidth) * cropRatioFromLeft);
+                        finalDrawX = -pixelsToCutFromLeft;
+                    } else {
+                        finalDrawX = panelWidth - scaledWidth;
+                        finalDrawX -= 10; 
+                    }
+
+                    int drawY = -4;
+
+                    g2d.drawImage(cachedImage, finalDrawX, drawY, scaledWidth, scaledHeight, null);
+                } else {
+                    g2d.setColor(Color.WHITE);
+                    g2d.setFont(new Font("Arial", Font.BOLD, 12));
+                    String noImgText = "NO IMAGE";
+                    FontMetrics fm = g2d.getFontMetrics();
+                    int textWidth = fm.stringWidth(noImgText);
+                    int textHeight = fm.getHeight();
+                    g2d.drawString(noImgText, (getWidth() - textWidth) / 2, (getHeight() + textHeight / 2) / 2);
+                }
             }
         };
-        card.setLayout(new BorderLayout());
-        card.setPreferredSize(new Dimension(200, 200));
+        imageRenderPanel.setOpaque(false);
+        imageRenderPanel.setMinimumSize(new Dimension(120, 180)); 
+        imageRenderPanel.setPreferredSize(new Dimension(120, 180)); 
 
-        JLabel lblName = new JLabel(name.toUpperCase());
-        lblName.setFont(new Font("Arial", Font.BOLD, 20));
-        lblName.setForeground(Color.WHITE);
-        lblName.setBorder(new EmptyBorder(20, 20, 0, 0));
-        card.add(lblName, BorderLayout.NORTH);
-
-        JButton browseButton = new JButton("Jelajahi");
-        browseButton.setBackground(Color.WHITE);
-        browseButton.setForeground(Color.BLACK);
-        browseButton.setBorderPainted(false);
-        browseButton.setFocusPainted(false);
-        browseButton.setFont(new Font("Arial", Font.BOLD, 12));
-        browseButton.setBorder(new EmptyBorder(10, 20, 10, 20));
-        browseButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setOpaque(false);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-        buttonPanel.setBorder(new EmptyBorder(0, 20, 20, 0));
-        buttonPanel.add(browseButton);
-        card.add(buttonPanel, BorderLayout.SOUTH);
-
-        card.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                card.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            }
-        });
-
-        return card;
+        gbc.gridx = 1;
+        gbc.weightx = 1; 
+        contentContainer.add(imageRenderPanel, gbc);
     }
 
-    private JPanel createOrdersPanel() { /* ... isi metode ini tidak berubah ... */
+    card.add(contentContainer, BorderLayout.CENTER);
+
+    card.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            card.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        }
+    });
+
+    return card;
+}
+
+    private JPanel createOrdersPanel() {
         JPanel ordersPanel = new JPanel(new BorderLayout());
         ordersPanel.setBackground(Color.WHITE);
 
@@ -1409,11 +1517,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
             JPanel headerPanel = (JPanel) this.getContentPane().getComponent(0);
             if (headerPanel != null) {
                 JPanel rightPanel = null;
-                // Mendapatkan LayoutManager dari headerPanel
                 LayoutManager layout = headerPanel.getLayout();
                 if (layout instanceof BorderLayout) {
                     BorderLayout borderLayout = (BorderLayout) layout;
-                    // Iterasi melalui komponen headerPanel untuk menemukan rightPanel berdasarkan constraint BorderLayout
                     for (Component comp : headerPanel.getComponents()) {
                         Object constraints = borderLayout.getConstraints(comp);
                         if (BorderLayout.EAST.equals(constraints) && comp instanceof JPanel && ((JPanel) comp).getLayout() instanceof FlowLayout) {
