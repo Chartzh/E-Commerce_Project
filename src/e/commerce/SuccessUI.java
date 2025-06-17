@@ -96,8 +96,13 @@ public class SuccessUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Sukses"};
-        String[] icons = {"🛒", "🏠", "💳", "✅"};
+        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] iconPaths = {
+            "/Resources/Images/cart_icon.png", 
+            "/Resources/Images/address_icon.png", 
+            "/Resources/Images/payment_icon.png", 
+            "/Resources/Images/success_icon.png"  
+        };
 
         for (int i = 0; i < steps.length; i++) {
             JPanel stepContainer = new JPanel();
@@ -105,20 +110,38 @@ public class SuccessUI extends JPanel {
             stepContainer.setBackground(Color.WHITE);
             stepContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel stepIcon = new JLabel(icons[i]);
-            stepIcon.setFont(new Font("Arial", Font.PLAIN, 20));
+            JLabel stepIcon = new JLabel(); 
+
+            try {
+                ImageIcon originalIcon = new ImageIcon(getClass().getResource(iconPaths[i]));
+                Image originalImage = originalIcon.getImage();
+                Image scaledImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+                stepIcon.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception e) {
+                System.err.println("Error loading icon for step '" + steps[i] + "': " + e.getMessage());
+                stepIcon.setText("?"); 
+                stepIcon.setFont(new Font("Arial", Font.PLAIN, 20)); 
+                stepIcon.setForeground(Color.RED);
+            }
+
             stepIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JLabel stepLabel = new JLabel(steps[i]);
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Sukses")) {
-                stepIcon.setForeground(ORANGE_THEME);
+            if (steps[i].equals("Success")) {
+                if (stepIcon.getIcon() != null) {
+                } else { 
+                    stepIcon.setForeground(ORANGE_THEME);
+                }
                 stepLabel.setForeground(ORANGE_THEME);
                 stepLabel.setFont(new Font("Arial", Font.BOLD, 14));
             } else {
-                stepIcon.setForeground(GRAY_TEXT_COLOR);
+                if (stepIcon.getIcon() != null) {
+                } else {
+                    stepIcon.setForeground(GRAY_TEXT_COLOR);
+                }
                 stepLabel.setForeground(GRAY_TEXT_COLOR);
             }
             stepContainer.add(stepIcon);
@@ -197,7 +220,7 @@ public class SuccessUI extends JPanel {
         panel.add(orderNumberTitle);
         panel.add(Box.createVerticalStrut(10));
 
-        orderNumberLabel = new JLabel("Memuat..."); // Inisialisasi dengan teks memuat
+        orderNumberLabel = new JLabel("Memuat..."); 
         orderNumberLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         orderNumberLabel.setForeground(ORANGE_THEME);
         orderNumberLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -216,7 +239,7 @@ public class SuccessUI extends JPanel {
         viewOrderButton.setMaximumSize(new Dimension(200, 40));
         viewOrderButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showOrdersView(); // Ini mungkin perlu disesuaikan untuk mengambil ID pesanan spesifik
+                viewController.showOrdersView(); 
             }
         });
         panel.add(viewOrderButton);
@@ -242,7 +265,6 @@ public class SuccessUI extends JPanel {
         return panel;
     }
 
-    // Metode baru untuk memuat dan menampilkan detail pesanan dari database
     private void loadAndDisplayOrderDetails() {
         if (orderId == -1) {
             orderNumberLabel.setText("N/A (Pesanan Gagal)");
@@ -276,14 +298,12 @@ public class SuccessUI extends JPanel {
         return String.format("Rp %,.2f", amount);
     }
 
-    // Metode main untuk pengujian (DIMODIFIKASI untuk meneruskan orderId dummy)
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("Pesanan Berhasil");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            // User Dummy untuk pengujian
             User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
             try {
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
@@ -319,8 +339,7 @@ public class SuccessUI extends JPanel {
                 }
             };
 
-            // Teruskan ID pesanan dummy untuk pengujian mandiri
-            SuccessUI successUI = new SuccessUI(dummyVC, 12345); // Menggunakan ID pesanan dummy
+            SuccessUI successUI = new SuccessUI(dummyVC, 12345); 
             frame.add(successUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

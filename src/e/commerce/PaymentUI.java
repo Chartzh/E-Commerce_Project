@@ -192,8 +192,14 @@ public class PaymentUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Sukses"};
-        String[] icons = {"🛒", "🏠", "💳", "✅"};
+        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] iconPaths = {
+            "/Resources/Images/cart_icon.png", 
+            "/Resources/Images/address_icon.png", 
+            "/Resources/Images/payment_icon.png",
+            "/Resources/Images/success_icon.png"  
+        };
+        // --- AKHIR REVISI ---
 
         for (int i = 0; i < steps.length; i++) {
             JPanel stepContainer = new JPanel();
@@ -201,20 +207,37 @@ public class PaymentUI extends JPanel {
             stepContainer.setBackground(Color.WHITE);
             stepContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel stepIcon = new JLabel(icons[i]);
-            stepIcon.setFont(new Font("Arial", Font.PLAIN, 20));
+            JLabel stepIcon = new JLabel(); 
+            try {
+                ImageIcon originalIcon = new ImageIcon(getClass().getResource(iconPaths[i]));
+                Image originalImage = originalIcon.getImage();
+                Image scaledImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+                stepIcon.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception e) {
+                System.err.println("Error loading icon for step '" + steps[i] + "': " + e.getMessage());
+                stepIcon.setText("?");
+                stepIcon.setFont(new Font("Arial", Font.PLAIN, 20)); 
+                stepIcon.setForeground(Color.RED);
+            }
+
             stepIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JLabel stepLabel = new JLabel(steps[i]);
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Pembayaran")) {
-                stepIcon.setForeground(ORANGE_THEME);
+            if (steps[i].equals("Payment")) {
+                if (stepIcon.getIcon() != null) { 
+                } else { 
+                    stepIcon.setForeground(ORANGE_THEME);
+                }
                 stepLabel.setForeground(ORANGE_THEME);
                 stepLabel.setFont(new Font("Arial", Font.BOLD, 14));
             } else {
-                stepIcon.setForeground(GRAY_TEXT_COLOR);
+                if (stepIcon.getIcon() != null) {
+                } else {
+                    stepIcon.setForeground(GRAY_TEXT_COLOR);
+                }
                 stepLabel.setForeground(GRAY_TEXT_COLOR);
             }
             stepContainer.add(stepIcon);
@@ -271,7 +294,7 @@ public class PaymentUI extends JPanel {
         paymentMethodGroup.add(transferBankRadioButton);
         contentPanel.add(Box.createVerticalStrut(10));
 
-        // --- Opsi Pembayaran: E-Wallet (OVO, GoPay, DANA) ---
+        // --- Opsi Pembayaran: E-Wallet (OVO, GoPay, DANA) --
         JRadioButton eWalletRadioButton = new JRadioButton("E-Wallet (OVO, GoPay, DANA)");
         eWalletRadioButton.setFont(new Font("Arial", Font.PLAIN, 14));
         eWalletRadioButton.setForeground(DARK_TEXT_COLOR);
@@ -634,7 +657,7 @@ public class PaymentUI extends JPanel {
             }
 
             String selectedPaymentMethod = selectedMethodModel.getActionCommand();
-            processPayment(selectedPaymentMethod); // Panggil metode proses pembayaran
+            processPayment(selectedPaymentMethod); 
         });
         formPanel.add(payNowButton);
 
@@ -917,23 +940,19 @@ public class PaymentUI extends JPanel {
         if (applicableGSTLabel != null) applicableGSTLabel.setText(formatCurrency(applicableGST));
 
         if (deliveryLabel != null) {
-            // Tampilkan "Gratis" hanya jika deliveryCharge benar-benar 0.0
             deliveryLabel.setText(deliveryCharge == 0.0 ? "Gratis" : formatCurrency(deliveryCharge));
         }
         if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
 
-        // Perbarui teks tombol payNowButton
         updatePayNowButtonText();
     }
 
-    // Metode untuk memperbarui teks tombol "BAYAR SEKARANG"
     private void updatePayNowButtonText() {
         if (payNowButton != null) {
              payNowButton.setText("BAYAR SEKARANG " + formatCurrency(getTotalPaymentAmount()));
         }
     }
 
-    // --- Metode untuk menghitung total pembayaran akhir ---
     private double getTotalPaymentAmount() {
         return totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
     }

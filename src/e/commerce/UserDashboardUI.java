@@ -53,10 +53,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private static final int DEFAULT_BANNER_HEIGHT = 300;
 
     private JPanel searchResultPanel;
-    private JPanel searchContentCardPanel; // Panel dengan CardLayout untuk konten pencarian
-    private CardLayout searchContentCardLayout; // Layout untuk searchContentCardPanel
-    private JPanel noResultsPanel; // Panel untuk tampilan "Tidak ada produk"
-    private JPanel productsGridPanel; // Panel untuk menampilkan grid produk
+    private JPanel searchContentCardPanel;
+    private CardLayout searchContentCardLayout; 
+    private JPanel noResultsPanel; 
+    private JPanel productsGridPanel;
     private JLabel searchTitleLabel;
 
     public UserDashboardUI() {
@@ -148,7 +148,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
                     chatPopupUI.stopRefreshTimer();
                     chatPopupUI.dispose();
                 }
-                // Pastikan searchTimer di-cancel saat aplikasi ditutup
                 if (searchTimer != null) {
                     searchTimer.cancel();
                 }
@@ -163,8 +162,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof ProductDetailUI) {
                 mainPanel.remove(comp);
-                // Penting: Jika ProductDetailUI memiliki resource/listener yang perlu dibersihkan, panggil method di sini
-                // Contoh: ((ProductDetailUI)comp).disposeResources();
                 break;
             }
         }
@@ -570,7 +567,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         });
 
-        searchTimer = new Timer(); // This is java.util.Timer
+        searchTimer = new Timer();
 
         searchField.addKeyListener(new KeyAdapter() {
             @Override
@@ -651,7 +648,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         
         searchTitleLabel.setText("Hasil Pencarian untuk \"" + searchText + "\"");
         
-        // Hapus semua komponen dari productsGridPanel sebelum menambahkan yang baru
         productsGridPanel.removeAll(); 
 
         List<FavoritesUI.FavoriteItem> searchResults;
@@ -666,8 +662,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         if (searchResults.isEmpty()) {
             searchContentCardLayout.show(searchContentCardPanel, "NO_RESULTS");
         } else {
-            // --- REVISI: Atur layout FlowLayout (yang sudah ada) pada productsGridPanel
-            productsGridPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 15)); // Pastikan ini tetap FlowLayout
+            productsGridPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 15, 15));
             for (FavoritesUI.FavoriteItem product : searchResults) {
                 JPanel productCard = createDashboardProductCard(product);
                 productsGridPanel.add(productCard);
@@ -701,7 +696,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
-                // Tunggu sampai ukuran panel tersedia
                 while (bannerImagePanel.getWidth() == 0 || bannerImagePanel.getHeight() == 0) {
                     Thread.sleep(50);
                 }
@@ -726,7 +720,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
                     SwingUtilities.invokeLater(() -> {
                         label.setIcon(scaledIcon);
-                        label.setText(null); // Hapus teks "Memuat..."
+                        label.setText(null);
                     });
                 } else {
                     SwingUtilities.invokeLater(() -> {
@@ -915,12 +909,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 while (bannerImagePanel.getWidth() == 0 || bannerImagePanel.getHeight() == 0) {
                     Thread.sleep(50);
                 }
-                // --- REVISI: Panggil setScaledImage untuk setiap label banner secara individual ---
                 for (int i = 0; i < bannerLabels.size(); i++) {
-                    // Hanya panggil setScaledImage yang asli, tanpa SwingWorker internal
                     setScaledImage(bannerLabels.get(i), bannerPaths[i]);
                 }
-                // --- AKHIR REVISI ---
                 return null;
             }
             @Override
@@ -1015,15 +1006,38 @@ public class UserDashboardUI extends JFrame implements ViewController {
         featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         String[] featureTexts = {
-                "Pengiriman Gratis untuk Pesanan",
+                "Pengiriman Gratis",
                 "Jaminan Uang Kembali",
                 "Dukungan Online 24/7",
                 "Pembayaran Aman"
         };
-        for (String text : featureTexts) {
-            JLabel featureLabel = new JLabel("<html><center><img src='' width='30' height='30'><br>" + text + "</center></html>");
+        String[] featureIconPaths = {
+            "/Resources/Images/shipping_icon.png",
+            "/Resources/Images/money_back_icon.png",
+            "/Resources/Images/support_icon.png",    
+            "/Resources/Images/secure_payment_icon.png" 
+        };
+        for (int i = 0; i < featureTexts.length; i++) {
+            JLabel featureLabel = new JLabel();
             featureLabel.setFont(new Font("Arial", Font.PLAIN, 12));
             featureLabel.setForeground(Color.BLACK);
+            featureLabel.setHorizontalTextPosition(SwingConstants.CENTER); 
+            featureLabel.setVerticalTextPosition(SwingConstants.BOTTOM);  
+
+            try {
+                ImageIcon originalIcon = new ImageIcon(getClass().getResource(featureIconPaths[i]));
+                Image originalImage = originalIcon.getImage();
+
+                Image scaledImage = originalImage.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                featureLabel.setIcon(new ImageIcon(scaledImage));
+                featureLabel.setText(featureTexts[i]);
+
+            } catch (Exception e) {
+                System.err.println("Error loading feature icon from: " + featureIconPaths[i] + " - " + e.getMessage());
+                featureLabel.setText("<html><center>Gambar Tidak Ditemukan<br>" + featureTexts[i] + "</center></html>"); // Teks fallback
+                featureLabel.setIcon(null);
+            }
+
             featuresPanel.add(featureLabel);
         }
 

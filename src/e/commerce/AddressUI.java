@@ -18,19 +18,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import e.commerce.FavoritesUI;
-
-
-
-// Import tambahan untuk database
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement; // Untuk Statement.RETURN_GENERATED_KEYS
+import java.sql.Statement; 
 
 import e.commerce.ProductRepository;
 import e.commerce.ProductRepository.CartItem;
 import javax.swing.text.JTextComponent;
-// Asumsi DatabaseConnection, Authentication, User, dan ViewController ada di paket yang sama.
+
 
 public class AddressUI extends JPanel {
     private JLabel totalMRPLabel;
@@ -75,25 +71,17 @@ public class AddressUI extends JPanel {
     private static final Color GREEN_DISCOUNT_TEXT = new Color(76, 175, 80);
     private static final Color TEAL_FREE_TEXT = new Color(0, 150, 136);
 
-    // =========================================================================
-    // MODIFIKASI: INNER CLASS Address
-    // Disertakan di sini, dan disesuaikan untuk data dari database 'addresses'
-    // =========================================================================
     public static class Address {
-        int id; // ID dari database (kolom 'id')
-        int userId; // user_id dari database (kolom 'user_id')
-        String label; // e.g., 'Home', 'Office' (kolom 'label')
-        String fullAddress; // e.g., 'Jl. Merdeka No. 10' (kolom 'full_address')
-        String city; // e.g., 'Jakarta Pusat' (kolom 'city')
-        String province; // e.g., 'DKI Jakarta' (kolom 'province')
-        String postalCode; // e.g., '10110' (kolom 'postal_code')
-        String country; // e.g., 'Indonesia' (kolom 'country')
+        int id; 
+        int userId; 
+        String label; 
+        String fullAddress; 
+        String city; 
+        String province; 
+        String postalCode; 
+        String country;
 
-        // 'isDefault' dari versi dummy sebelumnya tidak ada di sini,
-        // karena pemilihan alamat default dilakukan saat query DB (ORDER BY).
-        // Parameter 'name' dan 'mobile' dari constructor dummy lama akan diganti
-        // dengan data dari objek User yang login saat display.
-
+    
         public Address(int id, int userId, String label, String fullAddress, String city, String province, String postalCode, String country) {
             this.id = id;
             this.userId = userId;
@@ -105,7 +93,6 @@ public class AddressUI extends JPanel {
             this.country = country;
         }
 
-        // Getters (dibuat agar kompatibel dengan data DB)
         public int getId() { return id; }
         public int getUserId() { return userId; }
         public String getLabel() { return label; }
@@ -115,7 +102,6 @@ public class AddressUI extends JPanel {
         public String getPostalCode() { return postalCode; }
         public String getCountry() { return country; }
 
-        // Setters (diperlukan jika objek Address ini akan diubah via dialog Add/Edit)
         public void setLabel(String label) { this.label = label; }
         public void setFullAddress(String fullAddress) { this.fullAddress = fullAddress; }
         public void setCity(String city) { this.city = city; }
@@ -123,13 +109,10 @@ public class AddressUI extends JPanel {
         public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
         public void setCountry(String country) { this.country = country; }
 
-        // Metode untuk format detail alamat untuk ditampilkan di UI.
-        // Menerima objek User untuk mendapatkan nama penerima dan nomor HP.
         public String getFormattedAddressDetailsForDisplay(User user) {
-            String recipientName = user.getUsername(); // Mengambil nama penerima dari User
-            String mobileNumber = user.getPhone() != null ? user.getPhone() : "N/A"; // Mengambil mobile dari User
+            String recipientName = user.getUsername(); 
+            String mobileNumber = user.getPhone() != null ? user.getPhone() : "N/A"; 
 
-            // Menggunakan HTML untuk format multi-baris di JLabel
             return recipientName + "<br>" +
                    fullAddress + "<br>" +
                    city + ", " + province + " - " + postalCode + "<br>" +
@@ -137,10 +120,7 @@ public class AddressUI extends JPanel {
                    "Mobile: " + mobileNumber;
         }
     }
-    // =========================================================================
-    // END MODIFIKASI: INNER CLASS Address
-    // =========================================================================
-
+ 
     public static class ShippingService {
         String name;
         String arrivalEstimate;
@@ -182,19 +162,14 @@ public class AddressUI extends JPanel {
         }
     }
 
-    // =========================================================================
-    // MODIFIKASI: initAddresses() -> initAddressesFromDatabase()
-    // Mengambil alamat dari database (mengganti data dummy)
-    // =========================================================================
-    private void initAddressesFromDatabase() { // Nama metode diubah dari initAddresses
+  
+    private void initAddressesFromDatabase() {
         savedAddresses = new ArrayList<>();
         Connection conn = null;
         PreparedStatement stmt = null;
         ResultSet rs = null;
         try {
             conn = DatabaseConnection.getConnection();
-            // Mengambil semua alamat dari database untuk user ini.
-            // Diurutkan berdasarkan ID untuk konsistensi, bisa ditambahkan is_default jika ada.
             String query = "SELECT id, user_id, label, full_address, city, province, postal_code, country " +
                            "FROM addresses WHERE user_id = ? ORDER BY id ASC";
             stmt = conn.prepareStatement(query);
@@ -216,7 +191,6 @@ public class AddressUI extends JPanel {
             }
 
             if (!savedAddresses.isEmpty()) {
-                // Pilih alamat pertama sebagai alamat yang sedang terpilih untuk display utama
                 selectedAddress = savedAddresses.get(0);
             } else {
                 selectedAddress = null; // Tidak ada alamat
@@ -230,9 +204,6 @@ public class AddressUI extends JPanel {
             DatabaseConnection.closeConnection(conn, stmt, rs);
         }
     }
-    // =========================================================================
-    // END MODIFIKASI: initAddresses() -> initAddressesFromDatabase()
-    // =========================================================================
 
     private void initShippingServices() {
         shippingServices = new LinkedHashMap<>();
@@ -328,9 +299,15 @@ public class AddressUI extends JPanel {
 
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
-
+      
         String[] steps = {"Cart", "Address", "Payment", "Success"};
-        String[] icons = {"🛒", "🏠", "💳", "✅"};
+        String[] iconPaths = {
+            "/Resources/Images/cart_icon.png",
+            "/Resources/Images/address_icon.png",
+            "/Resources/Images/payment_icon.png",
+            "/Resources/Images/success_icon.png"  
+        };
+     
 
         for (int i = 0; i < steps.length; i++) {
             JPanel stepContainer = new JPanel();
@@ -338,8 +315,20 @@ public class AddressUI extends JPanel {
             stepContainer.setBackground(Color.WHITE);
             stepContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel stepIcon = new JLabel(icons[i]);
-            stepIcon.setFont(new Font("Arial", Font.PLAIN, 20));
+            JLabel stepIcon = new JLabel(); 
+
+            try {
+                ImageIcon originalIcon = new ImageIcon(getClass().getResource(iconPaths[i]));
+                Image originalImage = originalIcon.getImage();
+                Image scaledImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+                stepIcon.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception e) {
+                System.err.println("Error loading icon for step '" + steps[i] + "': " + e.getMessage());
+                stepIcon.setText("?"); 
+                stepIcon.setFont(new Font("Arial", Font.PLAIN, 20)); 
+                stepIcon.setForeground(Color.RED); 
+            }
+
             stepIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JLabel stepLabel = new JLabel(steps[i]);
@@ -347,11 +336,17 @@ public class AddressUI extends JPanel {
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             if (steps[i].equals("Address")) {
-                stepIcon.setForeground(ORANGE_THEME);
+                if (stepIcon.getIcon() != null) { 
+                } else { 
+                    stepIcon.setForeground(ORANGE_THEME);
+                }
                 stepLabel.setForeground(ORANGE_THEME);
                 stepLabel.setFont(new Font("Arial", Font.BOLD, 14));
             } else {
-                stepIcon.setForeground(GRAY_TEXT_COLOR);
+                if (stepIcon.getIcon() != null) {
+                } else {
+                    stepIcon.setForeground(GRAY_TEXT_COLOR);
+                }
                 stepLabel.setForeground(GRAY_TEXT_COLOR);
             }
             stepContainer.add(stepIcon);
@@ -479,12 +474,8 @@ public class AddressUI extends JPanel {
 
     private void updateDisplayedAddress() {
         if (selectedAddress != null && currentUser != null) {
-            // Mengambil nama penerima dari User yang login (asumsi username adalah nama penerima)
             currentAddressNameLabel.setText(currentUser.getUsername());
-            // Mengambil mobile dari User yang login (asumsi phone adalah mobile)
             currentAddressMobileLabel.setText("Mobile: " + (currentUser.getPhone() != null ? currentUser.getPhone() : "N/A"));
-
-            // Detail alamat dari objek Address (menggunakan HTML untuk JLabel)
             currentAddressDetailLabel.setText("<html>" + selectedAddress.getFormattedAddressDetailsForDisplay(currentUser) + "</html>");
             deliveryEstimateHeaderLabel.setText("Estimated Delivery " + calculateDeliveryDates("header"));
         } else {
@@ -621,21 +612,18 @@ public class AddressUI extends JPanel {
         headerPanel.add(labelPanel, BorderLayout.CENTER);
         card.add(headerPanel, BorderLayout.NORTH);
 
-        // Detail alamat (menggunakan getFormattedAddressDetailsForDisplay dari objek Address)
         JLabel addressDetailLabel = new JLabel("<html>" + addr.getFormattedAddressDetailsForDisplay(currentUser) + "</html>");
         addressDetailLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         addressDetailLabel.setForeground(new Color(102, 102, 102));
         addressDetailLabel.setBorder(new EmptyBorder(8, 25, 0, 0));
         card.add(addressDetailLabel, BorderLayout.CENTER);
 
-        buttonGroup.add(radioButton); // Add to button group for single selection
+        buttonGroup.add(radioButton);
 
-        // Click listener for the entire card
         card.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 radioButton.setSelected(true);
-                // No need to update selectedAddress here directly, it's handled by Select Address button
             }
         });
 
@@ -1071,11 +1059,7 @@ public class AddressUI extends JPanel {
         }
     }
 
-    // =========================================================================
-    // DATABASE METHODS FOR ADDRESS (Tambahan, untuk mengambil dan mengelola alamat)
-    // =========================================================================
-
-    // Mengambil alamat utama/default dari database (untuk panel "Delivery Address" utama)
+ 
     private Address getPrimaryDeliveryAddress(int userId) {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -1112,7 +1096,6 @@ public class AddressUI extends JPanel {
         return primaryAddress;
     }
 
-    // Metode untuk memuat semua alamat dari database (untuk dialog "CHANGE ADDRESS")
     private List<Address> getAllAddressesForUser(int userId) {
         List<Address> addresses = new ArrayList<>();
         Connection conn = null;
@@ -1146,9 +1129,7 @@ public class AddressUI extends JPanel {
         return addresses;
     }
 
-    // Metode untuk mengambil daftar provinsi dari tbl_kodepos (untuk dropdown di dialog)
-    // Map untuk provinsi dan kota tidak diperlukan di sini karena hanya untuk dropdown dialog
-    // dan tidak menyimpan ID untuk update Address object.
+
     private List<String> getProvincesFromDB() {
         List<String> provinces = new ArrayList<>();
         Connection conn = null;
@@ -1172,7 +1153,6 @@ public class AddressUI extends JPanel {
         return provinces;
     }
 
-    // Metode untuk mengambil daftar kabupaten/kota dari tbl_kodepos berdasarkan provinsi (untuk dropdown di dialog)
     private List<String> getCitiesFromDB(String provinceName) {
         List<String> cities = new ArrayList<>();
         if (provinceName == null || provinceName.isEmpty()) return cities;
@@ -1199,7 +1179,6 @@ public class AddressUI extends JPanel {
         return cities;
     }
 
-    // Metode untuk mengambil daftar kodepos dari tbl_kodepos berdasarkan provinsi dan kabupaten/kota (untuk dropdown di dialog)
     private List<String> getPostalCodesFromDB(String provinceName, String cityName) {
         List<String> postalCodes = new ArrayList<>();
         if (provinceName == null || provinceName.isEmpty() || cityName == null || cityName.isEmpty()) return postalCodes;
@@ -1227,9 +1206,6 @@ public class AddressUI extends JPanel {
         return postalCodes;
     }
 
-    // Metode untuk menambahkan alamat baru ke database (dipanggil dari dialog)
-    // Perhatikan: dialog Add/Edit saat ini tidak ada di AddressUI ini.
-    // Jika Anda ingin tombol "Add New Address" di dialog pemilihan, Anda perlu mengimplementasikan dialog tersebut.
     private void addAddressToDatabase(Address address) {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -1265,7 +1241,6 @@ public class AddressUI extends JPanel {
         }
     }
 
-    // Metode untuk mengupdate alamat di database (dipanggil dari dialog)
     private void updateAddressInDatabase(Address address) {
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -1297,7 +1272,6 @@ public class AddressUI extends JPanel {
         }
     }
 
-    // Metode untuk menghapus alamat dari database (dipanggil dari dialog)
     private void deleteAddress(int addressId) {
         int confirm = JOptionPane.showConfirmDialog(null, "Apakah Anda yakin ingin menghapus alamat ini?", "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
@@ -1328,15 +1302,6 @@ public class AddressUI extends JPanel {
             }
         }
     }
-    // =========================================================================
-    // END DATABASE METHODS FOR ADDRESS
-    // =========================================================================
-
-    // =========================================================================
-    // UTILITY METHODS (Untuk dialog Add/Edit Address, diambil dari ProfileUI/AddressUI sebelumnya)
-    // =========================================================================
-    // Ini adalah utility method untuk placeholder yang mungkin tidak digunakan di AddressUI ini
-    // tapi disertakan agar tidak ada error jika masih dipanggil.
     private String getTextFieldValue(JTextField textField) {
         if (Boolean.TRUE.equals(textField.getClientProperty("showingPlaceholder"))) {
             return "";
@@ -1381,7 +1346,6 @@ public class AddressUI extends JPanel {
         }
     }
 
-    // Inner class for Placeholder FocusListener
     private class PlaceholderFocusListener implements FocusListener {
         private JTextComponent component;
         private String placeholder;
@@ -1421,21 +1385,14 @@ public class AddressUI extends JPanel {
             }
         }
     }
-    // =========================================================================
-    // END UTILITY METHODS
-    // =========================================================================
 
-
-    // =========================================================================
-    // MAIN METHOD (untuk testing standalone AddressUI) - tidak berubah
-    // =========================================================================
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("UI Pemilihan Alamat");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
-            // User dummy untuk pengujian
+           
             User dummyUser = new User(1, "testuser", "hashedpass", "test@example.com", "1234567890123456", "08123456789", null, null, "user", true);
             try {
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
@@ -1458,7 +1415,6 @@ public class AddressUI extends JPanel {
                 @Override
                 public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
                     System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat (" + selectedAddress.getLabel() + ") dan Jasa Pengiriman (" + selectedShippingService.name + ")");
-                    // Dalam aplikasi nyata, ini akan beralih panel ke PaymentUI
                 }
                 @Override
                 public void showSuccessView(int orderId) {
