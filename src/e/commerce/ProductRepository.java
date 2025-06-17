@@ -1903,4 +1903,50 @@ public class ProductRepository {
             throw e;
         }
     }
+    
+    public static int getTotalProductCount() {
+        int count = 0;
+        String query = "SELECT COUNT(*) FROM products";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching total product count: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return count;
+    }
+
+    public static int getTotalOrderCount() {
+        int count = 0;
+        String query = "SELECT COUNT(*) FROM orders";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching total order count: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return count;
+    }
+
+    public static boolean updateUserVerificationStatus(int userId, boolean isVerified) throws SQLException {
+        String sql = "UPDATE users SET is_verified = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBoolean(1, isVerified);
+            pstmt.setInt(2, userId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating user verification status for ID " + userId + ": " + e.getMessage());
+            throw e;
+        }
+    }
 }

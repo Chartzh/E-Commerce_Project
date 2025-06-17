@@ -120,7 +120,7 @@ public class OrderHistory extends JPanel {
         datePanel.add(toLabel);
         datePanel.add(toDatePanel);
 
-        JButton backToDashboardButton = new JButton("← Kembali");
+        JButton backToDashboardButton = new JButton("← Back");
         backToDashboardButton.setFont(new Font("Arial", Font.BOLD, 14));
         backToDashboardButton.setForeground(TEXT_DARK);
         backToDashboardButton.setBackground(WHITE);
@@ -517,8 +517,6 @@ public class OrderHistory extends JPanel {
             if (items != null && !items.isEmpty()) {
                 OrderItem firstItem = items.get(0);
 
-                // --- START REVISION ---
-                // Menggunakan item.getLoadedImage() yang sudah berupa java.awt.Image
                 Image mainImage = firstItem.getLoadedImage(); 
 
                 if (mainImage != null) {
@@ -532,7 +530,6 @@ public class OrderHistory extends JPanel {
                     imageLabel.setFont(new Font("Arial", Font.ITALIC, 10));
                     imageLabel.setForeground(GRAY_TEXT_COLOR);
                 }
-                // --- AKHIR REVISI ---
 
                 JLabel firstProductInfoLabel = new JLabel(String.format(
                     "<html><b>%s</b><br>" +

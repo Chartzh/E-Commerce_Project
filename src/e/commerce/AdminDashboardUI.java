@@ -59,11 +59,11 @@ public class AdminDashboardUI extends JFrame {
         JPanel userManagementPanel = createUserManagementPanel();
 
         // Profile panel
-        ProfileUI profilePanel = new ProfileUI();
+        ProfileUI profilePanel = new ProfileUI(); // Pastikan ProfileUI ada dan berfungsi
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(userManagementPanel, "UserManagement");
-        mainPanel.add(profilePanel, "Profile");
+        mainPanel.add(profilePanel, "Profile"); // Pastikan ini panel yang benar
 
         // Content wrapper with header and main panel
         JPanel contentWrapper = new JPanel(new BorderLayout());
@@ -72,6 +72,9 @@ public class AdminDashboardUI extends JFrame {
 
         add(sidebar, BorderLayout.WEST);
         add(contentWrapper, BorderLayout.CENTER);
+
+        // Load user data saat aplikasi dimulai, agar tabel terisi
+        loadUserData();
     }
 
     private JPanel createSidebar() {
@@ -82,16 +85,17 @@ public class AdminDashboardUI extends JFrame {
         sidebar.setBorder(new EmptyBorder(20, 10, 20, 10));
 
         // Logo
-        JLabel lblLogo = new JLabel("QUANTRA");
-        lblLogo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblLogo.setForeground(new Color(255, 99, 71));
+        JLabel lblLogo = new JLabel();
+        ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png"));
+        Image scaledImage = logoIcon.getImage().getScaledInstance(100, 35, Image.SCALE_SMOOTH);
+        lblLogo.setIcon(new ImageIcon(scaledImage));
         lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
         sidebar.add(lblLogo);
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
         // Navigation items
         String[] navItems = {"Dashboard", "User Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"};
+        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; // Settings akan mengarah ke Profile untuk saat ini
         navButtons = new JButton[navItems.length]; // Initialize array to store buttons
 
         for (int i = 0; i < navItems.length; i++) {
@@ -129,7 +133,11 @@ public class AdminDashboardUI extends JFrame {
                 
                 // Refresh user data if navigating to UserManagement
                 if (panelName.equals("UserManagement")) {
-                    loadUserData();
+                    loadUserData(); // Muat ulang data pengguna
+                }
+                // Refresh dashboard data if navigating to Dashboard
+                if (panelName.equals("Dashboard")) {
+                    refreshDashboardData(); // Tambahkan metode ini
                 }
             });
 
@@ -221,6 +229,97 @@ public class AdminDashboardUI extends JFrame {
         return headerPanel;
     }
 
+    // Label untuk menampilkan data dashboard
+    private JLabel lblTotalUsersValue;
+    private JLabel lblTotalProductsValue;
+    private JLabel lblTotalTransactionsValue;
+
+    private void refreshDashboardData() {
+        int totalUsers = getTotalUserCount(); // Metode sudah ada
+        int totalProducts = ProductRepository.getTotalProductCount(); // Mengambil dari ProductRepository
+        int totalTransactions = ProductRepository.getTotalOrderCount(); // Mengambil dari ProductRepository
+
+        lblTotalUsersValue.setText(String.valueOf(totalUsers));
+        lblTotalProductsValue.setText(String.valueOf(totalProducts));
+        lblTotalTransactionsValue.setText(String.valueOf(totalTransactions));
+    }
+
+    private JPanel createAdminDashboardPanel() {
+        JPanel dashboardPanel = new JPanel(new BorderLayout());
+        dashboardPanel.setBackground(Color.WHITE);
+        dashboardPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        // Title panel
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBackground(Color.WHITE);
+
+        JLabel lblTitle = new JLabel("Dashboard Admin");
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 24));
+        titlePanel.add(lblTitle, BorderLayout.WEST);
+
+        // Stats panel
+        JPanel statsPanel = new JPanel(new GridLayout(1, 3, 15, 0));
+        statsPanel.setBackground(Color.WHITE);
+        statsPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
+
+        // Stat cards
+        // Inisialisasi label yang akan diupdate
+        lblTotalUsersValue = new JLabel();
+        lblTotalProductsValue = new JLabel();
+        lblTotalTransactionsValue = new JLabel();
+
+        statsPanel.add(createStatCard("Total Pengguna", lblTotalUsersValue, new Color(255, 99, 71)));
+        statsPanel.add(createStatCard("Total Produk", lblTotalProductsValue, new Color(255, 99, 71)));
+        statsPanel.add(createStatCard("Total Transaksi", lblTotalTransactionsValue, new Color(255, 99, 71)));
+
+        dashboardPanel.add(titlePanel, BorderLayout.NORTH);
+        dashboardPanel.add(statsPanel, BorderLayout.CENTER);
+
+        // Muat data awal
+        refreshDashboardData();
+
+        return dashboardPanel;
+    }
+
+    // Metode createStatCard yang dimodifikasi untuk menerima JLabel
+    private JPanel createStatCard(String title, JLabel valueLabel, Color color) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
+
+        // Header with color
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(color);
+        headerPanel.setPreferredSize(new Dimension(100, 15));
+
+        // Content panel
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        // Stats value
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        valueLabel.setForeground(color);
+        valueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Stats title
+        JLabel lblTitle = new JLabel(title);
+        lblTitle.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblTitle.setForeground(new Color(100, 100, 100));
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        contentPanel.add(valueLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        contentPanel.add(lblTitle);
+
+        card.add(headerPanel, BorderLayout.NORTH);
+        card.add(contentPanel, BorderLayout.CENTER);
+
+        return card;
+    }
+
+
     private int getTotalUserCountByRole(String role) {
         int count = 0;
         String query = "SELECT COUNT(*) FROM users WHERE role = ?";
@@ -276,74 +375,6 @@ public class AdminDashboardUI extends JFrame {
         }
 
         return count;
-    }
-
-    private JPanel createAdminDashboardPanel() {
-        JPanel dashboardPanel = new JPanel(new BorderLayout());
-        dashboardPanel.setBackground(Color.WHITE);
-        dashboardPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        // Title panel
-        JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setBackground(Color.WHITE);
-
-        JLabel lblTitle = new JLabel("Dashboard Admin");
-        lblTitle.setFont(new Font("Arial", Font.BOLD, 24));
-        titlePanel.add(lblTitle, BorderLayout.WEST);
-
-        // Stats panel
-        JPanel statsPanel = new JPanel(new GridLayout(1, 3, 15, 0));
-        statsPanel.setBackground(Color.WHITE);
-        statsPanel.setBorder(new EmptyBorder(20, 0, 20, 0));
-
-        // Stat cards
-        int totalUsers = getTotalUserCount();
-        statsPanel.add(createStatCard("Total Pengguna", String.valueOf(totalUsers), new Color(255, 99, 71)));
-        statsPanel.add(createStatCard("Total Produk", "48", new Color(255, 99, 71)));
-        statsPanel.add(createStatCard("Total Transaksi", "312", new Color(255, 99, 71)));
-
-        dashboardPanel.add(titlePanel, BorderLayout.NORTH);
-        dashboardPanel.add(statsPanel, BorderLayout.CENTER);
-
-        return dashboardPanel;
-    }
-
-    private JPanel createStatCard(String title, String value, Color color) {
-        JPanel card = new JPanel(new BorderLayout());
-        card.setBackground(Color.WHITE);
-        card.setBorder(BorderFactory.createLineBorder(new Color(220, 220, 220), 1));
-
-        // Header with color
-        JPanel headerPanel = new JPanel();
-        headerPanel.setBackground(color);
-        headerPanel.setPreferredSize(new Dimension(100, 15));
-
-        // Content panel
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBackground(Color.WHITE);
-        contentPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        // Stats value
-        JLabel lblValue = new JLabel(value);
-        lblValue.setFont(new Font("Arial", Font.BOLD, 32));
-        lblValue.setForeground(color);
-        lblValue.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Stats title
-        JLabel lblTitle = new JLabel(title);
-        lblTitle.setFont(new Font("Arial", Font.PLAIN, 14));
-        lblTitle.setForeground(new Color(100, 100, 100));
-        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        contentPanel.add(lblValue);
-        contentPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-        contentPanel.add(lblTitle);
-
-        card.add(headerPanel, BorderLayout.NORTH);
-        card.add(contentPanel, BorderLayout.CENTER);
-
-        return card;
     }
 
     private JPanel createUserManagementPanel() {
@@ -407,11 +438,20 @@ public class AdminDashboardUI extends JFrame {
         actionPanel.add(addPanel, BorderLayout.EAST);
 
         // User table
-        String[] columnNames = {"ID", "Username", "Email", "Role", "Aksi"};
+        // MENAMBAH KOLOM "STATUS"
+        String[] columnNames = {"ID", "Username", "Email", "Role", "Status", "Aksi"};
         userTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 4; // Only action column is editable
+                return column == 5; // Hanya kolom "Aksi" yang bisa diedit
+            }
+            @Override
+            public Class<?> getColumnClass(int column) {
+                // Mengatur kelas untuk kolom aksi agar renderer dan editor bekerja
+                if (column == 5) {
+                    return JPanel.class; // Karena ButtonRenderer/Editor menggunakan JPanel
+                }
+                return super.getColumnClass(column);
             }
         };
 
@@ -423,15 +463,15 @@ public class AdminDashboardUI extends JFrame {
         userTable.getTableHeader().setForeground(Color.WHITE);
 
         // Custom renderer for action buttons
-        userTable.getColumnModel().getColumn(4).setCellRenderer(new ButtonRenderer());
-        userTable.getColumnModel().getColumn(4).setCellEditor(new ButtonEditor(new JCheckBox()));
+        userTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer()); // Kolom ke-5 adalah Aksi
+        userTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox())); // Kolom ke-5 adalah Aksi
 
         JScrollPane scrollPane = new JScrollPane(userTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
         userManagementPanel.add(titlePanel, BorderLayout.NORTH);
         userManagementPanel.add(actionPanel, BorderLayout.CENTER);
-        userManagementPanel.add(scrollPane, BorderLayout.SOUTH);
+        userManagementPanel.add(scrollPane, BorderLayout.SOUTH); // Menggunakan SOUTH, pastikan tata letak cocok
 
         return userManagementPanel;
     }
@@ -441,17 +481,20 @@ public class AdminDashboardUI extends JFrame {
 
         try {
             Connection conn = DatabaseConnection.getConnection();
-            String query = "SELECT * FROM users ORDER BY id";
+            // Ambil juga kolom is_verified
+            String query = "SELECT id, username, email, role, is_verified FROM users ORDER BY id";
             PreparedStatement stmt = conn.prepareStatement(query);
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                Object[] row = new Object[5];
+                // Sesuaikan ukuran array row menjadi 6 karena ada kolom "Status"
+                Object[] row = new Object[6];
                 row[0] = rs.getInt("id");
                 row[1] = rs.getString("username");
                 row[2] = rs.getString("email");
                 row[3] = rs.getString("role");
-                row[4] = "Aksi";
+                row[4] = rs.getBoolean("is_verified") ? "Aktif" : "Nonaktif"; // Tampilkan status aktif/nonaktif
+                row[5] = "Aksi"; // Placeholder untuk tombol aksi
                 userTableModel.addRow(row);
             }
 
@@ -472,7 +515,8 @@ public class AdminDashboardUI extends JFrame {
 
         try {
             Connection conn = DatabaseConnection.getConnection();
-            String query = "SELECT * FROM users WHERE username LIKE ? OR email LIKE ? OR role LIKE ? ORDER BY id";
+            // Ambil juga kolom is_verified
+            String query = "SELECT id, username, email, role, is_verified FROM users WHERE username LIKE ? OR email LIKE ? OR role LIKE ? ORDER BY id";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, "%" + keyword + "%");
             stmt.setString(2, "%" + keyword + "%");
@@ -480,12 +524,14 @@ public class AdminDashboardUI extends JFrame {
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                Object[] row = new Object[5];
+                // Sesuaikan ukuran array row menjadi 6
+                Object[] row = new Object[6];
                 row[0] = rs.getInt("id");
                 row[1] = rs.getString("username");
                 row[2] = rs.getString("email");
                 row[3] = rs.getString("role");
-                row[4] = "Aksi";
+                row[4] = rs.getBoolean("is_verified") ? "Aktif" : "Nonaktif";
+                row[5] = "Aksi";
                 userTableModel.addRow(row);
             }
 
@@ -520,12 +566,12 @@ public class AdminDashboardUI extends JFrame {
 
     private void showAddUserDialog() {
         JDialog addUserDialog = new JDialog(this, "Tambah Pengguna", true);
-        addUserDialog.setSize(400, 300);
+        addUserDialog.setSize(400, 350); // Ukuran sedikit lebih besar
         addUserDialog.setLocationRelativeTo(this);
         addUserDialog.setLayout(new BorderLayout());
 
         JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridLayout(5, 2, 10, 10));
+        formPanel.setLayout(new GridLayout(6, 2, 10, 10)); // 6 baris untuk status
         formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JLabel lblUsername = new JLabel("Username:");
@@ -538,8 +584,12 @@ public class AdminDashboardUI extends JFrame {
         JPasswordField txtPassword = new JPasswordField(20);
 
         JLabel lblRole = new JLabel("Role:");
-        String[] roles = {"user", "admin"};
+        String[] roles = {"user", "admin", "supervisor"}; // Tambahkan supervisor
         JComboBox<String> cmbRole = new JComboBox<>(roles);
+
+        JLabel lblIsVerified = new JLabel("Status Aktif:");
+        JCheckBox chkIsVerified = new JCheckBox();
+        chkIsVerified.setSelected(true); // Default: aktif
 
         formPanel.add(lblUsername);
         formPanel.add(txtUsername);
@@ -549,6 +599,8 @@ public class AdminDashboardUI extends JFrame {
         formPanel.add(txtPassword);
         formPanel.add(lblRole);
         formPanel.add(cmbRole);
+        formPanel.add(lblIsVerified);
+        formPanel.add(chkIsVerified);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
@@ -574,6 +626,7 @@ public class AdminDashboardUI extends JFrame {
                 String email = txtEmail.getText().trim();
                 String password = new String(txtPassword.getPassword());
                 String role = (String) cmbRole.getSelectedItem();
+                boolean isVerified = chkIsVerified.isSelected(); // Ambil status is_verified
 
                 if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
                     JOptionPane.showMessageDialog(addUserDialog,
@@ -601,12 +654,14 @@ public class AdminDashboardUI extends JFrame {
                         return;
                     }
 
-                    String insertQuery = "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)";
+                    // Tambahkan is_verified ke query insert
+                    String insertQuery = "INSERT INTO users (username, email, password, role, is_verified) VALUES (?, ?, ?, ?, ?)";
                     PreparedStatement insertStmt = conn.prepareStatement(insertQuery);
                     insertStmt.setString(1, username);
                     insertStmt.setString(2, email);
                     insertStmt.setString(3, hashedPassword);
                     insertStmt.setString(4, role);
+                    insertStmt.setBoolean(5, isVerified); // Set is_verified
 
                     int result = insertStmt.executeUpdate();
 
@@ -616,7 +671,7 @@ public class AdminDashboardUI extends JFrame {
                                 "Sukses",
                                 JOptionPane.INFORMATION_MESSAGE);
                         addUserDialog.dispose();
-                        loadUserData();
+                        loadUserData(); // Muat ulang data setelah penambahan
                     } else {
                         JOptionPane.showMessageDialog(addUserDialog,
                                 "Gagal menambahkan pengguna!",
@@ -643,40 +698,51 @@ public class AdminDashboardUI extends JFrame {
     }
 
     class ButtonRenderer extends JPanel implements TableCellRenderer {
-        private JButton editButton;
-        private JButton deleteButton;
+        private JButton editRoleButton; // Mengganti nama
+        private JButton toggleStatusButton; // Tombol baru
 
         public ButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
 
-            editButton = new JButton("Edit");
-            editButton.setBackground(new Color(255, 99, 71));
-            editButton.setForeground(Color.WHITE);
-            editButton.setFocusPainted(false);
-            editButton.setBorderPainted(false);
+            editRoleButton = new JButton("Edit"); // Mengubah teks
+            editRoleButton.setBackground(new Color(255, 99, 71));
+            editRoleButton.setForeground(Color.WHITE);
+            editRoleButton.setFocusPainted(false);
+            editRoleButton.setBorderPainted(false);
+            editRoleButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            deleteButton = new JButton("Hapus");
-            deleteButton.setBackground(new Color(220, 53, 69));
-            deleteButton.setForeground(Color.WHITE);
-            deleteButton.setFocusPainted(false);
-            deleteButton.setBorderPainted(false);
+            toggleStatusButton = new JButton();
+            toggleStatusButton.setForeground(Color.WHITE);
+            toggleStatusButton.setFocusPainted(false);
+            toggleStatusButton.setBorderPainted(false);
+            toggleStatusButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            add(editButton);
-            add(deleteButton);
+            add(editRoleButton);
+            add(toggleStatusButton);
             setBackground(Color.WHITE);
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
                 boolean isSelected, boolean hasFocus, int row, int column) {
+            
+            // Ambil status dari model tabel (kolom 4)
+            String status = (String) table.getModel().getValueAt(row, 4); 
+            if ("Aktif".equals(status)) {
+                toggleStatusButton.setText("Nonaktifkan");
+                toggleStatusButton.setBackground(new Color(220, 53, 69)); // Merah untuk Nonaktifkan
+            } else {
+                toggleStatusButton.setText("Aktifkan");
+                toggleStatusButton.setBackground(new Color(40, 167, 69)); // Hijau untuk Aktifkan
+            }
             return this;
         }
     }
 
     class ButtonEditor extends DefaultCellEditor {
         private JPanel panel;
-        private JButton editButton;
-        private JButton deleteButton;
+        private JButton editRoleButton;
+        private JButton toggleStatusButton;
         private String action = "";
         private boolean isPushed;
         private int selectedRow;
@@ -686,19 +752,18 @@ public class AdminDashboardUI extends JFrame {
 
             panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
 
-            editButton = new JButton("Edit");
-            editButton.setBackground(new Color(255, 99, 71));
-            editButton.setForeground(Color.WHITE);
-            editButton.setFocusPainted(false);
-            editButton.setBorderPainted(false);
+            editRoleButton = new JButton("Edit");
+            editRoleButton.setBackground(new Color(255, 99, 71));
+            editRoleButton.setForeground(Color.WHITE);
+            editRoleButton.setFocusPainted(false);
+            editRoleButton.setBorderPainted(false);
 
-            deleteButton = new JButton("Hapus");
-            deleteButton.setBackground(new Color(220, 53, 69));
-            deleteButton.setForeground(Color.WHITE);
-            deleteButton.setFocusPainted(false);
-            deleteButton.setBorderPainted(false);
+            toggleStatusButton = new JButton(); // Teks akan diatur secara dinamis
+            toggleStatusButton.setForeground(Color.WHITE);
+            toggleStatusButton.setFocusPainted(false);
+            toggleStatusButton.setBorderPainted(false);
 
-            editButton.addActionListener(new ActionListener() {
+            editRoleButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     action = "Edit";
@@ -707,17 +772,17 @@ public class AdminDashboardUI extends JFrame {
                 }
             });
 
-            deleteButton.addActionListener(new ActionListener() {
+            toggleStatusButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    action = "Delete";
+                    action = "ToggleStatus";
                     isPushed = true;
                     fireEditingStopped();
                 }
             });
 
-            panel.add(editButton);
-            panel.add(deleteButton);
+            panel.add(editRoleButton);
+            panel.add(toggleStatusButton);
             panel.setBackground(Color.WHITE);
         }
 
@@ -726,6 +791,16 @@ public class AdminDashboardUI extends JFrame {
                 boolean isSelected, int row, int column) {
             selectedRow = row;
             isPushed = false;
+            
+            String status = (String) table.getModel().getValueAt(row, 4); 
+            if ("Aktif".equals(status)) {
+                toggleStatusButton.setText("Nonaktifkan");
+                toggleStatusButton.setBackground(new Color(220, 53, 69));
+            } else {
+                toggleStatusButton.setText("Aktifkan");
+                toggleStatusButton.setBackground(new Color(40, 167, 69));
+            }
+            
             return panel;
         }
 
@@ -736,12 +811,14 @@ public class AdminDashboardUI extends JFrame {
 
                 if (action.equals("Edit")) {
                     showEditUserDialog(userId, selectedRow);
-                } else if (action.equals("Delete")) {
-                    deleteUser(userId, selectedRow);
+                } else if (action.equals("ToggleStatus")) {
+                    // Ambil status saat ini dari tabel (kolom 4)
+                    boolean currentStatus = ((String) userTable.getValueAt(selectedRow, 4)).equals("Aktif");
+                    toggleUserStatus(userId, currentStatus);
                 }
             }
             isPushed = false;
-            return "";
+            return ""; // Penting untuk mengembalikan nilai dummy
         }
 
         @Override
@@ -753,35 +830,68 @@ public class AdminDashboardUI extends JFrame {
 
     private void showEditUserDialog(int userId, int row) {
         JDialog editUserDialog = new JDialog(this, "Edit Pengguna", true);
-        editUserDialog.setSize(400, 250);
+        editUserDialog.setSize(500, 300); 
         editUserDialog.setLocationRelativeTo(this);
         editUserDialog.setLayout(new BorderLayout());
 
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridLayout(4, 2, 10, 10));
+        JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5); 
+        gbc.fill = GridBagConstraints.HORIZONTAL; 
 
         String username = (String) userTable.getValueAt(row, 1);
         String email = (String) userTable.getValueAt(row, 2);
         String role = (String) userTable.getValueAt(row, 3);
+        boolean isVerified = ((String) userTable.getValueAt(row, 4)).equals("Aktif");
 
-        JLabel lblUsername = new JLabel("Username:");
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        formPanel.add(new JLabel("ID Pengguna:"), gbc);
+        gbc.gridx = 1;
+        JTextField txtUserId = new JTextField(String.valueOf(userId));
+        txtUserId.setEditable(false); // ID tidak bisa diedit
+        formPanel.add(txtUserId, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        formPanel.add(new JLabel("Username:"), gbc);
+        gbc.gridx = 1;
         JTextField txtUsername = new JTextField(username);
+        txtUsername.setEditable(false); // Username tidak bisa diedit
+        formPanel.add(txtUsername, gbc);
 
-        JLabel lblEmail = new JLabel("Email:");
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        formPanel.add(new JLabel("Email:"), gbc);
+        gbc.gridx = 1;
         JTextField txtEmail = new JTextField(email);
+        txtEmail.setEditable(false); // Email tidak bisa diedit
+        formPanel.add(txtEmail, gbc);
 
-        JLabel lblRole = new JLabel("Role:");
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        formPanel.add(new JLabel("Role:"), gbc);
+        gbc.gridx = 1;
         String[] roles = {"user", "supervisor", "admin"};
         JComboBox<String> cmbRole = new JComboBox<>(roles);
         cmbRole.setSelectedItem(role);
+        formPanel.add(cmbRole, gbc);
 
-        formPanel.add(lblUsername);
-        formPanel.add(txtUsername);
-        formPanel.add(lblEmail);
-        formPanel.add(txtEmail);
-        formPanel.add(lblRole);
-        formPanel.add(cmbRole);
+        gbc.gridx = 0;
+        gbc.gridy = 4; 
+        formPanel.add(new JLabel("Status Aktif:"), gbc);
+        gbc.gridx = 1;
+        JCheckBox chkIsVerified = new JCheckBox();
+        chkIsVerified.setSelected(isVerified);
+        formPanel.add(chkIsVerified, gbc);
+        
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.weighty = 1.0;
+        formPanel.add(Box.createVerticalGlue(), gbc);
+
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
@@ -802,49 +912,23 @@ public class AdminDashboardUI extends JFrame {
         btnSave.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String updatedUsername = txtUsername.getText().trim();
-                String updatedEmail = txtEmail.getText().trim();
                 String updatedRole = (String) cmbRole.getSelectedItem();
-
-                if (updatedUsername.isEmpty() || updatedEmail.isEmpty()) {
-                    JOptionPane.showMessageDialog(editUserDialog,
-                            "Username dan email harus diisi!",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
+                boolean updatedIsVerified = chkIsVerified.isSelected();
 
                 try {
                     Connection conn = DatabaseConnection.getConnection();
 
-                    String checkQuery = "SELECT COUNT(*) FROM users WHERE username = ? AND id != ?";
-                    PreparedStatement checkStmt = conn.prepareStatement(checkQuery);
-                    checkStmt.setString(1, updatedUsername);
-                    checkStmt.setInt(2, userId);
-                    ResultSet rs = checkStmt.executeQuery();
-                    rs.next();
-
-                    if (rs.getInt(1) > 0) {
-                        JOptionPane.showMessageDialog(editUserDialog,
-                                "Username sudah digunakan oleh pengguna lain!",
-                                "Error",
-                                JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    String updateQuery = "UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?";
+                    String updateQuery = "UPDATE users SET role = ?, is_verified = ? WHERE id = ?";
                     PreparedStatement updateStmt = conn.prepareStatement(updateQuery);
-                    updateStmt.setString(1, updatedUsername);
-                    updateStmt.setString(2, updatedEmail);
-                    updateStmt.setString(3, updatedRole);
-                    updateStmt.setInt(4, userId);
+                    updateStmt.setString(1, updatedRole);
+                    updateStmt.setBoolean(2, updatedIsVerified);
+                    updateStmt.setInt(3, userId);
 
                     int result = updateStmt.executeUpdate();
 
                     if (result > 0) {
-                        userTable.setValueAt(updatedUsername, row, 1);
-                        userTable.setValueAt(updatedEmail, row, 2);
                         userTable.setValueAt(updatedRole, row, 3);
+                        userTable.setValueAt(updatedIsVerified ? "Aktif" : "Nonaktif", row, 4);
 
                         JOptionPane.showMessageDialog(editUserDialog,
                                 "Data pengguna berhasil diperbarui!",
@@ -876,31 +960,29 @@ public class AdminDashboardUI extends JFrame {
         editUserDialog.setVisible(true);
     }
 
-    private void deleteUser(int userId, int row) {
+    private void toggleUserStatus(int userId, boolean currentStatus) {
+        String actionMessage = currentStatus ? "menonaktifkan" : "mengaktifkan";
+        String confirmMessage = "Apakah Anda yakin ingin " + actionMessage + " pengguna ini?";
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Apakah Anda yakin ingin menghapus pengguna ini?",
-                "Konfirmasi Hapus",
+                confirmMessage,
+                "Konfirmasi Aksi",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                Connection conn = DatabaseConnection.getConnection();
-                String deleteQuery = "DELETE FROM users WHERE id = ?";
-                PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery);
-                deleteStmt.setInt(1, userId);
+                // Panggil metode dari ProductRepository untuk memperbarui status
+                boolean success = ProductRepository.updateUserVerificationStatus(userId, !currentStatus);
 
-                int result = deleteStmt.executeUpdate();
-
-                if (result > 0) {
-                    userTableModel.removeRow(row);
+                if (success) {
                     JOptionPane.showMessageDialog(this,
-                            "Pengguna berhasil dihapus!",
+                            "Pengguna berhasil " + (currentStatus ? "dinonaktifkan" : "diaktifkan") + "!",
                             "Sukses",
                             JOptionPane.INFORMATION_MESSAGE);
+                    loadUserData(); // Muat ulang data untuk merefleksikan perubahan
                 } else {
                     JOptionPane.showMessageDialog(this,
-                            "Gagal menghapus pengguna!",
+                            "Gagal " + actionMessage + " pengguna!",
                             "Error",
                             JOptionPane.ERROR_MESSAGE);
                 }
@@ -913,140 +995,6 @@ public class AdminDashboardUI extends JFrame {
                         JOptionPane.ERROR_MESSAGE);
             }
         }
-    }
-
-    private void updateUserRole(int userId, String newRole) {
-        try {
-            Connection conn = DatabaseConnection.getConnection();
-            String updateQuery = "UPDATE users SET role = ? WHERE id = ?";
-            PreparedStatement updateStmt = conn.prepareStatement(updateQuery);
-            updateStmt.setString(1, newRole);
-            updateStmt.setInt(2, userId);
-
-            int result = updateStmt.executeUpdate();
-
-            if (result > 0) {
-                JOptionPane.showMessageDialog(this,
-                        "Role pengguna berhasil diperbarui!",
-                        "Sukses",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                JOptionPane.showMessageDialog(this,
-                        "Gagal memperbarui role pengguna!",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error database: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void showBulkRoleChangeDialog() {
-        JDialog bulkRoleDialog = new JDialog(this, "Ubah Role Massal", true);
-        bulkRoleDialog.setSize(350, 200);
-        bulkRoleDialog.setLocationRelativeTo(this);
-        bulkRoleDialog.setLayout(new BorderLayout());
-
-        JPanel formPanel = new JPanel();
-        formPanel.setLayout(new GridLayout(2, 2, 10, 10));
-        formPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-
-        JLabel lblCurrentRole = new JLabel("Role Saat Ini:");
-        String[] currentRoles = {"user", "supervisor", "admin", "semua"};
-        JComboBox<String> cmbCurrentRole = new JComboBox<>(currentRoles);
-
-        JLabel lblNewRole = new JLabel("Role Baru:");
-        String[] newRoles = {"user", "supervisor", "admin"};
-        JComboBox<String> cmbNewRole = new JComboBox<>(newRoles);
-
-        formPanel.add(lblCurrentRole);
-        formPanel.add(cmbCurrentRole);
-        formPanel.add(lblNewRole);
-        formPanel.add(cmbNewRole);
-
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-
-        JButton btnCancel = new JButton("Batal");
-        btnCancel.setBackground(new Color(108, 117, 125));
-        btnCancel.setForeground(Color.WHITE);
-        btnCancel.setFocusPainted(false);
-        btnCancel.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                bulkRoleDialog.dispose();
-            }
-        });
-
-        JButton btnApply = new JButton("Terapkan");
-        btnApply.setBackground(new Color(255, 99, 71));
-        btnApply.setForeground(Color.WHITE);
-        btnApply.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String currentRole = (String) cmbCurrentRole.getSelectedItem();
-                String newRole = (String) cmbNewRole.getSelectedItem();
-
-                if (currentRole.equals(newRole) && !currentRole.equals("semua")) {
-                    JOptionPane.showMessageDialog(bulkRoleDialog,
-                            "Role baru harus berbeda dengan role saat ini!",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                try {
-                    Connection conn = DatabaseConnection.getConnection();
-                    String updateQuery;
-                    PreparedStatement updateStmt;
-
-                    if (currentRole.equals("semua")) {
-                        updateQuery = "UPDATE users SET role = ?";
-                        updateStmt = conn.prepareStatement(updateQuery);
-                        updateStmt.setString(1, newRole);
-                    } else {
-                        updateQuery = "UPDATE users SET role = ? WHERE role = ?";
-                        updateStmt = conn.prepareStatement(updateQuery);
-                        updateStmt.setString(1, newRole);
-                        updateStmt.setString(2, currentRole);
-                    }
-
-                    int result = updateStmt.executeUpdate();
-
-                    if (result > 0) {
-                        JOptionPane.showMessageDialog(bulkRoleDialog,
-                                result + " pengguna berhasil diperbarui!",
-                                "Sukses",
-                                JOptionPane.INFORMATION_MESSAGE);
-                        bulkRoleDialog.dispose();
-                        loadUserData();
-                    } else {
-                        JOptionPane.showMessageDialog(bulkRoleDialog,
-                                "Tidak ada pengguna yang diperbarui!",
-                                "Info",
-                                JOptionPane.INFORMATION_MESSAGE);
-                    }
-
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(bulkRoleDialog,
-                            "Error database: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
-
-        buttonPanel.add(btnCancel);
-        buttonPanel.add(btnApply);
-
-        bulkRoleDialog.add(formPanel, BorderLayout.CENTER);
-        bulkRoleDialog.add(buttonPanel, BorderLayout.SOUTH);
-        bulkRoleDialog.setVisible(true);
     }
 
     private void showUserStatistics() {
@@ -1077,9 +1025,23 @@ public class AdminDashboardUI extends JFrame {
             userRs.next();
             int userCount = userRs.getInt(1);
 
+            String activeQuery = "SELECT COUNT(*) FROM users WHERE is_verified = TRUE"; // Jumlah aktif
+            PreparedStatement activeStmt = conn.prepareStatement(activeQuery);
+            ResultSet activeRs = activeStmt.executeQuery();
+            activeRs.next();
+            int activeCount = activeRs.getInt(1);
+
+            String inactiveQuery = "SELECT COUNT(*) FROM users WHERE is_verified = FALSE"; // Jumlah nonaktif
+            PreparedStatement inactiveStmt = conn.prepareStatement(inactiveQuery);
+            ResultSet inactiveRs = inactiveStmt.executeQuery();
+            inactiveRs.next();
+            int inactiveCount = inactiveRs.getInt(1);
+
             JOptionPane.showMessageDialog(this,
                     "Statistik Pengguna:\n\n" +
                     "Total Pengguna: " + totalUsers + "\n" +
+                    "Jumlah Aktif: " + activeCount + "\n" + // Tampilkan jumlah aktif
+                    "Jumlah Nonaktif: " + inactiveCount + "\n" + // Tampilkan jumlah nonaktif
                     "Jumlah Admin: " + adminCount + "\n" +
                     "Jumlah Supervisor: " + supervisorCount + "\n" +
                     "Jumlah User: " + userCount,
@@ -1097,14 +1059,16 @@ public class AdminDashboardUI extends JFrame {
 
     private void exportUserData() {
         try {
+            // Sesuaikan header CSV untuk kolom status
             StringBuilder csvData = new StringBuilder();
-            csvData.append("ID,Username,Email,Role\n");
+            csvData.append("ID,Username,Email,Role,Status\n");
 
             for (int i = 0; i < userTable.getRowCount(); i++) {
                 csvData.append(userTable.getValueAt(i, 0)).append(",");
                 csvData.append(userTable.getValueAt(i, 1)).append(",");
                 csvData.append(userTable.getValueAt(i, 2)).append(",");
-                csvData.append(userTable.getValueAt(i, 3)).append("\n");
+                csvData.append(userTable.getValueAt(i, 3)).append(",");
+                csvData.append(userTable.getValueAt(i, 4)).append("\n"); // Kolom status
             }
 
             JFileChooser fileChooser = new JFileChooser();

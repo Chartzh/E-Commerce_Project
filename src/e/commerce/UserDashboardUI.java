@@ -320,7 +320,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         JLabel lblLogo = new JLabel();
         ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png"));
-        Image scaledImage = logoIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+        Image scaledImage = logoIcon.getImage().getScaledInstance(100, 35, Image.SCALE_SMOOTH);
         lblLogo.setIcon(new ImageIcon(scaledImage));
         lblLogo.setCursor(new Cursor(Cursor.HAND_CURSOR));
         lblLogo.addMouseListener(new MouseAdapter() {

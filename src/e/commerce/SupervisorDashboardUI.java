@@ -87,8 +87,6 @@ public class SupervisorDashboardUI extends JFrame {
         add(headerPanel);
         add(mainPanel);
 
-        // Membuat dummy ViewController yang akan diteruskan ke ChatPopupUI
-        // Ini adalah minimal, bisa diperluas jika ChatPopupUI perlu memicu lebih banyak aksi UI dari dashboard.
         ViewController dummyVCForChatPopup = new ViewController() {
             @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
             @Override public void showFavoritesView() { /* do nothing */ }
@@ -102,8 +100,6 @@ public class SupervisorDashboardUI extends JFrame {
             @Override public void showSuccessView(int orderId) { /* do nothing */ }
             @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
             @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
-                // Ketika ChatPopupUI ingin memicu chat ke seller, ia akan memanggil ini.
-                // Disini kita akan memanggil metode startChatWith pada instance chatPopupUI itu sendiri.
                 chatPopupUI.startChatWith(sellerId, sellerUsername);
             }
         };
@@ -160,9 +156,10 @@ public class SupervisorDashboardUI extends JFrame {
         sidebar.setPreferredSize(new Dimension(200, 0));
         sidebar.setBorder(new EmptyBorder(20, 10, 20, 10));
 
-        JLabel lblLogo = new JLabel("Quantra");
-        lblLogo.setFont(new Font("Arial", Font.BOLD, 20));
-        lblLogo.setForeground(ORANGE_PRIMARY);
+        JLabel lblLogo = new JLabel();
+        ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png"));
+        Image scaledImage = logoIcon.getImage().getScaledInstance(100, 35, Image.SCALE_SMOOTH);
+        lblLogo.setIcon(new ImageIcon(scaledImage));
         lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
         sidebar.add(lblLogo);
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
