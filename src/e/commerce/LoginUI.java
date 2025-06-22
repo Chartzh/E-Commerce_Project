@@ -12,7 +12,7 @@ public class LoginUI extends JFrame {
 
     public LoginUI() {
         setTitle("E-Commerce App - Login");
-        setSize(1000, 600); 
+        setSize(1000, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -25,7 +25,7 @@ public class LoginUI extends JFrame {
 
         // Left panel with the full banner design as background
         JPanel leftPanel = new JPanel() {
-            private Image bufferedImage; 
+            private Image bufferedImage;
 
             @Override
             protected void paintComponent(Graphics g) {
@@ -42,7 +42,7 @@ public class LoginUI extends JFrame {
                         bufferedImage = originalImage.getScaledInstance(getWidth(), getHeight(), Image.SCALE_SMOOTH);
                     } catch (Exception e) {
                         System.err.println("Error loading or scaling image: " + e.getMessage());
-                        g.setColor(new Color(255, 102, 51)); 
+                        g.setColor(new Color(255, 102, 51));
                         g.fillRect(0, 0, getWidth(), getHeight());
                         g.setColor(Color.WHITE);
                         g.setFont(new Font("Arial", Font.BOLD, 16));
@@ -61,15 +61,15 @@ public class LoginUI extends JFrame {
                 }
             }
         };
-        leftPanel.setPreferredSize(new Dimension(600, 600)); 
-        leftPanel.setBackground(new Color(255, 102, 51)); 
+        leftPanel.setPreferredSize(new Dimension(600, 600));
+        leftPanel.setBackground(new Color(255, 102, 51));
 
         // Right panel with login form
         JPanel rightPanel = new JPanel();
-        rightPanel.setPreferredSize(new Dimension(400, 600)); 
+        rightPanel.setPreferredSize(new Dimension(400, 600));
         rightPanel.setBackground(Color.WHITE);
         rightPanel.setLayout(new BorderLayout());
-        rightPanel.setBorder(BorderFactory.createEmptyBorder(60, 50, 60, 50)); 
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(60, 50, 60, 50));
 
         JPanel headerPanel = new JPanel();
         headerPanel.setBackground(Color.WHITE);
@@ -85,34 +85,34 @@ public class LoginUI extends JFrame {
         JLabel lblUsername = new JLabel("Username");
         lblUsername.setFont(new Font("Arial", Font.PLAIN, 16));
         lblUsername.setForeground(new Color(255, 102, 51));
-        
+
         txtUsername = new JTextField();
-        txtUsername.setFont(new Font("Arial", Font.PLAIN, 18)); 
+        txtUsername.setFont(new Font("Arial", Font.PLAIN, 18));
         txtUsername.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(1, 15, 1, 15) 
+            BorderFactory.createEmptyBorder(1, 15, 1, 15)
         ));
-        txtUsername.setBackground(new Color(230, 230, 230)); 
+        txtUsername.setBackground(new Color(230, 230, 230));
         txtUsername.setForeground(Color.BLACK);
         txtUsername.setCaretColor(Color.BLACK);
-        txtUsername.setFocusable(true); 
-        txtUsername.setRequestFocusEnabled(true); 
+        txtUsername.setFocusable(true);
+        txtUsername.setRequestFocusEnabled(true);
 
         JLabel lblPassword = new JLabel("Password");
         lblPassword.setFont(new Font("Arial", Font.PLAIN, 16));
         lblPassword.setForeground(new Color(255, 102, 51));
-        
+
         txtPassword = new JPasswordField();
-        txtPassword.setFont(new Font("Arial", Font.PLAIN, 18)); 
+        txtPassword.setFont(new Font("Arial", Font.PLAIN, 18));
         txtPassword.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(1, 15, 1, 15) 
+            BorderFactory.createEmptyBorder(1, 15, 1, 15)
         ));
-        txtPassword.setBackground(new Color(230, 230, 230)); 
+        txtPassword.setBackground(new Color(230, 230, 230));
         txtPassword.setForeground(Color.BLACK);
         txtPassword.setCaretColor(Color.BLACK);
-        txtPassword.setFocusable(true); 
-        txtPassword.setRequestFocusEnabled(true); 
+        txtPassword.setFocusable(true);
+        txtPassword.setRequestFocusEnabled(true);
 
         formPanel.add(lblUsername);
         formPanel.add(txtUsername);
@@ -120,7 +120,7 @@ public class LoginUI extends JFrame {
         formPanel.add(txtPassword);
 
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(3, 1, 0, 5)); 
+        buttonPanel.setLayout(new GridLayout(3, 1, 0, 5));
         buttonPanel.setBackground(Color.WHITE);
 
         btnLogin = new JButton("Login");
@@ -164,7 +164,7 @@ public class LoginUI extends JFrame {
                 SwingUtilities.invokeLater(() -> txtUsername.requestFocusInWindow());
             }
         });
-        
+
         btnLogin.addActionListener(e -> login());
 
         btnRegister.addActionListener(e -> {
@@ -203,6 +203,11 @@ public class LoginUI extends JFrame {
                     case "supervisor":
                         SupervisorDashboardUI supervisorDashboard = new SupervisorDashboardUI();
                         supervisorDashboard.setVisible(true);
+                        break;
+                    // [Perubahan ManagerRole]: Tambahkan case untuk "op_manager"
+                    case "op_manager":
+                        ManagerDashboardUI managerDashboard = new ManagerDashboardUI();
+                        managerDashboard.setVisible(true);
                         break;
                     case "user":
                     default:
