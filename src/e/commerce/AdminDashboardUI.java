@@ -47,7 +47,6 @@ public class AdminDashboardUI extends JFrame {
     private JLabel lblTotalTransactionsValue;
 
     public AdminDashboardUI() {
-        // Placeholder for Authentication and User (replace with your actual classes)
         User currentUser = Authentication.getCurrentUser();
         // [Perubahan ManagerRole]: Izinkan admin DAN op_manager untuk mengakses
         if (currentUser == null || (!currentUser.getRole().equalsIgnoreCase("admin") && !currentUser.getRole().equalsIgnoreCase("op_manager"))) {
