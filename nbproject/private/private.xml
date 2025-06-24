@@ -7,6 +7,35 @@
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/User.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/AdminDashboardUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/DatabaseConnection.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/User.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/RegisterUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/LoginUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ProfileUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/DatabaseConnection.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/UserDashboardUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/AdminDashboardUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/SupervisorDashboardUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/EmailSender.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/OTPManager.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/OTPVerificationUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/IconUtil.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/Main.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/CartUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/AddressUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/PaymentUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/SuccessUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/FavoritesUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ProductRepository.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ViewController.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/OrderHistory.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/OrderDetailUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ChatSellerUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ProductDetailUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ChatFloatingButton.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ChatPopupUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/ManagerDashboardUI.java</file>
+            <file>file:/C:/Users/LENOVO/Documents/NetBeansProjects/e-commerce/src/e/commerce/Authentication.java</file>
+27d5565c6a687469bd67ce28241564938250d154
         </group>
     </open-files>
 </project-private>
