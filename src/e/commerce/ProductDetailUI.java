@@ -558,8 +558,7 @@ public class ProductDetailUI extends JPanel {
         additionalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         additionalPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
-        // --- REVISI: Atur ukuran tombol Chat lebih baik ---
-        ImageIcon chatIcon = new ImageIcon("C:\\Users\\LENOVO\\Documents\\NetBeansProjects\\e-commerce\\src\\Resources\\Images\\chat_icon.png");
+        ImageIcon chatIcon = new ImageIcon(getClass().getResource("/Resources/Images/chat_icon.png"));
         Image originalChatImage = chatIcon.getImage();
         JButton chatBtn;
         if (originalChatImage == null || chatIcon.getIconWidth() <= 0) {
@@ -580,7 +579,7 @@ public class ProductDetailUI extends JPanel {
         chatBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         chatBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        ImageIcon favIcon = new ImageIcon("C:\\Users\\LENOVO\\Documents\\NetBeansProjects\\e-commerce\\src\\Resources\\Images\\fav_icon.png");
+        ImageIcon favIcon = new ImageIcon(getClass().getResource("/Resources/Images/fav_icon.png"));
         Image originalFavImage = favIcon.getImage();
         if (originalFavImage == null || favIcon.getIconWidth() <= 0) {
             favIcon = null;
@@ -655,23 +654,23 @@ public class ProductDetailUI extends JPanel {
                     boolean success = ProductRepository.addFavoriteItem(userId, productId);
                     if (success) {
                         isFavorite = true;
-                        JOptionPane.showMessageDialog(this, "Ditambahkan ke wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Ditambahkan ke favorit!", "Favorit", JOptionPane.INFORMATION_MESSAGE);
                         if (viewController instanceof UserDashboardUI) {
                             ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
                         }
                     } else {
-                        JOptionPane.showMessageDialog(this, "Gagal menambahkan ke wishlist. Mungkin sudah ada atau ada error.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Gagal menambahkan ke favorit. Mungkin sudah ada atau ada error.", "Error Favorit", JOptionPane.ERROR_MESSAGE);
                     }
                 } else {
                     boolean success = ProductRepository.removeFavoriteItem(userId, productId);
                     if (success) {
                         isFavorite = false;
-                        JOptionPane.showMessageDialog(this, "Dihapus dari wishlist!", "Wishlist", JOptionPane.INFORMATION_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Dihapus dari favorit!", "Favorit", JOptionPane.INFORMATION_MESSAGE);
                         if (viewController instanceof UserDashboardUI) {
                             ((UserDashboardUI) viewController).updateHeaderCartAndFavCounts();
                         }
                     } else {
-                        JOptionPane.showMessageDialog(this, "Gagal menghapus dari wishlist.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Gagal menghapus dari favorit.", "Error favorit", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             } catch (SQLException ex) {

@@ -273,6 +273,42 @@ public class ProductRepository {
         // Setter (opsional, jika ingin mengubah status read)
         public void setRead(boolean read) { isRead = read; }
     }
+    
+    public static List<ChatUser> getRecentChatUsersWithLastMessage(int currentUserId) throws SQLException {
+        List<ChatUser> users = new ArrayList<>();
+        // Perbaikan: Ubah ORDER BY untuk kompatibilitas MySQL lama
+        String sql = "SELECT u.id, u.username, COALESCE(last_msg.message_text, '') as last_message_text, last_msg.timestamp as last_message_timestamp " + // Tambahkan last_message_timestamp
+                     "FROM users u " +
+                     "JOIN (SELECT DISTINCT sender_id AS user_id FROM messages WHERE receiver_id = ? " +
+                     "      UNION ALL " +
+                     "      SELECT DISTINCT receiver_id AS user_id FROM messages WHERE sender_id = ?) AS chat_participants " +
+                     "ON u.id = chat_participants.user_id AND u.id != ? " +
+                     "LEFT JOIN ( " +
+                     "    SELECT sender_id, receiver_id, message_text, timestamp, " +
+                     "           ROW_NUMBER() OVER(PARTITION BY LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id) ORDER BY timestamp DESC) as rn " +
+                     "    FROM messages " +
+                     ") AS last_msg ON (last_msg.sender_id = u.id AND last_msg.receiver_id = ?) OR (last_msg.receiver_id = u.id AND last_msg.sender_id = ?) " +
+                     "WHERE rn = 1 OR last_msg.message_text IS NULL " + // Baris ini harusnya OK, rn=1 memastikan hanya pesan terakhir, NULL untuk kontak baru
+                     "ORDER BY (last_message_timestamp IS NULL) ASC, last_message_timestamp DESC"; // <--- PERUBAHAN DI SINI
+                     // (last_message_timestamp IS NULL) ASC akan menempatkan NULL di akhir (TRUE=1, FALSE=0)
+                     // Lalu diikuti dengan ORDER BY timestamp DESC
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, currentUserId);
+            pstmt.setInt(2, currentUserId);
+            pstmt.setInt(3, currentUserId);
+            pstmt.setInt(4, currentUserId);
+            pstmt.setInt(5, currentUserId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String lastMessage = rs.getString("last_message_text");
+                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), lastMessage));
+                }
+            }
+        }
+        return users;
+    }
 
     /**
      * Inner class untuk objek Order (representasi baris dari tabel 'orders').
@@ -387,14 +423,17 @@ public class ProductRepository {
     public static class ChatUser {
         private int id; // users.id
         private String username; // users.username
+        private String lastMessage;
 
-        public ChatUser(int id, String username) {
+        public ChatUser(int id, String username, String lastMessage) { // <--- KONSTRUKTOR BARU (SUDAH ADA di kode Anda)
             this.id = id;
             this.username = username;
+            this.lastMessage = lastMessage;
         }
 
         public int getId() { return id; }
         public String getUsername() { return username; }
+        public String getLastMessage() { return lastMessage; }
 
         @Override
         public String toString() {
@@ -1496,9 +1535,10 @@ public class ProductRepository {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"))); 
-                }
-            }
+                    String lastMessage = rs.getString("last_message_text"); 
+                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), lastMessage)); 
+               }
+}
         } catch (SQLException e) {
             System.err.println("Error fetching recent chat users: " + e.getMessage());
             throw e;

@@ -36,6 +36,10 @@ public class SupervisorDashboardUI extends JFrame {
     private ChatFloatingButton chatFloatingButton;
     private ChatPopupUI chatPopupUI;
 
+    private ExportExcelService exportService;
+    private JLabel exportStatusLabel; // Deklarasi JLabel untuk status ekspor di panel pesanan
+
+    // Warna-warna yang sudah Anda definisikan
     private static final Color ORANGE_PRIMARY = new Color(255, 102, 0);
     private static final Color ORANGE_LIGHT = new Color(255, 153, 51);
     private static final Color WHITE = Color.WHITE;
@@ -60,13 +64,15 @@ public class SupervisorDashboardUI extends JFrame {
             return;
         }
 
+        exportService = new ExportExcelService(currentUser); // Inisialisasi ExportExcelService
+
         setTitle("Quantra - Dashboard " + currentUser.getRole());
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         IconUtil.setIcon(this);
-        setLayout(null);
+        setLayout(null); // Menggunakan Absolute Layout untuk penempatan panel
 
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
@@ -76,7 +82,7 @@ public class SupervisorDashboardUI extends JFrame {
         JPanel headerPanel = createHeaderPanel(currentUser);
         
         JPanel productPanel = createProductManagementPanel();
-        JPanel ordersPanel = createOrdersPanel();
+        JPanel ordersPanel = createOrdersPanel(); // ordersPanel dibuat di sini
         ProfileUI profilePanel = new ProfileUI();
         
         mainPanel.add(productPanel, "Produk");
@@ -104,14 +110,13 @@ public class SupervisorDashboardUI extends JFrame {
             }
         };
 
-        chatFloatingButton = new ChatFloatingButton(this,  dummyVCForChatPopup); // 'this' adalah JFrame, cocok
+        chatFloatingButton = new ChatFloatingButton(this, dummyVCForChatPopup);
         chatFloatingButton.setSize(chatFloatingButton.getPreferredSize());
         
         JLayeredPane layeredPane = getRootPane().getLayeredPane();
         layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER);
 
-        // Mengirim 'this' (JFrame owner) dan dummyVCForChatPopup (ViewController)
-        chatPopupUI = new ChatPopupUI(this, dummyVCForChatPopup); // <--- PERBAIKI DI SINI
+        chatPopupUI = new ChatPopupUI(this, dummyVCForChatPopup);
         chatPopupUI.pack();
         chatPopupUI.setLocationRelativeTo(this);
 
@@ -142,7 +147,9 @@ public class SupervisorDashboardUI extends JFrame {
             }
             @Override
             public void windowOpened(WindowEvent e) {
-                getComponentListeners()[0].componentResized(new ComponentEvent(SupervisorDashboardUI.this, ComponentEvent.COMPONENT_RESIZED));
+                if (getComponentListeners().length > 0 && getComponentListeners()[0] instanceof ComponentAdapter) {
+                    getComponentListeners()[0].componentResized(new ComponentEvent(SupervisorDashboardUI.this, ComponentEvent.COMPONENT_RESIZED));
+                }
             }
         });
 
@@ -213,6 +220,11 @@ public class SupervisorDashboardUI extends JFrame {
                         loadProductsForSupervisor();
                     } else if (panelName.equals("Pesanan")) {
                         loadOrdersForSeller();
+                        // Reset status label ketika pindah ke panel Pesanan
+                        if (exportStatusLabel != null) {
+                            exportStatusLabel.setForeground(TEXT_DARK);
+                            exportStatusLabel.setText("Siap untuk ekspor.");
+                        }
                     }
                     chatFloatingButton.setVisible(true);
                 });
@@ -659,6 +671,32 @@ public class SupervisorDashboardUI extends JFrame {
         filterPanel.add(new JLabel("Status:"));
         filterPanel.add(orderStatusFilterCombo);
 
+        // --- START: Tambahkan Tombol Ekspor ke Excel ---
+        JButton exportToExcelButton = new JButton("Ekspor ke Excel");
+        exportToExcelButton.setBackground(BLUE_PRIMARY);
+        exportToExcelButton.setForeground(WHITE);
+        exportToExcelButton.setBorderPainted(false);
+        exportToExcelButton.setFocusPainted(false);
+        exportToExcelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        exportToExcelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exportSalesDataToExcelAction();
+            }
+        });
+
+        filterPanel.add(Box.createHorizontalGlue()); // Ini akan mendorong tombol ke kanan
+        filterPanel.add(exportToExcelButton);
+        
+        // Inisialisasi exportStatusLabel di sini dengan teks awal yang informatif
+        exportStatusLabel = new JLabel("Siap untuk ekspor.");
+        exportStatusLabel.setForeground(TEXT_DARK);
+        exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        filterPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi antara tombol dan label
+        filterPanel.add(exportStatusLabel);
+        // --- END: Tambahkan Tombol Ekspor ke Excel ---
+
         String[] columns = {"ID Pesanan", "Pelanggan", "Tanggal Pesanan", "Total Harga", "Status", "Aksi"};
         orderTableModel = new DefaultTableModel(columns, 0) {
             @Override
@@ -699,6 +737,81 @@ public class SupervisorDashboardUI extends JFrame {
         ordersPanel.add(scrollPane, BorderLayout.CENTER);
 
         return ordersPanel;
+    }
+
+    private void exportSalesDataToExcelAction() {
+        // Mendapatkan path default dari ExportExcelService
+        String defaultPath = exportService.getDefaultExcelPath();
+        File defaultFile = new File(defaultPath);
+
+        // Pastikan direktori ada
+        File parentDir = defaultFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs();
+            System.out.println("DEBUG: Parent directories created: " + dirsCreated + " at " + parentDir.getAbsolutePath());
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Simpan Laporan Penjualan");
+        fileChooser.setSelectedFile(defaultFile); // Set nama file default
+
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            // Pastikan ekstensi .xlsx ada
+            if (!fileToSave.getName().toLowerCase().endsWith(".xlsx")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".xlsx");
+            }
+            String finalPath = fileToSave.getAbsolutePath();
+            System.out.println("DEBUG: User selected path: " + finalPath);
+
+            // Perbarui status label saat proses dimulai
+            exportStatusLabel.setForeground(TEXT_DARK);
+            exportStatusLabel.setText("Mengekspor data penjualan ke Excel... Mohon tunggu.");
+            
+            // Jalankan proses ekspor di thread terpisah agar UI tidak freeze
+            new SwingWorker<Void, Void>() {
+                String message;
+                Color msgColor;
+
+                @Override
+                protected Void doInBackground() throws Exception {
+                    try {
+                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService.");
+                        exportService.exportSalesDataToExcel(finalPath);
+                        message = "Data berhasil diekspor ke:<br>" + finalPath;
+                        msgColor = SUCCESS_GREEN;
+                        System.out.println("DEBUG: Export successful in SwingWorker.");
+                    } catch (SQLException | IOException ex) {
+                        message = "Gagal mengekspor data: " + ex.getMessage();
+                        msgColor = CANCEL_RED;
+                        System.err.println("DEBUG: Export failed in SwingWorker.");
+                        ex.printStackTrace(); // Cetak stack trace ke konsol untuk debugging
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    // Pastikan message tidak null sebelum digunakan
+                    if (message == null) {
+                        message = "Terjadi kesalahan tidak terduga, pesan status kosong.";
+                        msgColor = CANCEL_RED;
+                        System.err.println("DEBUG: Message in SwingWorker.done() was unexpectedly null.");
+                    }
+                    exportStatusLabel.setForeground(msgColor);
+                    exportStatusLabel.setText("<html>" + message + "</html>");
+                    System.out.println("DEBUG: SwingWorker done() finished. Label updated.");
+                }
+            }.execute();
+        } else {
+            exportStatusLabel.setForeground(TEXT_DARK);
+            exportStatusLabel.setText("Ekspor dibatalkan.");
+            System.out.println("DEBUG: Export cancelled by user.");
+        }
     }
 
     public void loadOrdersForSeller() {
@@ -1111,8 +1224,6 @@ public class SupervisorDashboardUI extends JFrame {
                 detailDialog.setLocationRelativeTo(parent);
                 detailDialog.setLayout(new BorderLayout());
 
-                // Membuat dummy ViewController khusus untuk OrderDetailUI dalam konteks ini,
-                // karena SupervisorDashboardUI tidak mengimplementasikan ViewController.
                 ViewController dummyVCForOrderDetail = new ViewController() {
                     @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
                     @Override public void showFavoritesView() { /* do nothing */ }
@@ -1126,7 +1237,6 @@ public class SupervisorDashboardUI extends JFrame {
                     @Override public void showSuccessView(int orderId) { /* do nothing */ }
                     @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
                     @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
-                        // Membuka chat pop-up dari sini (melalui SupervisorDashboardUI parent)
                         chatPopupUI.startChatWith(sellerId, sellerUsername);
                     }
                 };
@@ -1207,29 +1317,7 @@ public class SupervisorDashboardUI extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            // Pengaturan currentUser harus dilakukan oleh mekanisme login yang sebenarnya.
-            // Baris ini sudah dihapus dari versi final.
             new SupervisorDashboardUI().setVisible(true);
         });
     }
-    
-    // Di dalam konstruktor SupervisorDashboardUI()
-    ViewController dummyVCForFloatingButton = new ViewController() {
-        @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
-        @Override public void showFavoritesView() { /* do nothing */ }
-        @Override public void showDashboardView() { /* do nothing */ }
-        @Override public void showCartView() { /* do nothing */ }
-        @Override public void showProfileView() { /* do nothing */ }
-        @Override public void showOrdersView() { /* do nothing */ }
-        @Override public void showCheckoutView() { /* do nothing */ }
-        @Override public void showAddressView() { /* do nothing */ }
-        @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
-        @Override public void showSuccessView(int orderId) { /* do nothing */ }
-        @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
-        @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
-            // Ketika floating button atau popup chat ingin membuka chat spesifik (e.g., dari daftar kontak)
-            // ia akan memanggil ini. Di sini kita memicu chatPopupUI.startChatWith().
-            chatPopupUI.startChatWith(sellerId, sellerUsername);
-        }
-    };
 }

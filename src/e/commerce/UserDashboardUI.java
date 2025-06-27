@@ -461,56 +461,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
             new EmptyBorder(8, 15, 8, 15)
         ));
 
-        JTextField searchField = createSearchTextField();
-        searchContainer.add(searchField, BorderLayout.CENTER);
-
-        JButton searchButton = createSearchButton();
-        searchContainer.add(searchButton, BorderLayout.EAST);
-
-        searchContainer.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                if (!searchField.isFocusOwner()) {
-                    searchContainer.setBorder(new CompoundBorder(
-                        new LineBorder(new Color(180, 180, 180), 1) {
-                            @Override
-                            public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-                                Graphics2D g2d = (Graphics2D) g.create();
-                                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                                g2d.setColor(getLineColor());
-                                g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
-                                g2d.dispose();
-                            }
-                        },
-                        new EmptyBorder(8, 15, 8, 15)
-                    ));
-                }
-            }
-
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (!searchField.isFocusOwner()) {
-                    searchContainer.setBorder(new CompoundBorder(
-                        new LineBorder(new Color(230, 230, 230), 1) {
-                            @Override
-                            public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-                                Graphics2D g2d = (Graphics2D) g.create();
-                                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                                g2d.setColor(getLineColor());
-                                g2d.drawRoundRect(x, y, width - 1, height - 1, 20, 20);
-                                g2d.dispose();
-                            }
-                        },
-                        new EmptyBorder(8, 15, 8, 15)
-                    ));
-                }
-            }
-        });
-
-        return searchContainer;
-    }
-
-    private JTextField createSearchTextField() {
         JTextField searchField = new JTextField();
         searchField.setFont(new Font("Arial", Font.PLAIN, 14));
         searchField.setBorder(null);
@@ -592,10 +542,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         });
 
-        return searchField;
-    }
+        searchContainer.add(searchField, BorderLayout.CENTER);
 
-    private JButton createSearchButton() {
         JButton searchButton = new JButton();
         searchButton.setPreferredSize(new Dimension(30, 24));
         searchButton.setBorder(null);
@@ -603,11 +551,17 @@ public class UserDashboardUI extends JFrame implements ViewController {
         searchButton.setFocusPainted(false);
         searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        searchButton.setIcon(createSearchIcon());
+        BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = icon.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.setColor(new Color(120, 120, 120));
+        g2.drawOval(2, 2, 8, 8);
+        g2.drawLine(9, 9, 14, 14);
+        g2.dispose();
+        searchButton.setIcon(new ImageIcon(icon));
 
         searchButton.addActionListener(e -> {
-            JPanel parent = (JPanel) searchButton.getParent();
-            JTextField searchField = (JTextField) parent.getComponent(0);
             String searchText = searchField.getText();
             if (!searchText.equals("Cari produk...") && !searchText.trim().isEmpty()) {
                 performSearch(searchText);
@@ -626,21 +580,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         });
 
-        return searchButton;
-    }
+        searchContainer.add(searchButton, BorderLayout.EAST);
 
-    private ImageIcon createSearchIcon() {
-        BufferedImage icon = new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = icon.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.setColor(new Color(120, 120, 120));
-
-        g2.drawOval(2, 2, 8, 8);
-        g2.drawLine(9, 9, 14, 14);
-
-        g2.dispose();
-        return new ImageIcon(icon);
+        return searchContainer;
     }
 
     private void performSearch(String searchText) {
@@ -969,7 +911,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(Color.WHITE);
-        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        // MODIFIED: Increased top and bottom padding for contentPanel
+        contentPanel.setBorder(new EmptyBorder(30, 20, 30, 20));
 
         JPanel categoriesPanel = new JPanel(new GridLayout(2, 3, 15, 15));
         categoriesPanel.setBackground(Color.WHITE);
@@ -1001,7 +944,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             categoriesPanel.add(categoryCard);
         }
 
-        JPanel featuresPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 50, 10));
+        JPanel featuresPanel = new JPanel(new GridLayout(1, 4, 100, 0)); 
         featuresPanel.setBackground(Color.WHITE);
         featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
@@ -1018,27 +961,29 @@ public class UserDashboardUI extends JFrame implements ViewController {
             "/Resources/Images/secure_payment_icon.png" 
         };
         for (int i = 0; i < featureTexts.length; i++) {
-            JLabel featureLabel = new JLabel();
-            featureLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-            featureLabel.setForeground(Color.BLACK);
-            featureLabel.setHorizontalTextPosition(SwingConstants.CENTER); 
-            featureLabel.setVerticalTextPosition(SwingConstants.BOTTOM);  
+            JPanel featureItemPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0)); 
+            featureItemPanel.setBackground(Color.WHITE);
 
+            JLabel featureIconLabel = new JLabel();
             try {
                 ImageIcon originalIcon = new ImageIcon(getClass().getResource(featureIconPaths[i]));
                 Image originalImage = originalIcon.getImage();
 
-                Image scaledImage = originalImage.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-                featureLabel.setIcon(new ImageIcon(scaledImage));
-                featureLabel.setText(featureTexts[i]);
-
+                Image scaledImage = originalImage.getScaledInstance(50, 50, Image.SCALE_SMOOTH); 
+                featureIconLabel.setIcon(new ImageIcon(scaledImage));
             } catch (Exception e) {
                 System.err.println("Error loading feature icon from: " + featureIconPaths[i] + " - " + e.getMessage());
-                featureLabel.setText("<html><center>Gambar Tidak Ditemukan<br>" + featureTexts[i] + "</center></html>"); // Teks fallback
-                featureLabel.setIcon(null);
+                featureIconLabel.setText("!"); 
             }
 
-            featuresPanel.add(featureLabel);
+            JLabel featureTextLabel = new JLabel(featureTexts[i]);
+            featureTextLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+            featureTextLabel.setForeground(Color.BLACK);
+
+            featureItemPanel.add(featureIconLabel);
+            featureItemPanel.add(featureTextLabel);
+            
+            featuresPanel.add(featureItemPanel);
         }
 
         JPanel bestSellerPanel = new JPanel(new BorderLayout());
@@ -1075,7 +1020,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
          bestSellerPanel.add(bestSellerProducts, BorderLayout.CENTER);
 
         contentPanel.add(categoriesPanel);
+        // MODIFIED: Added rigid areas for spacing around featuresPanel
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 30))); // Space above featuresPanel
         contentPanel.add(featuresPanel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 30))); // Space below featuresPanel
         contentPanel.add(bestSellerPanel);
 
         dashboardPanel.add(contentPanel);
@@ -1393,7 +1341,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     gbc.gridx = 0;
     // Berikan bobot yang lebih kecil untuk teks/tombol, agar gambar mendapatkan lebih banyak ruang
-    gbc.weightx = 0.6; // Coba 20%
+    gbc.weightx = 0.6; 
     contentContainer.add(leftContentPanel, gbc);
 
     if (imagePath != null) {

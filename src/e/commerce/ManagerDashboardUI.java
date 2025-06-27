@@ -13,6 +13,8 @@ import java.sql.SQLException;
 import javax.swing.table.TableCellRenderer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.io.File; // Tambahkan import ini untuk File
+import java.io.IOException; // Tambahkan import ini untuk IOException
 
 // Import untuk JFreeChart
 import org.jfree.chart.ChartFactory;
@@ -24,7 +26,6 @@ import org.jfree.data.general.PieDataset;
 import org.jfree.chart.ui.RectangleInsets;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
 
-// Missing JFreeChart imports
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.HorizontalAlignment;
 import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
@@ -34,12 +35,11 @@ import org.jfree.chart.util.Rotation;
 import java.awt.BasicStroke;
 import javax.swing.border.Border;
 
-// IMPOR BARU UNTUK GRAFIK GARIS (tetap ada jika nanti ada grafik garis lain)
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.LineAndShapeRenderer;
-import org.jfree.chart.renderer.category.BarRenderer; // BARU: Untuk grafik batang
-import java.util.Locale; // Import for currency formatting
+import org.jfree.chart.renderer.category.BarRenderer;
+import java.util.Locale;
 
 public class ManagerDashboardUI extends JFrame {
     private JPanel mainPanel;
@@ -51,8 +51,12 @@ public class ManagerDashboardUI extends JFrame {
     // Label untuk menampilkan data dashboard
     private JLabel lblTotalUsersValue;
     private JLabel lblTotalProductsValue;
-    private JLabel lblTotalTransactionsValue; // Label for Total Transactions COUNT (kept as is)
-    private JLabel lblTotalRevenueValue; // NEW Label for Total Transactions IN RUPIAH (repurposed lblJuneRevenueValue)
+    private JLabel lblTotalTransactionsValue;
+    private JLabel lblTotalRevenueValue;
+
+    // Variabel untuk fitur ekspor Excel
+    private ExportExcelService exportService; // Deklarasi ExportExcelService
+    private JLabel exportStatusLabel; // Deklarasi JLabel untuk status ekspor di dashboard panel
 
     public ManagerDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
@@ -63,6 +67,9 @@ public class ManagerDashboardUI extends JFrame {
             dispose();
             return;
         }
+
+        // Inisialisasi ExportExcelService dengan user yang sedang login
+        exportService = new ExportExcelService(currentUser); 
 
         setTitle("Quantra - Operation Manager Dashboard");
         setSize(1200, 800);
@@ -129,7 +136,7 @@ public class ManagerDashboardUI extends JFrame {
 
         // Navigation items
         String[] navItems = {"Dashboard", "User Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"};
+        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; // Settings akan dialihkan ke Profile untuk contoh ini
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -167,6 +174,11 @@ public class ManagerDashboardUI extends JFrame {
                 }
                 if (panelName.equals("Dashboard")) {
                     refreshDashboardData();
+                    // Reset status label ekspor ketika pindah ke Dashboard
+                    if (exportStatusLabel != null) {
+                        exportStatusLabel.setForeground(Color.BLACK);
+                        exportStatusLabel.setText("Siap untuk ekspor.");
+                    }
                 }
             });
 
@@ -258,26 +270,19 @@ public class ManagerDashboardUI extends JFrame {
     private void refreshDashboardData() {
         int totalUsers = getTotalUserCount();
         int totalProducts = ProductRepository.getTotalProductCount();
-        // This is the count of transactions (kept as is)
         int totalTransactionsCount = ProductRepository.getTotalOrderCount();
-        // Get total revenue from the database
         double totalRevenue = getTotalRevenue();
 
         lblTotalUsersValue.setText(String.valueOf(totalUsers));
         lblTotalProductsValue.setText(String.valueOf(totalProducts));
-        // Update the label for transaction count (which is the third card)
         lblTotalTransactionsValue.setText(String.valueOf(totalTransactionsCount));
 
-        // Update the label that was "Pendapatan Juni 2025" to show Total Transaksi in Rupiah
-        // Format the revenue as Rupiah
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
         lblTotalRevenueValue.setText(currencyFormat.format(totalRevenue));
     }
 
-    // New method to get total revenue from the database
     private double getTotalRevenue() {
         double totalRevenue = 0.0;
-        // Assuming your 'orders' table has a 'total_amount' column
         String query = "SELECT SUM(total_amount) FROM orders";
 
         Connection conn = null;
@@ -473,24 +478,55 @@ public class ManagerDashboardUI extends JFrame {
 
         lblTotalUsersValue = new JLabel("0");
         lblTotalProductsValue = new JLabel("0");
-        lblTotalTransactionsValue = new JLabel("0"); // This remains for the transaction count card
-        lblTotalRevenueValue = new JLabel("0"); // This is the new label for total revenue in Rupiah
+        lblTotalTransactionsValue = new JLabel("0");
+        lblTotalRevenueValue = new JLabel("0");
 
         summaryCardsPanel.add(createSummaryCard("Total Pengguna", lblTotalUsersValue, new Color(255, 99, 71)));
         summaryCardsPanel.add(createSummaryCard("Total Produk", lblTotalProductsValue, new Color(255, 99, 71)));
-        // Card for Total Transactions (Count) - Keep as is
         summaryCardsPanel.add(createSummaryCard("Total Transaksi", lblTotalTransactionsValue, new Color(255, 99, 71)));
-        // Card for Total Transaksi (Rupiah) - Repurpose the original "Pendapatan Juni 2025" slot
-        // The image_c362e2.png shows a green card with "Pendapatan Juni 2025"
-        summaryCardsPanel.add(createSummaryCard("Total Transaksi", lblTotalRevenueValue, new Color(76, 175, 80))); // Green color from image
+        summaryCardsPanel.add(createSummaryCard("Total Pendapatan", lblTotalRevenueValue, new Color(76, 175, 80))); // Green color
 
-        dashboardPanel.add(summaryCardsPanel, BorderLayout.NORTH);
+        // --- START: Tambahkan Panel Kontrol Ekspor ---
+        JPanel exportControlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
+        exportControlPanel.setBackground(Color.WHITE);
+        exportControlPanel.setBorder(new EmptyBorder(10, 0, 10, 0)); 
+
+        JButton exportToExcelButton = new JButton("Ekspor Laporan Penjualan ke Excel");
+        exportToExcelButton.setBackground(new Color(74, 110, 255)); // BLUE_PRIMARY
+        exportToExcelButton.setForeground(Color.WHITE);
+        exportToExcelButton.setBorderPainted(false);
+        exportToExcelButton.setFocusPainted(false);
+        exportToExcelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        exportToExcelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                exportSalesDataToExcelAction(); // Panggil metode ekspor
+            }
+        });
+
+        exportStatusLabel = new JLabel("Siap untuk ekspor."); // Inisialisasi label status
+        exportStatusLabel.setForeground(Color.BLACK); 
+        exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+
+        exportControlPanel.add(exportToExcelButton);
+        exportControlPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi
+        exportControlPanel.add(exportStatusLabel);
+
+        // Bungkus summaryCardsPanel dan exportControlPanel
+        JPanel topPanelWrapper = new JPanel(new BorderLayout());
+        topPanelWrapper.setBackground(Color.WHITE);
+        topPanelWrapper.add(summaryCardsPanel, BorderLayout.NORTH);
+        topPanelWrapper.add(exportControlPanel, BorderLayout.CENTER);
+
+        dashboardPanel.add(topPanelWrapper, BorderLayout.NORTH); 
+        // --- END: Tambahkan Panel Kontrol Ekspor ---
 
         JPanel chartAndDetailsPanel = new JPanel(new GridLayout(1, 2, 20, 0));
         chartAndDetailsPanel.setBackground(Color.WHITE);
         chartAndDetailsPanel.setOpaque(true);
-        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
-
+        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0)); 
+        
         chartAndDetailsPanel.add(createModernChartWrapper());
         chartAndDetailsPanel.add(createMonthlySalesTrendChartPanel());
 
@@ -522,15 +558,11 @@ public class ManagerDashboardUI extends JFrame {
         return card;
     }
 
-    // Metode untuk membuat panel grafik batang Pendapatan Bulanan
     private JPanel createMonthlySalesTrendChartPanel() {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
-        // --- BAGIAN PENGAMBILAN DATA DARI DATABASE ---
-        // PASTIKAN NAMA TABEL ('orders') DAN KOLOM ('order_date', 'total_amount') SESUAI DENGAN DATABASE ANDA
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                 // Kueri ini untuk MySQL atau PostgreSQL. Sesuaikan jika Anda menggunakan SQL Server (FORMAT(order_date, 'yyyy-MM'))
                  "SELECT DATE_FORMAT(order_date, '%Y-%m') AS sales_month, SUM(total_amount) AS monthly_revenue FROM orders GROUP BY sales_month ORDER BY sales_month"
              );
              ResultSet rs = stmt.executeQuery()) {
@@ -543,14 +575,12 @@ public class ManagerDashboardUI extends JFrame {
 
         } catch (SQLException e) {
             e.printStackTrace();
-            // Tampilkan pesan error di konsol atau di UI jika gagal mengambil data
             System.err.println("Error fetching monthly sales data from database: " + e.getMessage());
             JOptionPane.showMessageDialog(this,
                     "Gagal memuat data penjualan bulanan dari database.\n" + e.getMessage(),
                     "Error Database",
                     JOptionPane.ERROR_MESSAGE);
         }
-        // --- AKHIR BAGIAN PENGAMBILAN DATA DARI DATABASE ---
 
         JFreeChart barChart = ChartFactory.createBarChart(
                 "Pendapatan Bulanan",
@@ -579,18 +609,13 @@ public class ManagerDashboardUI extends JFrame {
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setDrawBarOutline(false);
 
-        // --- WARNA BATANG SENADA DENGAN APLIKASI (menggunakan warna oranye utama) ---
-        // Ensure solid color, no gradient
-        renderer.setSeriesPaint(0, new Color(255, 99, 71)); // Using your app's main orange color
-        renderer.setMaximumBarWidth(0.3); // Membuat batang lebih ramping (30% dari lebar kategori)
-        // --- AKHIR WARNA BATANG ---
+        renderer.setSeriesPaint(0, new Color(255, 99, 71));
+        renderer.setMaximumBarWidth(0.3);
 
-        // To make bars left-aligned and solid color:
-        // Set item margin to 0.0 and adjust category and lower margins to simulate left alignment.
-        plot.getDomainAxis().setCategoryMargin(0.0); // No gap between categories for left alignment effect
-        plot.getDomainAxis().setLowerMargin(0.0); // Start bars immediately from the left
-        plot.getDomainAxis().setUpperMargin(0.9); // Push bars to the left by increasing upper margin
-        renderer.setItemMargin(0.0); // Ensure bars are tightly packed if multiple series exist (not applicable here, but good practice)
+        plot.getDomainAxis().setCategoryMargin(0.0);
+        plot.getDomainAxis().setLowerMargin(0.0);
+        plot.getDomainAxis().setUpperMargin(0.9);
+        renderer.setItemMargin(0.0);
 
         plot.getDomainAxis().setTickLabelFont(new Font("Arial", Font.PLAIN, 12));
         plot.getDomainAxis().setLabelFont(new Font("Arial", Font.BOLD, 14));
@@ -1466,6 +1491,76 @@ public class ManagerDashboardUI extends JFrame {
                     "Error mengekspor data: " + e.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // Metode untuk aksi ekspor data penjualan ke Excel (sama seperti di SupervisorDashboardUI)
+    private void exportSalesDataToExcelAction() {
+        String defaultPath = exportService.getDefaultExcelPath();
+        File defaultFile = new File(defaultPath);
+
+        File parentDir = defaultFile.getParentFile();
+        if (parentDir != null && !parentDir.exists()) {
+            boolean dirsCreated = parentDir.mkdirs();
+            System.out.println("DEBUG: Parent directories created: " + dirsCreated + " at " + parentDir.getAbsolutePath());
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Simpan Laporan Penjualan");
+        fileChooser.setSelectedFile(defaultFile);
+
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            File fileToSave = fileChooser.getSelectedFile();
+            if (!fileToSave.getName().toLowerCase().endsWith(".xlsx")) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + ".xlsx");
+            }
+            String finalPath = fileToSave.getAbsolutePath();
+            System.out.println("DEBUG: User selected path: " + finalPath);
+
+            exportStatusLabel.setForeground(Color.BLACK);
+            exportStatusLabel.setText("Mengekspor data penjualan ke Excel... Mohon tunggu.");
+            
+            new SwingWorker<Void, Void>() {
+                String message;
+                Color msgColor;
+
+                @Override
+                protected Void doInBackground() throws Exception {
+                    try {
+                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService.");
+                        exportService.exportSalesDataToExcel(finalPath);
+                        message = "Data berhasil diekspor ke:<br>" + finalPath;
+                        msgColor = new Color(40, 167, 69); // SUCCESS_GREEN
+                        System.out.println("DEBUG: Export successful in SwingWorker.");
+                    } catch (SQLException | IOException ex) {
+                        message = "Gagal mengekspor data: " + ex.getMessage();
+                        msgColor = new Color(220, 53, 69); // CANCEL_RED
+                        System.err.println("DEBUG: Export failed in SwingWorker.");
+                        ex.printStackTrace(); 
+                    }
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    if (message == null) {
+                        message = "Terjadi kesalahan tidak terduga, pesan status kosong.";
+                        msgColor = new Color(220, 53, 69); // CANCEL_RED
+                        System.err.println("DEBUG: Message in SwingWorker.done() was unexpectedly null.");
+                    }
+                    exportStatusLabel.setForeground(msgColor);
+                    exportStatusLabel.setText("<html>" + message + "</html>");
+                    System.out.println("DEBUG: SwingWorker done() finished. Label updated.");
+                }
+            }.execute();
+        } else {
+            exportStatusLabel.setForeground(Color.BLACK);
+            exportStatusLabel.setText("Ekspor dibatalkan.");
+            System.out.println("DEBUG: Export cancelled by user.");
         }
     }
 

@@ -93,41 +93,39 @@ public class User {
         isVerified = verified; //
     }
 
-    // Helper method untuk mendapatkan ImageIcon dari profilePicture
-    public ImageIcon getProfileImageIcon() { //
-        if (profilePicture != null) { //
-            try (ByteArrayInputStream bis = new ByteArrayInputStream(profilePicture)) { //
-                Image img = ImageIO.read(bis); //
-                return new ImageIcon(img); //
-            } catch (IOException e) { //
-                System.err.println("Error converting profile image: " + e.getMessage()); //
+    public ImageIcon getProfileImageIcon() { 
+        if (profilePicture != null) { 
+            try (ByteArrayInputStream bis = new ByteArrayInputStream(profilePicture)) { 
+                Image img = ImageIO.read(bis); 
+                if (img != null && img.getWidth(null) > 0 && img.getHeight(null) > 0) { // <--- TAMBAHKAN PENGECEKAN INI
+                    return new ImageIcon(img); 
+                } else {
+                    System.err.println("Warning: Profile picture is invalid or has zero dimensions.");
+                }
+            } catch (IOException e) { 
+                System.err.println("Error converting profile image: " + e.getMessage()); 
             }
         }
         // Pastikan path ke default_profile.png benar
-        return new ImageIcon(getClass().getResource("/resources/default_profile.png")); //
+        return new ImageIcon(getClass().getResource("/resources/default_profile.png")); 
     }
 
-    // Helper method untuk mendapatkan ImageIcon dari bannerPicture
-    public ImageIcon getBannerImageIcon() { //
-        if (bannerPicture != null) { //
-            try (ByteArrayInputStream bis = new ByteArrayInputStream(bannerPicture)) { //
-                Image img = ImageIO.read(bis); //
-                return new ImageIcon(img); //
-            } catch (IOException e) { //
-                System.err.println("Error converting banner image: " + e.getMessage()); //
+    public ImageIcon getBannerImageIcon() { 
+        if (bannerPicture != null) { 
+            try (ByteArrayInputStream bis = new ByteArrayInputStream(bannerPicture)) { 
+                Image img = ImageIO.read(bis); 
+                if (img != null && img.getWidth(null) > 0 && img.getHeight(null) > 0) { // <--- TAMBAHKAN PENGECEKAN INI
+                    return new ImageIcon(img); 
+                } else {
+                    System.err.println("Warning: Banner picture is invalid or has zero dimensions.");
+                }
+            } catch (IOException e) { 
+                System.err.println("Error converting banner image: " + e.getMessage()); 
             }
         }
-        // Pastikan path ke default_banner.png benar
-        return new ImageIcon(getClass().getResource("/resources/default_banner.png")); //
+        return new ImageIcon(getClass().getResource("/resources/default_banner.png")); 
     }
 
-    // --- Metode Database ---
-    // [Perbaikan KRITIS]: HAPUS METODE register() DARI SINI SELURUHNYA.
-    // Metode register() kini ditangani oleh OTPManager.setOTP() (INSERT/UPDATE awal)
-    // dan OTPManager.verifyOTP() (UPDATE is_verified).
-    // public boolean register() { ... }
-
-    // loadUserById method diubah untuk melakukan JOIN ke tabel 'profile'
     public boolean loadUserById(int userId) { //
         try (Connection conn = DatabaseConnection.getConnection()) { //
             String sql = "SELECT u.id, u.username, u.password, u.email, u.role, u.is_verified, " + //
