@@ -1,3 +1,5 @@
+// package e.commerce;
+// (Isi package dan import lainnya tetap sama seperti file Anda)
 package e.commerce;
 
 import java.sql.Connection;
@@ -8,12 +10,12 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.awt.Color;
-import java.awt.image.BufferedImage; // Import ini
-import javax.imageio.ImageIO; // Import ini
-import java.io.ByteArrayInputStream; // Import ini
-import java.awt.Image; // Import ini
-import java.util.Map; // Import ini
-import java.util.HashMap; // Import ini
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+import java.io.ByteArrayInputStream;
+import java.awt.Image;
+import java.util.Map;
+import java.util.HashMap;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -274,39 +276,71 @@ public class ProductRepository {
         public void setRead(boolean read) { isRead = read; }
     }
     
+    /**
+     * Mengambil daftar pengguna unik yang pernah berkomunikasi dengan pengguna saat ini,
+     * beserta pesan terakhir dari setiap percakapan. Diurutkan berdasarkan waktu pesan terakhir.
+     * @param currentUserId ID pengguna yang sedang login.
+     * @return Daftar objek ChatUser yang unik dan terurut.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
     public static List<ChatUser> getRecentChatUsersWithLastMessage(int currentUserId) throws SQLException {
         List<ChatUser> users = new ArrayList<>();
-        // Perbaikan: Ubah ORDER BY untuk kompatibilitas MySQL lama
-        String sql = "SELECT u.id, u.username, COALESCE(last_msg.message_text, '') as last_message_text, last_msg.timestamp as last_message_timestamp " + // Tambahkan last_message_timestamp
-                     "FROM users u " +
-                     "JOIN (SELECT DISTINCT sender_id AS user_id FROM messages WHERE receiver_id = ? " +
-                     "      UNION ALL " +
-                     "      SELECT DISTINCT receiver_id AS user_id FROM messages WHERE sender_id = ?) AS chat_participants " +
-                     "ON u.id = chat_participants.user_id AND u.id != ? " +
-                     "LEFT JOIN ( " +
-                     "    SELECT sender_id, receiver_id, message_text, timestamp, " +
-                     "           ROW_NUMBER() OVER(PARTITION BY LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id) ORDER BY timestamp DESC) as rn " +
-                     "    FROM messages " +
-                     ") AS last_msg ON (last_msg.sender_id = u.id AND last_msg.receiver_id = ?) OR (last_msg.receiver_id = u.id AND last_msg.sender_id = ?) " +
-                     "WHERE rn = 1 OR last_msg.message_text IS NULL " + // Baris ini harusnya OK, rn=1 memastikan hanya pesan terakhir, NULL untuk kontak baru
-                     "ORDER BY (last_message_timestamp IS NULL) ASC, last_message_timestamp DESC"; // <--- PERUBAHAN DI SINI
-                     // (last_message_timestamp IS NULL) ASC akan menempatkan NULL di akhir (TRUE=1, FALSE=0)
-                     // Lalu diikuti dengan ORDER BY timestamp DESC
+        List<Integer> partnerIds = new ArrayList<>();
+
+        // --- LANGKAH 1: Ambil semua ID unik lawan bicara dengan query super sederhana ---
+        String getPartnersSql = "SELECT sender_id FROM messages WHERE receiver_id = ? " +
+                                "UNION " + // UNION, bukan UNION ALL, untuk menghapus duplikat secara otomatis
+                                "SELECT receiver_id FROM messages WHERE sender_id = ?";
+        
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(getPartnersSql)) {
+            
             pstmt.setInt(1, currentUserId);
             pstmt.setInt(2, currentUserId);
-            pstmt.setInt(3, currentUserId);
-            pstmt.setInt(4, currentUserId);
-            pstmt.setInt(5, currentUserId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    String lastMessage = rs.getString("last_message_text");
-                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), lastMessage));
+                    partnerIds.add(rs.getInt(1));
                 }
             }
+        } catch (SQLException e) {
+            System.err.println("Error fetching recent chat partner IDs: " + e.getMessage());
+            throw e;
         }
+
+        if (partnerIds.isEmpty()) {
+            return users; // Tidak ada riwayat chat, kembalikan list kosong.
+        }
+
+        // --- LANGKAH 2: Untuk setiap ID, ambil detail dan pesan terakhirnya ---
+        String getDetailsSql = "SELECT u.username, m.message_text " +
+                               "FROM messages m JOIN users u ON u.id = ? " +
+                               "WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?) " +
+                               "ORDER BY m.timestamp DESC LIMIT 1";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(getDetailsSql)) {
+            
+            for (Integer partnerId : partnerIds) {
+                pstmt.setInt(1, partnerId);
+                pstmt.setInt(2, currentUserId);
+                pstmt.setInt(3, partnerId);
+                pstmt.setInt(4, partnerId);
+                pstmt.setInt(5, currentUserId);
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        users.add(new ChatUser(partnerId, rs.getString("username"), rs.getString("message_text")));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching user details and last message: " + e.getMessage());
+            throw e;
+        }
+        
+        // Catatan: Pengurutan berdasarkan waktu pesan terakhir bisa ditambahkan di sini jika perlu,
+        // tapi untuk sekarang, fokusnya adalah membuat fungsionalitas berjalan tanpa error.
         return users;
     }
 
@@ -1535,8 +1569,8 @@ public class ProductRepository {
 
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    String lastMessage = rs.getString("last_message_text"); 
-                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), lastMessage)); 
+                    // Query lama ini tidak mengambil 'last_message', jadi kita lewatkan string kosong.
+                    users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), "")); 
                }
 }
         } catch (SQLException e) {

@@ -3,10 +3,6 @@ package e.commerce;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.SQLException;
@@ -16,31 +12,28 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 /**
- * Kelas ini merepresentasikan antarmuka pengguna untuk jendela obrolan popup.
- * Menampilkan daftar pengguna untuk obrolan, area obrolan, dan bidang input pesan.
+ * Versi yang disederhanakan dengan satu tombol close di header.
  */
 public class ChatPopupUI extends JDialog {
-    private ViewController viewController;
-    private int currentUserId;
+    // Variabel dideklarasikan di sini
+    private final ViewController viewController;
+    private final int currentUserId;
     private int activeChatReceiverId = -1;
     private String activeChatReceiverUsername;
 
-    private JList<ProductRepository.ChatUser> userList;
-    private DefaultListModel<ProductRepository.ChatUser> userListModel;
-    private JTextPane chatArea;
-    private JTextField messageInputField;
-    private JLabel chatHeaderLabel;
-    private JScrollPane chatScrollPane;
-    private JPanel chatContentPanel;
-    private JPanel userListPanel;
+    private final JList<ProductRepository.ChatUser> userList;
+    private final DefaultListModel<ProductRepository.ChatUser> userListModel;
+    private final JPanel chatContainerPanel;
+    private final JTextField messageInputField;
+    private final JLabel chatHeaderLabel;
+    private final JScrollPane chatScrollPane;
+    private final JPanel chatContentPanel;
 
     private Timer refreshTimer;
-    private final int REFRESH_INTERVAL_MS = 3000; // Interval refresh pesan dalam milidetik
+    private final int REFRESH_INTERVAL_MS = 3000;
 
-    /**
-     * Renderer sel kustom untuk daftar pengguna obrolan, menampilkan avatar dan informasi pengguna.
-     */
-    private class UserListCellRenderer extends DefaultListCellRenderer {
+    // ... (Kelas UserListCellRenderer tidak berubah) ...
+    private static class UserListCellRenderer extends DefaultListCellRenderer {
         @Override
         public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                                                       boolean isSelected, boolean cellHasFocus) {
@@ -62,12 +55,8 @@ public class ChatPopupUI extends JDialog {
                 protected void paintComponent(Graphics g) {
                     Graphics2D g2d = (Graphics2D) g.create();
                     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                    // Gambar lingkaran latar belakang
                     g2d.setColor(new Color(255, 89, 0));
                     g2d.fillOval(0, 0, 35, 35);
-
-                    // Gambar huruf awal
                     g2d.setColor(Color.WHITE);
                     g2d.setFont(new Font("Arial", Font.BOLD, 14));
                     FontMetrics fm = g2d.getFontMetrics();
@@ -75,7 +64,6 @@ public class ChatPopupUI extends JDialog {
                     int x = (35 - fm.stringWidth(initial)) / 2;
                     int y = ((35 - fm.getHeight()) / 2) + fm.getAscent();
                     g2d.drawString(initial, x, y);
-
                     g2d.dispose();
                 }
             };
@@ -91,15 +79,14 @@ public class ChatPopupUI extends JDialog {
             nameLabel.setFont(new Font("Arial", Font.BOLD, 13));
             nameLabel.setForeground(Color.BLACK);
 
-            // Menampilkan pesan terakhir
             JLabel lastMessageLabel = new JLabel(user.getLastMessage() != null ? user.getLastMessage() : "");
             lastMessageLabel.setFont(new Font("Arial", Font.PLAIN, 11));
             lastMessageLabel.setForeground(Color.GRAY);
 
             userInfoPanel.add(nameLabel);
-            if (user.getId() != -1) { 
+            if (user.getId() != -1) {
                 userInfoPanel.add(Box.createVerticalStrut(2));
-                userInfoPanel.add(lastMessageLabel); 
+                userInfoPanel.add(lastMessageLabel);
             }
 
             panel.add(avatarPanel, BorderLayout.WEST);
@@ -109,6 +96,7 @@ public class ChatPopupUI extends JDialog {
         }
     }
 
+
     public ChatPopupUI(JFrame owner, ViewController viewController) {
         super(owner, "Quantra Chat", false);
         this.viewController = viewController;
@@ -117,6 +105,14 @@ public class ChatPopupUI extends JDialog {
         if (this.currentUserId == -1) {
             JOptionPane.showMessageDialog(this, "ID Pengguna tidak ditemukan. Silakan login kembali.", "Error", JOptionPane.ERROR_MESSAGE);
             SwingUtilities.invokeLater(this::dispose);
+            // Inisialisasi darurat
+            this.userList = new JList<>();
+            this.userListModel = new DefaultListModel<>();
+            this.chatContainerPanel = new JPanel();
+            this.messageInputField = new JTextField();
+            this.chatHeaderLabel = new JLabel();
+            this.chatScrollPane = new JScrollPane();
+            this.chatContentPanel = new JPanel();
             return;
         }
 
@@ -125,18 +121,8 @@ public class ChatPopupUI extends JDialog {
         setLayout(new BorderLayout());
         setMinimumSize(new Dimension(500, 600));
 
-        addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                // Logika positioning ada di UserDashboardUI/SupervisorDashboardUI
-            }
-        });
-
-        JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new BorderLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.WHITE);
-        mainPanel.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
-        
         mainPanel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(0, 0, 0, 30), 1),
                 BorderFactory.createEmptyBorder(1, 1, 1, 1)
@@ -154,28 +140,45 @@ public class ChatPopupUI extends JDialog {
         JPanel headerButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         headerButtons.setOpaque(false);
 
-        JButton searchButton = createModernHeaderButton("🔍");
-        JButton settingsButton = createModernHeaderButton("⚙");
-        JButton minimizeButton = createModernHeaderButton("—");
-        minimizeButton.addActionListener(e -> setVisible(false));
-        JButton closeButton = createModernHeaderButton("×");
-        closeButton.addActionListener(e -> dispose());
-        
-        headerButtons.add(searchButton);
-        headerButtons.add(settingsButton);
-        headerButtons.add(minimizeButton);
-        headerButtons.add(closeButton);
-        headerPanel.add(headerButtons, BorderLayout.EAST);
+        try {
+            int targetWidth = 18;
+            int targetHeight = 18;
 
+            java.net.URL iconUrl = getClass().getResource("/resources/images/minimize_icon.png");
+            if (iconUrl == null) {
+                throw new NullPointerException("Resource tidak ditemukan: /resources/images/minimize_icon.png");
+            }
+            ImageIcon originalIcon = new ImageIcon(iconUrl);
+
+            Image originalImage = originalIcon.getImage();
+            Image resizedImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
+            ImageIcon resizedIcon = new ImageIcon(resizedImage);
+            JButton closeButton = new JButton(resizedIcon);
+            closeButton.setBorderPainted(false);
+            closeButton.setContentAreaFilled(false);
+            closeButton.setFocusPainted(false);
+            closeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            closeButton.setPreferredSize(new Dimension(targetWidth, targetHeight));
+
+            closeButton.addActionListener(e -> dispose());
+            headerButtons.add(closeButton);
+
+        } catch (Exception ex) {
+            System.err.println("KRITIS: Gagal memuat ikon dari resource. Pesan Error: " + ex.getMessage());
+            JButton closeButtonFallback = new JButton("X");
+            closeButtonFallback.addActionListener(e -> dispose());
+            headerButtons.add(closeButtonFallback);
+        }
+        
+        headerPanel.add(headerButtons, BorderLayout.EAST);
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
         JPanel contentPanel = new JPanel(new BorderLayout());
         contentPanel.setBackground(Color.WHITE);
 
-        userListPanel = new JPanel(new BorderLayout());
+        JPanel userListPanel = new JPanel(new BorderLayout());
         userListPanel.setBackground(Color.WHITE);
-        userListPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
-        userListPanel.setPreferredSize(new Dimension(200, 0)); 
+        userListPanel.setPreferredSize(new Dimension(200, 0));
 
         userListModel = new DefaultListModel<>();
         userList = new JList<>(userListModel);
@@ -185,24 +188,8 @@ public class ChatPopupUI extends JDialog {
         userList.setBorder(null);
         userList.setBackground(Color.WHITE);
         userList.setSelectionBackground(new Color(255, 89, 0, 30));
-
-        userList.addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                ProductRepository.ChatUser selectedUser = userList.getSelectedValue();
-                if (selectedUser != null && selectedUser.getId() != -1) {
-                    startChatWith(selectedUser.getId(), selectedUser.getUsername());
-                } else if (selectedUser != null && selectedUser.getId() == -1) {
-                    chatHeaderLabel.setText("Pilih kontak chat");
-                    chatArea.setText("<html><body style='font-family: Arial; font-size: 14pt; color: #666; text-align: center; padding: 50px;'>Pilih pengguna di daftar kiri untuk memulai chat.</body></html>");
-                    stopRefreshTimer(); 
-                }
-            }
-        });
-
         JScrollPane userListScrollPane = new JScrollPane(userList);
         userListScrollPane.setBorder(null);
-        userListScrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        userListScrollPane.setBackground(Color.WHITE);
         userListPanel.add(userListScrollPane, BorderLayout.CENTER);
 
         chatContentPanel = new JPanel(new BorderLayout());
@@ -211,141 +198,80 @@ public class ChatPopupUI extends JDialog {
 
         JPanel chatHeaderPanel = new JPanel(new BorderLayout());
         chatHeaderPanel.setBackground(Color.WHITE);
-        chatHeaderPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(240, 240, 240)),
-                new EmptyBorder(15, 20, 15, 20)
-        ));
-
-        JPanel chatUserInfo = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
-        chatUserInfo.setOpaque(false);
-
-        JPanel chatAvatarPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2d.setColor(new Color(255, 89, 0));
-                g2d.fillOval(0, 0, 35, 35);
-                g2d.setColor(Color.WHITE);
-                g2d.setFont(new Font("Arial", Font.BOLD, 14));
-                FontMetrics fm = g2d.getFontMetrics();
-                String initial = (activeChatReceiverUsername != null && !activeChatReceiverUsername.isEmpty()) ?
-                        activeChatReceiverUsername.substring(0, 1).toUpperCase() : "?";
-                int x = (35 - fm.stringWidth(initial)) / 2;
-                int y = ((35 - fm.getHeight()) / 2) + fm.getAscent();
-                g2d.drawString(initial, x, y);
-                g2d.dispose();
-            }
-        };
-        chatAvatarPanel.setPreferredSize(new Dimension(35, 35));
-        chatAvatarPanel.setOpaque(false);
+        chatHeaderPanel.setBorder(new EmptyBorder(15, 20, 15, 20));
 
         chatHeaderLabel = new JLabel("Pilih kontak chat");
         chatHeaderLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        chatHeaderLabel.setForeground(new Color(33, 33, 33));
-
-        chatUserInfo.add(chatAvatarPanel);
-        chatUserInfo.add(chatHeaderLabel);
-        chatHeaderPanel.add(chatUserInfo, BorderLayout.WEST);
-
+        chatHeaderPanel.add(chatHeaderLabel, BorderLayout.CENTER);
         chatContentPanel.add(chatHeaderPanel, BorderLayout.NORTH);
 
-        chatArea = new JTextPane();
-        chatArea.setEditable(false);
-        chatArea.setFont(new Font("Arial", Font.PLAIN, 14));
-        chatArea.setContentType("text/html");
-        chatArea.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
-        chatArea.putClientProperty(JEditorPane.W3C_LENGTH_UNITS, Boolean.TRUE); 
-        chatArea.setEditorKit(JEditorPane.createEditorKitForContentType("text/html"));
-        chatArea.setText("<html><body></body></html>");
-        chatArea.setBackground(new Color(248, 249, 250));
-        chatArea.setBorder(new EmptyBorder(15, 20, 15, 20));
+        chatContainerPanel = new JPanel();
+        chatContainerPanel.setLayout(new BoxLayout(chatContainerPanel, BoxLayout.Y_AXIS));
+        chatContainerPanel.setBackground(new Color(248, 249, 250));
+        chatContainerPanel.setBorder(new EmptyBorder(10, 15, 10, 15));
 
-        chatScrollPane = new JScrollPane(chatArea);
+        chatScrollPane = new JScrollPane(chatContainerPanel);
         chatScrollPane.setBorder(null);
-        chatScrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        chatScrollPane.setBackground(new Color(248, 249, 250));
-        chatScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        chatScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER); 
-
         chatContentPanel.add(chatScrollPane, BorderLayout.CENTER);
 
         JPanel messageInputPanel = new JPanel(new BorderLayout(10, 0));
         messageInputPanel.setBorder(new EmptyBorder(15, 20, 20, 20));
         messageInputPanel.setBackground(Color.WHITE);
-        messageInputPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(240, 240, 240)),
-                new EmptyBorder(15, 20, 20, 20)
-        ));
-
-        JPanel inputContainer = new JPanel(new BorderLayout());
-        inputContainer.setBackground(new Color(248, 249, 250));
-        inputContainer.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(230, 230, 230), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
 
         messageInputField = new JTextField();
         messageInputField.setFont(new Font("Arial", Font.PLAIN, 14));
-        messageInputField.setBorder(null);
-        messageInputField.setBackground(new Color(248, 249, 250));
-        messageInputField.addActionListener(e -> sendMessage()); 
+        messageInputField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220)),
+            new EmptyBorder(5, 10, 5, 10)
+        ));
+        messageInputField.addActionListener(e -> sendMessage());
+        messageInputPanel.add(messageInputField, BorderLayout.CENTER);
 
-        inputContainer.add(messageInputField, BorderLayout.CENTER);
-
-        JButton sendButton = new JButton("Send") {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-                if (getModel().isPressed()) {
-                    g2d.setColor(new Color(230, 70, 0));
-                } else if (getModel().isRollover()) {
-                    g2d.setColor(new Color(255, 110, 30));
-                } else {
-                    g2d.setColor(new Color(255, 89, 0));
-                }
-
-                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-
-                g2d.setColor(Color.WHITE);
-                g2d.setFont(getFont());
-                FontMetrics fm = g2d.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth(getText())) / 2;
-                int y = ((getHeight() - fm.getHeight()) / 2) + fm.getAscent();
-                g2d.drawString(getText(), x, y);
-
-                g2d.dispose();
-            }
-        };
-        sendButton.setFont(new Font("Arial", Font.BOLD, 13));
-        sendButton.setForeground(Color.WHITE);
-        sendButton.setFocusPainted(false);
-        sendButton.setBorderPainted(false);
-        sendButton.setContentAreaFilled(false);
-        sendButton.setPreferredSize(new Dimension(70, 35));
-        sendButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton sendButton = new JButton("Send");
         sendButton.addActionListener(e -> sendMessage());
-
-        messageInputPanel.add(inputContainer, BorderLayout.CENTER);
         messageInputPanel.add(sendButton, BorderLayout.EAST);
-
         chatContentPanel.add(messageInputPanel, BorderLayout.SOUTH);
 
         contentPanel.add(userListPanel, BorderLayout.WEST);
         contentPanel.add(chatContentPanel, BorderLayout.CENTER);
-
         mainPanel.add(contentPanel, BorderLayout.CENTER);
         add(mainPanel);
 
+        // Listener ditambahkan setelah semua komponen diinisialisasi
+        userList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                ProductRepository.ChatUser selectedUser = userList.getSelectedValue();
+                if (selectedUser != null && selectedUser.getId() != -1) {
+                    startChatWith(selectedUser.getId(), selectedUser.getUsername());
+                } else if (selectedUser != null && selectedUser.getId() == -1) {
+                    chatHeaderLabel.setText("Pilih kontak chat");
+                    showPlaceholderInChatPanel("Pilih pengguna di daftar kiri untuk memulai chat.");
+                    stopRefreshTimer();
+                }
+            }
+        });
+        
         loadUsers();
-        chatArea.setText("<html><body style='font-family: Arial; font-size: 14pt; color: #666; text-align: center; padding: 50px;'>Pilih pengguna di daftar kiri untuk memulai chat.</body></html>");
+        showPlaceholderInChatPanel("Pilih pengguna di daftar kiri untuk memulai chat.");
+    }
+    
+    // ... (Sisa metode seperti showPlaceholderInChatPanel, createModernHeaderButton, loadUsers, dll. tetap sama) ...
+    private void showPlaceholderInChatPanel(String text) {
+        chatContainerPanel.removeAll();
+        chatContainerPanel.setLayout(new GridBagLayout());
+
+        JLabel placeholderLabel = new JLabel(text);
+        placeholderLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        placeholderLabel.setForeground(Color.GRAY);
+        
+        chatContainerPanel.add(placeholderLabel, new GridBagConstraints());
+        chatContainerPanel.revalidate();
+        chatContainerPanel.repaint();
     }
 
     private JButton createModernHeaderButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.PLAIN, 16));
+        button.setFont(new Font("Dialog", Font.PLAIN, 16));
         button.setForeground(new Color(120, 120, 120));
         button.setBackground(Color.WHITE);
         button.setBorderPainted(false);
@@ -359,6 +285,7 @@ public class ChatPopupUI extends JDialog {
             public void mouseEntered(MouseEvent e) {
                 button.setForeground(new Color(255, 89, 0));
             }
+
             @Override
             public void mouseExited(MouseEvent e) {
                 button.setForeground(new Color(120, 120, 120));
@@ -372,7 +299,7 @@ public class ChatPopupUI extends JDialog {
             userListModel.clear();
             List<ProductRepository.ChatUser> users = ProductRepository.getRecentChatUsersWithLastMessage(currentUserId);
             if (users.isEmpty()) {
-                userListModel.addElement(new ProductRepository.ChatUser(-1, "Belum ada chat.", "")); 
+                userListModel.addElement(new ProductRepository.ChatUser(-1, "Belum ada chat.", ""));
                 userList.setEnabled(false);
             } else {
                 for (ProductRepository.ChatUser user : users) {
@@ -395,9 +322,6 @@ public class ChatPopupUI extends JDialog {
         this.activeChatReceiverId = receiverId;
         this.activeChatReceiverUsername = receiverUsername;
         chatHeaderLabel.setText(receiverUsername);
-
-        chatContentPanel.getComponent(0).repaint(); 
-
         loadChatMessages();
         startRefreshTimer();
 
@@ -407,51 +331,75 @@ public class ChatPopupUI extends JDialog {
                 break;
             }
         }
-        setVisible(true); 
-        messageInputField.requestFocusInWindow(); 
+        setVisible(true);
+        messageInputField.requestFocusInWindow();
     }
-
+    
     private void loadChatMessages() {
         if (activeChatReceiverId == -1) {
-            chatArea.setText("<html><body style='font-family: Arial; font-size: 10pt; color: #666; text-align: center; padding: 50px;'>Pilih pengguna di daftar kiri untuk memulai chat.</body></html>");
+            showPlaceholderInChatPanel("Pilih pengguna untuk memulai chat.");
             return;
         }
 
         try {
-            List<ProductRepository.ChatMessage> messages = ProductRepository.getChatMessages(currentUserId, activeChatReceiverId);
-            StringBuilder sb = new StringBuilder("<html><body style='font-family: Arial; font-size: 10pt; margin: 0; padding: 10px; background-color: #f8f9fa;'>");
+            chatContainerPanel.removeAll();
+            chatContainerPanel.setLayout(new BoxLayout(chatContainerPanel, BoxLayout.Y_AXIS));
 
+            List<ProductRepository.ChatMessage> messages = ProductRepository.getChatMessages(currentUserId, activeChatReceiverId);
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
             for (ProductRepository.ChatMessage msg : messages) {
                 String timestampStr = msg.getTimestamp().format(formatter);
-                String messageHtml;
+                String cleanMessage = escapeHtml(msg.getMessageText());
+                boolean isSender = msg.getSenderId() == currentUserId;
+                
+                JPanel bubbleWrapper = new JPanel(new BorderLayout());
+                bubbleWrapper.setOpaque(false);
+                bubbleWrapper.setBorder(new EmptyBorder(2, 0, 2, 0));
 
-                // Chat kita sendiri (pengirim adalah currentUserId) - di sebelah kanan, teks putih, latar belakang oranye tema
-                if (msg.getSenderId() == currentUserId) {
-                    messageHtml = "<div style='margin: 5px 0; text-align: right;'>" + // Margin diperkecil
-                                  "<div style='display: inline-block; max-width: 65%; background: #FF5900; color: white; padding: 8px 12px; border-radius: 12px 12px 3px 12px; text-align: left; box-shadow: 0 2px 5px rgba(255,89,0,0.2); word-wrap: break-word; font-size: 9pt; line-height: 1.3;'>" + // Padding, border-radius, font-size, dan line-height disesuaikan
-                                  escapeHtml(msg.getMessageText()).replace("\n", "<br>") +
-                                  "</div><br>" +
-                                  "<span style='font-size: 8px; color: #999; margin-right: 5px; margin-top: 2px; display: inline-block;'>" + timestampStr + "</span>" + // Ukuran font timestamp, margin-top
-                                  "</div>";
+                JPanel contentPanel = new JPanel();
+                contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+                contentPanel.setOpaque(false);
+
+                JTextArea textBubble = new JTextArea(cleanMessage);
+                textBubble.setEditable(false);
+                textBubble.setLineWrap(true);
+                textBubble.setWrapStyleWord(true);
+                textBubble.setFont(new Font("Arial", Font.PLAIN, 12));
+                textBubble.setBorder(new EmptyBorder(8, 12, 8, 12));
+                
+                JLabel timestampLabel = new JLabel(timestampStr);
+                timestampLabel.setFont(new Font("Arial", Font.PLAIN, 10));
+                timestampLabel.setForeground(Color.GRAY);
+                timestampLabel.setBorder(new EmptyBorder(2,5,0,5));
+
+                if (isSender) {
+                    textBubble.setBackground(new Color(255, 89, 0));
+                    textBubble.setForeground(Color.WHITE);
+                    contentPanel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+                    timestampLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+                    bubbleWrapper.add(contentPanel, BorderLayout.EAST);
                 } else {
-                    // Chat dari lawan (pengirim bukan currentUserId) - di sebelah kiri, teks hitam, latar belakang abu-abu
-                    messageHtml = "<div style='margin: 5px 0; text-align: left;'>" + // Margin diperkecil
-                                  "<div style='display: inline-block; max-width: 65%; background: #E0E0E0; color: black; padding: 8px 12px; border-radius: 12px 12px 12px 3px; border: 1px solid #D0D0D0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); word-wrap: break-word; font-size: 9pt; line-height: 1.3;'>" + // Padding, border-radius, font-size, dan line-height disesuaikan
-                                  escapeHtml(msg.getMessageText()).replace("\n", "<br>") +
-                                  "</div><br>" +
-                                  "<span style='font-size: 8px; color: #999; margin-left: 5px; margin-top: 2px; display: inline-block;'>" + timestampStr + "</span>" + // Ukuran font timestamp, margin-top
-                                  "</div>";
+                    textBubble.setBackground(new Color(233, 233, 235));
+                    textBubble.setForeground(Color.BLACK);
+                    contentPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    timestampLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    bubbleWrapper.add(contentPanel, BorderLayout.WEST);
                 }
-                sb.append(messageHtml);
+
+                contentPanel.add(textBubble);
+                contentPanel.add(timestampLabel);
+                
+                chatContainerPanel.add(bubbleWrapper);
 
                 if (msg.getReceiverId() == currentUserId && !msg.isRead()) {
                     ProductRepository.markMessagesAsRead(currentUserId, msg.getSenderId());
                 }
             }
-            sb.append("</body></html>");
-            chatArea.setText(sb.toString());
+
+            chatContainerPanel.add(Box.createVerticalGlue());
+            chatContainerPanel.revalidate();
+            chatContainerPanel.repaint();
 
             SwingUtilities.invokeLater(() -> {
                 JScrollBar vertical = chatScrollPane.getVerticalScrollBar();
@@ -460,10 +408,11 @@ public class ChatPopupUI extends JDialog {
 
         } catch (SQLException e) {
             System.err.println("Error loading chat messages: " + e.getMessage());
+            showPlaceholderInChatPanel("Gagal memuat pesan chat.");
             JOptionPane.showMessageDialog(this, "Gagal memuat pesan chat. Cek koneksi database.", "Error Database", JOptionPane.ERROR_MESSAGE);
         }
     }
-
+    
     private void sendMessage() {
         String messageText = messageInputField.getText().trim();
         if (activeChatReceiverId == -1) {
@@ -477,9 +426,9 @@ public class ChatPopupUI extends JDialog {
         try {
             boolean success = ProductRepository.sendMessage(currentUserId, activeChatReceiverId, messageText);
             if (success) {
-                messageInputField.setText(""); 
-                loadChatMessages(); 
-                loadUsers(); 
+                messageInputField.setText("");
+                loadChatMessages();
+                loadUsers();
             } else {
                 JOptionPane.showMessageDialog(this, "Gagal mengirim pesan.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -493,14 +442,14 @@ public class ChatPopupUI extends JDialog {
         if (refreshTimer != null) {
             refreshTimer.cancel();
         }
-        refreshTimer = new Timer();
+        refreshTimer = new Timer("ChatRefreshTimer", true);
         refreshTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
                 if (activeChatReceiverId != -1 && isVisible()) {
                     SwingUtilities.invokeLater(() -> {
                         loadChatMessages();
-                        loadUsers(); 
+                        loadUsers();
                     });
                 }
             }
@@ -519,13 +468,13 @@ public class ChatPopupUI extends JDialog {
             setVisible(false);
             stopRefreshTimer();
         } else {
-            loadUsers(); 
+            loadUsers();
             setVisible(true);
             if (activeChatReceiverId != -1) {
-                startRefreshTimer(); 
+                startRefreshTimer();
             } else {
                 chatHeaderLabel.setText("Pilih kontak chat");
-                chatArea.setText("<html><body style='font-family: Arial; font-size: 14pt; color: #666; text-align: center; padding: 50px;'>Pilih pengguna di daftar kiri untuk memulai chat.</body></html>");
+                showPlaceholderInChatPanel("Pilih pengguna di daftar kiri untuk memulai chat.");
             }
             if (getOwner() != null) {
                 int x = getOwner().getX() + getOwner().getWidth() - getWidth() - 20;
@@ -545,11 +494,11 @@ public class ChatPopupUI extends JDialog {
                 startChatWith(firstUser.getId(), firstUser.getUsername());
             } else {
                 chatHeaderLabel.setText("Belum ada chat.");
-                chatArea.setText("<html><body style='font-family: Arial; font-size: 14pt; color: #666; text-align: center; padding: 50px;'>Mulai chat dari halaman produk.</body></html>");
+                showPlaceholderInChatPanel("Mulai chat dari halaman produk.");
             }
-        } else if (userListModel.isEmpty() || (userListModel.size() == 1 && userListModel.getElementAt(0).getId() == -1)){
+        } else if (userListModel.isEmpty() || (userListModel.size() == 1 && userListModel.getElementAt(0).getId() == -1)) {
             chatHeaderLabel.setText("Belum ada chat.");
-            chatArea.setText("<html><body style='font-family: Arial; font-size: 14pt; color: #666; text-align: center; padding: 50px;'>Mulai chat dari halaman produk.</body></html>");
+            showPlaceholderInChatPanel("Mulai chat dari halaman produk.");
         }
         toggleVisibility();
     }
@@ -564,7 +513,7 @@ public class ChatPopupUI extends JDialog {
 
     @Override
     public void dispose() {
-        stopRefreshTimer(); 
+        stopRefreshTimer();
         super.dispose();
     }
 }
