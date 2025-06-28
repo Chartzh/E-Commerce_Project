@@ -13,8 +13,8 @@ import java.sql.SQLException;
 import javax.swing.table.TableCellRenderer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.io.File; // Tambahkan import ini untuk File
-import java.io.IOException; // Tambahkan import ini untuk IOException
+import java.io.File; 
+import java.io.IOException; 
 
 // Import untuk JFreeChart
 import org.jfree.chart.ChartFactory;
@@ -54,9 +54,10 @@ public class ManagerDashboardUI extends JFrame {
     private JLabel lblTotalTransactionsValue;
     private JLabel lblTotalRevenueValue;
 
-    // Variabel untuk fitur ekspor Excel
-    private ExportExcelService exportService; // Deklarasi ExportExcelService
-    private JLabel exportStatusLabel; // Deklarasi JLabel untuk status ekspor di dashboard panel
+    // Variabel untuk fitur ekspor
+    private ExportExcelService exportService; 
+    private ExportPdfService exportPdfService; // Deklarasi ExportPdfService
+    private JLabel exportStatusLabel; 
 
     public ManagerDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
@@ -68,8 +69,9 @@ public class ManagerDashboardUI extends JFrame {
             return;
         }
 
-        // Inisialisasi ExportExcelService dengan user yang sedang login
+        // Inisialisasi Export Services dengan user yang sedang login
         exportService = new ExportExcelService(currentUser); 
+        exportPdfService = new ExportPdfService(currentUser); // Inisialisasi ExportPdfService
 
         setTitle("Quantra - Operation Manager Dashboard");
         setSize(1200, 800);
@@ -136,7 +138,7 @@ public class ManagerDashboardUI extends JFrame {
 
         // Navigation items
         String[] navItems = {"Dashboard", "User Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; // Settings akan dialihkan ke Profile untuk contoh ini
+        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; 
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -491,17 +493,18 @@ public class ManagerDashboardUI extends JFrame {
         exportControlPanel.setBackground(Color.WHITE);
         exportControlPanel.setBorder(new EmptyBorder(10, 0, 10, 0)); 
 
-        JButton exportToExcelButton = new JButton("Ekspor Laporan Penjualan ke Excel");
-        exportToExcelButton.setBackground(new Color(74, 110, 255)); // BLUE_PRIMARY
-        exportToExcelButton.setForeground(Color.WHITE);
-        exportToExcelButton.setBorderPainted(false);
-        exportToExcelButton.setFocusPainted(false);
-        exportToExcelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // Mengubah tombol menjadi tombol Ekspor universal
+        JButton exportButton = new JButton("Ekspor Laporan"); // Ubah teks tombol
+        exportButton.setBackground(new Color(74, 110, 255)); // BLUE_PRIMARY
+        exportButton.setForeground(Color.WHITE);
+        exportButton.setBorderPainted(false);
+        exportButton.setFocusPainted(false);
+        exportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        exportToExcelButton.addActionListener(new ActionListener() {
+        exportButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                exportSalesDataToExcelAction(); // Panggil metode ekspor
+                showExportOptionDialog(); // Panggil dialog pilihan
             }
         });
 
@@ -509,7 +512,7 @@ public class ManagerDashboardUI extends JFrame {
         exportStatusLabel.setForeground(Color.BLACK); 
         exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
 
-        exportControlPanel.add(exportToExcelButton);
+        exportControlPanel.add(exportButton); // Gunakan tombol yang sudah diubah
         exportControlPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi
         exportControlPanel.add(exportStatusLabel);
 
@@ -580,6 +583,9 @@ public class ManagerDashboardUI extends JFrame {
                     "Gagal memuat data penjualan bulanan dari database.\n" + e.getMessage(),
                     "Error Database",
                     JOptionPane.ERROR_MESSAGE);
+        } finally {
+            // Pastikan koneksi ditutup jika tidak menggunakan try-with-resources
+            // DatabaseConnection.closeConnection(conn, stmt, rs); // Dihapus karena sudah try-with-resources
         }
 
         JFreeChart barChart = ChartFactory.createBarChart(
@@ -1494,10 +1500,55 @@ public class ManagerDashboardUI extends JFrame {
         }
     }
 
-    // Metode untuk aksi ekspor data penjualan ke Excel (sama seperti di SupervisorDashboardUI)
-    private void exportSalesDataToExcelAction() {
-        String defaultPath = exportService.getDefaultExcelPath();
-        File defaultFile = new File(defaultPath);
+    // Metode untuk aksi ekspor data penjualan (diubah namanya dan menerima enum)
+    private void showExportOptionDialog() {
+        String[] options = {"Excel", "PDF"};
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            "Pilih format ekspor:",
+            "Pilihan Ekspor Laporan",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0] 
+        );
+
+        if (choice == 0) { // Excel
+            exportSalesData(ExportFormat.EXCEL);
+        } else if (choice == 1) { // PDF
+            exportSalesData(ExportFormat.PDF);
+        } else {
+            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
+            exportStatusLabel.setText("Ekspor dibatalkan.");
+        }
+    }
+    
+    // Enum untuk format ekspor (harus dideklarasikan di luar metode, bisa di dalam kelas ManagerDashboardUI)
+    private enum ExportFormat {
+        EXCEL, PDF
+    }
+
+    private void exportSalesData(ExportFormat format) {
+        String defaultFileName;
+        String fileExtension;
+        String dialogTitle;
+        
+        // Tidak perlu deklarasi variabel lokal currentExportExcelService dan currentExportPdfService
+        // karena kita akan langsung menggunakan field kelas exportService dan exportPdfService
+
+        if (format == ExportFormat.EXCEL) {
+            defaultFileName = "LaporanPenjualan.xlsx";
+            fileExtension = "xlsx";
+            dialogTitle = "Simpan Laporan Penjualan (Excel)";
+        } else { // PDF
+            defaultFileName = "LaporanPenjualan.pdf";
+            fileExtension = "pdf";
+            dialogTitle = "Simpan Laporan Penjualan (PDF)";
+        }
+
+        String userHome = System.getProperty("user.home");
+        File defaultFile = new File(userHome + File.separator + "Downloads" + File.separator + defaultFileName);
 
         File parentDir = defaultFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
@@ -1506,23 +1557,22 @@ public class ManagerDashboardUI extends JFrame {
         }
 
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Simpan Laporan Penjualan");
+        fileChooser.setDialogTitle(dialogTitle);
         fileChooser.setSelectedFile(defaultFile);
-
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(format.name() + " Files (*." + fileExtension + ")", fileExtension));
 
         int userSelection = fileChooser.showSaveDialog(this);
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToSave = fileChooser.getSelectedFile();
-            if (!fileToSave.getName().toLowerCase().endsWith(".xlsx")) {
-                fileToSave = new File(fileToSave.getAbsolutePath() + ".xlsx");
+            if (!fileToSave.getName().toLowerCase().endsWith("." + fileExtension)) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + "." + fileExtension);
             }
             String finalPath = fileToSave.getAbsolutePath();
             System.out.println("DEBUG: User selected path: " + finalPath);
 
-            exportStatusLabel.setForeground(Color.BLACK);
-            exportStatusLabel.setText("Mengekspor data penjualan ke Excel... Mohon tunggu.");
+            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
+            exportStatusLabel.setText("Mengekspor data penjualan ke " + format.name() + "... Mohon tunggu.");
             
             new SwingWorker<Void, Void>() {
                 String message;
@@ -1531,8 +1581,14 @@ public class ManagerDashboardUI extends JFrame {
                 @Override
                 protected Void doInBackground() throws Exception {
                     try {
-                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService.");
-                        exportService.exportSalesDataToExcel(finalPath);
+                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService for " + format.name() + ".");
+                        if (format == ExportFormat.EXCEL) {
+                            // Menggunakan field kelas 'exportService' secara langsung
+                            exportService.exportSalesDataToExcel(finalPath);
+                        } else { // PDF
+                            // Menggunakan field kelas 'exportPdfService' secara langsung
+                            exportPdfService.exportSalesDataToPdf(finalPath);
+                        }
                         message = "Data berhasil diekspor ke:<br>" + finalPath;
                         msgColor = new Color(40, 167, 69); // SUCCESS_GREEN
                         System.out.println("DEBUG: Export successful in SwingWorker.");
@@ -1541,6 +1597,11 @@ public class ManagerDashboardUI extends JFrame {
                         msgColor = new Color(220, 53, 69); // CANCEL_RED
                         System.err.println("DEBUG: Export failed in SwingWorker.");
                         ex.printStackTrace(); 
+                    } catch (Throwable ex) { 
+                        message = "Terjadi kesalahan kritis saat ekspor ke " + format.name() + ": " + ex.getMessage();
+                        msgColor = new Color(220, 53, 69); // CANCEL_RED
+                        System.err.println("DEBUG: Critical error in SwingWorker during PDF export: " + ex.getClass().getName());
+                        ex.printStackTrace();
                     }
                     return null;
                 }
@@ -1558,7 +1619,7 @@ public class ManagerDashboardUI extends JFrame {
                 }
             }.execute();
         } else {
-            exportStatusLabel.setForeground(Color.BLACK);
+            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
             exportStatusLabel.setText("Ekspor dibatalkan.");
             System.out.println("DEBUG: Export cancelled by user.");
         }

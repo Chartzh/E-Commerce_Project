@@ -36,8 +36,10 @@ public class SupervisorDashboardUI extends JFrame {
     private ChatFloatingButton chatFloatingButton;
     private ChatPopupUI chatPopupUI;
 
+    // Field untuk Export Services
     private ExportExcelService exportService;
-    private JLabel exportStatusLabel; // Deklarasi JLabel untuk status ekspor di panel pesanan
+    private ExportPdfService exportPdfService;
+    private JLabel exportStatusLabel; 
 
     // Warna-warna yang sudah Anda definisikan
     private static final Color ORANGE_PRIMARY = new Color(255, 102, 0);
@@ -64,7 +66,9 @@ public class SupervisorDashboardUI extends JFrame {
             return;
         }
 
-        exportService = new ExportExcelService(currentUser); // Inisialisasi ExportExcelService
+        // Inisialisasi Export Services dengan currentUser
+        exportService = new ExportExcelService(currentUser);
+        exportPdfService = new ExportPdfService(currentUser);
 
         setTitle("Quantra - Dashboard " + currentUser.getRole());
         setSize(1200, 800);
@@ -72,7 +76,7 @@ public class SupervisorDashboardUI extends JFrame {
         setLocationRelativeTo(null);
 
         IconUtil.setIcon(this);
-        setLayout(null); // Menggunakan Absolute Layout untuk penempatan panel
+        setLayout(null);
 
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
@@ -82,7 +86,7 @@ public class SupervisorDashboardUI extends JFrame {
         JPanel headerPanel = createHeaderPanel(currentUser);
         
         JPanel productPanel = createProductManagementPanel();
-        JPanel ordersPanel = createOrdersPanel(); // ordersPanel dibuat di sini
+        JPanel ordersPanel = createOrdersPanel();
         ProfileUI profilePanel = new ProfileUI();
         
         mainPanel.add(productPanel, "Produk");
@@ -535,15 +539,14 @@ public class SupervisorDashboardUI extends JFrame {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         JButton btnCancel = new JButton("Batal");
-        JButton btnSave = new JButton("Simpan");
-
-        btnSave.setBackground(ORANGE_PRIMARY);
-        btnSave.setForeground(WHITE);
-        btnSave.setFocusPainted(false);
-
         btnCancel.setBackground(new Color(108, 117, 125));
         btnCancel.setForeground(WHITE);
         btnCancel.setFocusPainted(false);
+
+        JButton btnSave = new JButton("Simpan");
+        btnSave.setBackground(ORANGE_PRIMARY);
+        btnSave.setForeground(WHITE);
+        btnSave.setFocusPainted(false);
 
         btnCancel.addActionListener(e -> dialog.dispose());
 
@@ -671,31 +674,30 @@ public class SupervisorDashboardUI extends JFrame {
         filterPanel.add(new JLabel("Status:"));
         filterPanel.add(orderStatusFilterCombo);
 
-        // --- START: Tambahkan Tombol Ekspor ke Excel ---
-        JButton exportToExcelButton = new JButton("Ekspor ke Excel");
-        exportToExcelButton.setBackground(BLUE_PRIMARY);
-        exportToExcelButton.setForeground(WHITE);
-        exportToExcelButton.setBorderPainted(false);
-        exportToExcelButton.setFocusPainted(false);
-        exportToExcelButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        JButton exportButton = new JButton("Ekspor Laporan");
+        exportButton.setBackground(BLUE_PRIMARY);
+        exportButton.setForeground(WHITE);
+        exportButton.setBorderPainted(false);
+        exportButton.setFocusPainted(false);
+        exportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        exportToExcelButton.addActionListener(new ActionListener() {
+        exportButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                exportSalesDataToExcelAction();
+                showExportOptionDialog();
             }
         });
 
-        filterPanel.add(Box.createHorizontalGlue()); // Ini akan mendorong tombol ke kanan
-        filterPanel.add(exportToExcelButton);
+        filterPanel.add(Box.createHorizontalGlue());
+        filterPanel.add(exportButton);
         
-        // Inisialisasi exportStatusLabel di sini dengan teks awal yang informatif
+        // --- Perbaikan: HANYA SATU KALI INISIALISASI exportStatusLabel ---
         exportStatusLabel = new JLabel("Siap untuk ekspor.");
         exportStatusLabel.setForeground(TEXT_DARK);
         exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        filterPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi antara tombol dan label
+        filterPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         filterPanel.add(exportStatusLabel);
-        // --- END: Tambahkan Tombol Ekspor ke Excel ---
+        // --- Akhir Perbaikan ---
 
         String[] columns = {"ID Pesanan", "Pelanggan", "Tanggal Pesanan", "Total Harga", "Status", "Aksi"};
         orderTableModel = new DefaultTableModel(columns, 0) {
@@ -738,13 +740,56 @@ public class SupervisorDashboardUI extends JFrame {
 
         return ordersPanel;
     }
+    
+    private void showExportOptionDialog() {
+        String[] options = {"Excel", "PDF"};
+        int choice = JOptionPane.showOptionDialog(
+            this,
+            "Pilih format ekspor:",
+            "Pilihan Ekspor Laporan",
+            JOptionPane.DEFAULT_OPTION,
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            options,
+            options[0] // Default pilihan
+        );
 
-    private void exportSalesDataToExcelAction() {
-        // Mendapatkan path default dari ExportExcelService
-        String defaultPath = exportService.getDefaultExcelPath();
-        File defaultFile = new File(defaultPath);
+        if (choice == 0) { // Excel
+            exportSalesData(ExportFormat.EXCEL);
+        } else if (choice == 1) { // PDF
+            exportSalesData(ExportFormat.PDF);
+        } else {
+            // Pengguna menutup dialog atau membatalkan
+            exportStatusLabel.setForeground(TEXT_DARK);
+            exportStatusLabel.setText("Ekspor dibatalkan.");
+        }
+    }
+    
+    private enum ExportFormat {
+        EXCEL, PDF
+    }
 
-        // Pastikan direktori ada
+    private void exportSalesData(ExportFormat format) {
+        String defaultFileName;
+        String fileExtension;
+        String dialogTitle;
+        
+        // Variabel local currentExportExcelService dan currentExportPdfService dihapus
+        // dan digantikan dengan penggunaan langsung field kelas exportService dan exportPdfService
+
+        if (format == ExportFormat.EXCEL) {
+            defaultFileName = "LaporanPenjualan.xlsx";
+            fileExtension = "xlsx";
+            dialogTitle = "Simpan Laporan Penjualan (Excel)";
+        } else { // PDF
+            defaultFileName = "LaporanPenjualan.pdf";
+            fileExtension = "pdf";
+            dialogTitle = "Simpan Laporan Penjualan (PDF)";
+        }
+
+        String userHome = System.getProperty("user.home");
+        File defaultFile = new File(userHome + File.separator + "Downloads" + File.separator + defaultFileName);
+
         File parentDir = defaultFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
             boolean dirsCreated = parentDir.mkdirs();
@@ -752,27 +797,23 @@ public class SupervisorDashboardUI extends JFrame {
         }
 
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Simpan Laporan Penjualan");
-        fileChooser.setSelectedFile(defaultFile); // Set nama file default
-
-        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Excel Files (*.xlsx)", "xlsx"));
+        fileChooser.setDialogTitle(dialogTitle);
+        fileChooser.setSelectedFile(defaultFile);
+        fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(format.name() + " Files (*." + fileExtension + ")", fileExtension));
 
         int userSelection = fileChooser.showSaveDialog(this);
 
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             File fileToSave = fileChooser.getSelectedFile();
-            // Pastikan ekstensi .xlsx ada
-            if (!fileToSave.getName().toLowerCase().endsWith(".xlsx")) {
-                fileToSave = new File(fileToSave.getAbsolutePath() + ".xlsx");
+            if (!fileToSave.getName().toLowerCase().endsWith("." + fileExtension)) {
+                fileToSave = new File(fileToSave.getAbsolutePath() + "." + fileExtension);
             }
             String finalPath = fileToSave.getAbsolutePath();
             System.out.println("DEBUG: User selected path: " + finalPath);
 
-            // Perbarui status label saat proses dimulai
             exportStatusLabel.setForeground(TEXT_DARK);
-            exportStatusLabel.setText("Mengekspor data penjualan ke Excel... Mohon tunggu.");
-            
-            // Jalankan proses ekspor di thread terpisah agar UI tidak freeze
+            exportStatusLabel.setText("Mengekspor data penjualan ke " + format.name() + "... Mohon tunggu.");
+
             new SwingWorker<Void, Void>() {
                 String message;
                 Color msgColor;
@@ -780,8 +821,14 @@ public class SupervisorDashboardUI extends JFrame {
                 @Override
                 protected Void doInBackground() throws Exception {
                     try {
-                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService.");
-                        exportService.exportSalesDataToExcel(finalPath);
+                        System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService for " + format.name() + ".");
+                        if (format == ExportFormat.EXCEL) {
+                            // Menggunakan field kelas 'exportService' secara langsung
+                            exportService.exportSalesDataToExcel(finalPath);
+                        } else { // PDF
+                            // Menggunakan field kelas 'exportPdfService' secara langsung
+                            exportPdfService.exportSalesDataToPdf(finalPath);
+                        }
                         message = "Data berhasil diekspor ke:<br>" + finalPath;
                         msgColor = SUCCESS_GREEN;
                         System.out.println("DEBUG: Export successful in SwingWorker.");
@@ -789,14 +836,18 @@ public class SupervisorDashboardUI extends JFrame {
                         message = "Gagal mengekspor data: " + ex.getMessage();
                         msgColor = CANCEL_RED;
                         System.err.println("DEBUG: Export failed in SwingWorker.");
-                        ex.printStackTrace(); // Cetak stack trace ke konsol untuk debugging
+                        ex.printStackTrace();
+                    } catch (Throwable ex) { // Tangkap Throwable untuk PDFBox Font related errors
+                        message = "Terjadi kesalahan kritis saat ekspor ke " + format.name() + ": " + ex.getMessage();
+                        msgColor = CANCEL_RED;
+                        System.err.println("DEBUG: Critical error in SwingWorker during PDF export: " + ex.getClass().getName());
+                        ex.printStackTrace();
                     }
                     return null;
                 }
 
                 @Override
                 protected void done() {
-                    // Pastikan message tidak null sebelum digunakan
                     if (message == null) {
                         message = "Terjadi kesalahan tidak terduga, pesan status kosong.";
                         msgColor = CANCEL_RED;
@@ -1024,20 +1075,17 @@ public class SupervisorDashboardUI extends JFrame {
     }
 
     class OrderActionButtonRenderer extends JPanel implements TableCellRenderer {
-        private JButton viewDetailsBtn;
-        private JComboBox<String> statusDropdown;
-
         public OrderActionButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
             setOpaque(true);
 
-            viewDetailsBtn = new JButton("Lihat Detail");
+            JButton viewDetailsBtn = new JButton("Lihat Detail"); // Declare locally since it's only rendered, not interacted with directly via field
             viewDetailsBtn.setBackground(BLUE_PRIMARY);
             viewDetailsBtn.setForeground(WHITE);
             viewDetailsBtn.setFont(new Font("Arial", Font.PLAIN, 12));
             viewDetailsBtn.setFocusPainted(false);
 
-            statusDropdown = new StatusComboBox("");
+            JComboBox<String> statusDropdown = new StatusComboBox(""); // Declare locally
             statusDropdown.setFont(new Font("Arial", Font.PLAIN, 12));
             statusDropdown.setBackground(Color.WHITE);
             statusDropdown.setForeground(TEXT_DARK);
@@ -1056,6 +1104,10 @@ public class SupervisorDashboardUI extends JFrame {
             } else {
                 setBackground(table.getBackground());
             }
+            // Access components from the JPanel directly if they are already added
+            JButton viewDetailsBtn = (JButton) getComponent(0); // Assuming it's the first component
+            JComboBox<String> statusDropdown = (JComboBox<String>) getComponent(1); // Assuming it's the second
+
             String orderStatusDb = (String) table.getValueAt(row, 5);
 
             viewDetailsBtn.setVisible(true);
