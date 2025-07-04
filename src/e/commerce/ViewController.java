@@ -11,7 +11,7 @@ public interface ViewController {
     void showOrdersView();
     void showCheckoutView();
     void showAddressView();
-    void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService);
+    void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount);
     void showSuccessView(int orderId);
     void showOrderDetailView(int orderId);
     void showChatWithSeller(int sellerId, String sellerUsername);

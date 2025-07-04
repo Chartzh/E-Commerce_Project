@@ -461,18 +461,20 @@ public class FavoritesUI extends JPanel {
         private String condition;
         private String minOrder;
         private String brand;
-        private Color bgColor;
+        private Color bgColor; // Ini sudah benar, diinisialisasi dari hexColor
         private int sellerId;
+        private double weight;
         
         // --- DIHAPUS: rawImageDataList dan rawFileExtensionList
         // private List<byte[]> rawImageDataList;
         // private List<String> rawFileExtensionList;
 
-        protected List<Image> loadedImages;
+        protected List<Image> loadedImages; // Ini yang akan diisi
 
+        // --- KONSTRUKTOR YANG DIREVISI: Menggunakan List<Image> BUKAN List<String> ---
         public FavoriteItem(int id, String name, String description, double price, double originalPrice,
                             int stock, String condition, String minOrder, String brand,
-                            String hexColor, List<String> imagePaths, int sellerId) { 
+                            String hexColor, List<Image> loadedImages, int sellerId, double weight) { // <<< DIREVISI DI SINI
             this.id = id;
             this.name = name;
             this.description = description;
@@ -482,14 +484,30 @@ public class FavoritesUI extends JPanel {
             this.condition = condition;
             this.minOrder = minOrder;
             this.brand = brand;
-            this.bgColor = Color.decode(hexColor);
-            this.loadedImages = new ArrayList<>(); // Inisialisasi list kosong
+            try { // Tambahkan try-catch untuk Color.decode
+                this.bgColor = Color.decode(hexColor);
+            } catch (NumberFormatException e) {
+                this.bgColor = Color.LIGHT_GRAY; // Fallback jika hexColor tidak valid
+                System.err.println("Invalid hexColor for FavoriteItem: " + hexColor + ". Defaulting to Light Gray.");
+            }
+            this.loadedImages = loadedImages != null ? loadedImages : new ArrayList<>(); // Inisialisasi dari parameter
             this.sellerId = sellerId;
+            this.weight = weight;
         }
+
+        // --- TAMBAHAN: Konstruktor overload agar kode lama (tanpa weight) tidak error (opsional) ---
+        public FavoriteItem(int id, String name, String description, double price, double originalPrice,
+                            int stock, String condition, String minOrder, String brand,
+                            String hexColor, List<Image> loadedImages, int sellerId) {
+            this(id, name, description, price, originalPrice, stock, condition, minOrder, brand,
+                 hexColor, loadedImages, sellerId, 0.0); // Panggil konstruktor utama dengan weight 0.0
+        }
+
 
         public void setLoadedImages(List<Image> images) {
             this.loadedImages = images;
         }
+        public void setWeight(double weight) { this.weight = weight; }
 
         public int getId() { return id; }
         public int getSellerId() { return sellerId; }
@@ -503,5 +521,12 @@ public class FavoritesUI extends JPanel {
         public String getBrand() { return brand; }
         public Color getBgColor() { return bgColor; }
         public List<Image> getLoadedImages() { return loadedImages; }
+        public double getWeight() { return weight; }
+
+        // --- Tambahan: getProductId() yang diperlukan SupervisorDashboardUI ---
+        public int getProductId() {
+            return this.id;
+        }
+        // --- Akhir Tambahan ---
     }
 }

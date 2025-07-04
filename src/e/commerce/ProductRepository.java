@@ -24,7 +24,7 @@ import java.sql.Timestamp;
 
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
-import e.commerce.FavoritesUI.FavoriteItem;
+import e.commerce.FavoritesUI.FavoriteItem; // Pastikan import ini benar
 import java.awt.Graphics2D;
 import java.io.IOException;
 
@@ -95,7 +95,7 @@ public class ProductRepository {
      * Digunakan untuk tampilan detail produk di mana semua gambar diperlukan.
      * @param productId ID produk.
      * @param rs ResultSet yang sedang aktif, digunakan untuk memuat gambar jika tidak di cache.
-     * @param firstRowData List of byte arrays dari gambar produk
+     * @param isFirstFetch boolean yang menunjukkan apakah ini fetch pertama untuk detail produk ini
      * @return List of java.awt.Image untuk semua gambar produk.
      * @throws SQLException jika terjadi kesalahan database saat memuat dari ResultSet.
      */
@@ -106,21 +106,38 @@ public class ProductRepository {
         }
 
         List<Image> images = new ArrayList<>();
-        // Jika ini adalah fetch pertama atau tidak di cache, muat semua gambar dari ResultSet
-        // Asumsi ResultSet akan di-rewind atau dikelola oleh pemanggil untuk mendapatkan semua baris gambar.
-        // Jika rs sudah di posisi yang benar dan akan diiterasi untuk semua gambar:
-        // (Logika ini akan diintegrasikan langsung ke getProductById)
-
         // Untuk tujuan caching: kumpulkan semua gambar yang bisa ditemukan dari DB
         List<byte[]> allImageDataBytes = new ArrayList<>();
-        rs.beforeFirst(); // Pastikan ResultSet berada di awal
-        while(rs.next()){
+        // --- Perbaikan: Pastikan rs.beforeFirst() dilakukan sebelum iterasi
+        // Ini memastikan ResultSet bisa diulang atau diposisikan ulang
+        if (rs != null) { // Tambahkan null check untuk rs
+            try {
+                rs.beforeFirst(); 
+            } catch (SQLException e) {
+                // Handle the exception if the ResultSet is not scrollable (TYPE_FORWARD_ONLY)
+                // In this case, we might need to re-execute the query or handle it differently.
+                // For now, print a warning and proceed without beforeFirst().
+                System.err.println("Warning: ResultSet is not scrollable. Cannot use rs.beforeFirst(). " + e.getMessage());
+                // As a fallback, if ResultSet is not scrollable, you might need to re-execute the query
+                // or ensure the initial query setup allows for scrolling.
+                // For this scenario, assuming getProductById ensures scrollable ResultSet.
+            }
+        }
+
+        while(rs != null && rs.next()){ // Tambahkan null check untuk rs
             byte[] imageData = rs.getBytes("image_data");
             if(imageData != null){
                 allImageDataBytes.add(imageData);
             }
         }
-        rs.first(); // Kembali ke baris pertama setelah mengumpulkan semua byte
+        if (rs != null) { // Tambahkan null check untuk rs
+            try {
+                rs.first(); // Kembali ke baris pertama setelah mengumpulkan semua byte
+            } catch (SQLException e) {
+                System.err.println("Warning: ResultSet is not scrollable. Cannot use rs.first(). " + e.getMessage());
+            }
+        }
+        // --- End Perbaikan ---
 
         if(!allImageDataBytes.isEmpty()){
             for (byte[] imageData : allImageDataBytes) {
@@ -161,10 +178,9 @@ public class ProductRepository {
         private double originalPrice;
         private int quantity;
         private String imageColor; // Warna hex untuk fallback/placeholder
-        // private byte[] imageData;    // Data gambar BLOB - DIHAPUS karena akan pakai Image
-        // private String fileExtension; // Ekstensi file untuk BLOB - DIHAPUS
-        private Image loadedImage; // --- REVISI: Tambah properti ini ---
+        private Image loadedImage; 
         private boolean isSelected;  // Properti untuk mengelola pilihan di CartUI
+        private double weight; //
 
         /**
          * Konstruktor untuk item keranjang dengan data gambar BLOB.
@@ -176,16 +192,18 @@ public class ProductRepository {
          * @param imageColor Warna fallback/placeholder (hex string).
          * @param imageData Data gambar BLOB sebagai array byte.
          * @param fileExtension Ekstensi file untuk BLOB (misal: "jpg", "png").
+         * @param weight Berat produk dalam kg.
          */
-        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor, byte[] imageData, String fileExtension) {
+        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor, byte[] imageData, String fileExtension, double weight) {
             this.id = id;
             this.name = name;
             this.price = price;
             this.originalPrice = originalPrice;
             this.quantity = quantity;
             this.imageColor = imageColor;
-            this.loadedImage = loadImageFromBytes(imageData); // --- REVISI: Langsung load image ---
-            this.isSelected = true; // Secara default terpilih saat dimuat ke UI keranjang
+            this.loadedImage = loadImageFromBytes(imageData);
+            this.isSelected = true;
+            this.weight = weight;
         }
 
         /**
@@ -197,9 +215,10 @@ public class ProductRepository {
          * @param originalPrice Harga asli produk.
          * @param quantity Kuantitas item di keranjang.
          * @param imageColor Warna fallback/placeholder (hex string).
+         * @param weight Berat produk dalam kg.
          */
-        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor) {
-            this(id, name, price, originalPrice, quantity, imageColor, null, null);
+        public CartItem(int id, String name, double price, double originalPrice, int quantity, String imageColor, double weight) {
+            this(id, name, price, originalPrice, quantity, imageColor, null, null, weight);
         }
 
         // --- Getters ---
@@ -209,10 +228,9 @@ public class ProductRepository {
         public double getOriginalPrice() { return originalPrice; }
         public int getQuantity() { return quantity; }
         public String getImageColor() { return imageColor; }
-        // public byte[] getImageData() { return imageData; } // DIHAPUS
-        // public String getFileExtension() { return fileExtension; } // DIHAPUS
-        public Image getLoadedImage() { return loadedImage; } // --- REVISI: Getter baru ---
+        public Image getLoadedImage() { return loadedImage; }
         public boolean isSelected() { return isSelected; }
+        public double getWeight() { return weight; }
 
         // --- Setters ---
         public void setQuantity(int quantity) {
@@ -223,12 +241,15 @@ public class ProductRepository {
             this.isSelected = selected;
         }
         
-        public void setLoadedImage(Image loadedImage) { // --- REVISI: Setter baru ---
+        public void setLoadedImage(Image loadedImage) { 
             this.loadedImage = loadedImage;
+        }
+        
+        public void setWeight(double weight) {
+            this.weight = weight;
         }
 
 
-        // --- Properti yang Dihitung ---
         public double getTotal() {
             return price * quantity;
         }
@@ -413,9 +434,7 @@ public class ProductRepository {
         private int quantity; // order_items.quantity
         private double pricePerItem; // order_items.price_per_item
         private double originalPricePerItem; // order_items.original_price_per_item
-        // private byte[] imageData; // DIHAPUS
-        // private String fileExtension; // DIHAPUS
-        private Image loadedImage; // --- REVISI: Tambah properti ini ---
+        private Image loadedImage; 
         private String brand;
         private String sellerName; // Nama penjual produk ini
 
@@ -428,16 +447,14 @@ public class ProductRepository {
             this.quantity = quantity;
             this.pricePerItem = pricePerItem;
             this.originalPricePerItem = originalPricePerItem;
-            this.loadedImage = loadImageFromBytes(imageData); // --- REVISI: Langsung load image ---
+            this.loadedImage = loadImageFromBytes(imageData); 
             this.brand = brand;
             this.sellerName = sellerName;
         }
 
         // --- Getters ---
-        // public byte[] getImageData() { return imageData; } // DIHAPUS
-        public Image getLoadedImage() { return loadedImage; } // --- REVISI: Getter baru ---
+        public Image getLoadedImage() { return loadedImage; } 
         public String getBrand() { return brand; }
-        // public String getFileExtension() { return fileExtension; } // DIHAPUS
         public String getSellerName() { return sellerName; }
         public int getId() { return id; }
         public int getProductId() { return productId; }
@@ -446,7 +463,7 @@ public class ProductRepository {
         public double getPricePerItem() { return pricePerItem; }
         public double getOriginalPricePerItem() { return originalPricePerItem; }
         
-        public void setLoadedImage(Image loadedImage) { // --- REVISI: Setter baru ---
+        public void setLoadedImage(Image loadedImage) { 
             this.loadedImage = loadedImage;
         }
     }
@@ -459,7 +476,7 @@ public class ProductRepository {
         private String username; // users.username
         private String lastMessage;
 
-        public ChatUser(int id, String username, String lastMessage) { // <--- KONSTRUKTOR BARU (SUDAH ADA di kode Anda)
+        public ChatUser(int id, String username, String lastMessage) {
             this.id = id;
             this.username = username;
             this.lastMessage = lastMessage;
@@ -485,7 +502,7 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang merepresentasikan semua produk.
      */
     public static List<FavoriteItem> getAllProducts() {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension FROM products p " +
                      "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE"; 
 
@@ -506,21 +523,20 @@ public class ProductRepository {
                 String minOrder = rs.getString("min_order");
                 String brand = rs.getString("brand");
                 int sellerId = rs.getInt("seller_id");
+                double weight = rs.getDouble("weight"); 
                 
                 String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
                 byte[] imageData = rs.getBytes("image_data");
-                String fileExtension = rs.getString("file_extension"); // Masih perlu untuk konversi
+                String fileExtension = rs.getString("file_extension");
 
                 FavoriteItem product = new FavoriteItem(
                     id, name, description, price, originalPrice,
                     stock, condition, minOrder, brand,
-                    hexColor, null, sellerId // Mengatur loadedImages menjadi null sementara
+                    hexColor, null, sellerId, weight 
                 );
 
-                // --- START REVISION: Caching main image ---
                 product.setLoadedImages(getOrCacheMainImage(id, imageData)); 
-                // --- AKHIR REVISI ---
                 
                 products.add(product);
             }
@@ -539,7 +555,7 @@ public class ProductRepository {
      */
     public static FavoriteItem getProductById(int productId) {
         // SQL untuk mengambil detail produk dan SEMUA gambar terkait
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension FROM products p " +
                      "LEFT JOIN product_images pi ON p.product_id = pi.product_id " +
                      "WHERE p.product_id = ? ORDER BY pi.order_index ASC"; 
@@ -551,18 +567,24 @@ public class ProductRepository {
 
             pstmt.setInt(1, productId);
             try (ResultSet rs = pstmt.executeQuery()) {
-                // --- START REVISION: Caching all images for product detail ---
                 List<Image> loadedImages = new ArrayList<>();
                 boolean isFirstFetch = !productImageCache.containsKey(productId) || productImageCache.get(productId).isEmpty();
 
-                // Dapatkan semua gambar dari ResultSet dan cache jika ini adalah fetch pertama
                 loadedImages = getOrCacheAllImages(productId, rs, isFirstFetch); 
 
-                // Reset ResultSet ke awal untuk proses data produk
-                rs.beforeFirst();
-                // --- AKHIR REVISI ---
-
-                boolean firstRow = true; // Bendera untuk memastikan objek produk dibuat hanya sekali
+                // --- Perbaikan: Pastikan rs.beforeFirst() dilakukan sebelum membuat objek Product
+                // Ini penting karena getOrCacheAllImages() sudah memajukan kursor ResultSet.
+                // Jika ResultSet tidak scrollable, ini akan error, tetapi kita sudah setting TYPE_SCROLL_INSENSITIVE.
+                if (rs != null) {
+                    try {
+                        rs.beforeFirst(); 
+                    } catch (SQLException e) {
+                        System.err.println("Warning: ResultSet for getProductById is not scrollable. Cannot use rs.beforeFirst(). " + e.getMessage());
+                    }
+                }
+                // --- End Perbaikan ---
+                
+                boolean firstRow = true;
 
                 while (rs.next()) {
                     if (firstRow) {
@@ -576,19 +598,20 @@ public class ProductRepository {
                         String minOrder = rs.getString("min_order");
                         String brand = rs.getString("brand");
                         int sellerId = rs.getInt("seller_id");
+                        double weight = rs.getDouble("weight"); 
 
                         String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
+                        // --- Ini baris yang dimaksud di screenshot ---
                         product = new FavoriteItem(
                             id, name, description, price, originalPrice,
                             stock, condition, minOrder, brand,
-                            hexColor, null, sellerId
+                            hexColor, null, sellerId, weight 
                         );
-                        product.setLoadedImages(loadedImages); // Set gambar yang sudah di-cache/dimuat
+                        // --- Akhir baris yang dimaksud ---
+                        product.setLoadedImages(loadedImages);
                         firstRow = false;
                     }
-                    // Jika ada beberapa baris (multiple images), data produk hanya dari baris pertama.
-                    // Gambar sudah diambil dan di-cache di getOrCacheAllImages.
                 }
             }
             return product;
@@ -607,7 +630,7 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang merepresentasikan produk-produk penjual.
      */
     public static List<FavoriteItem> getProductsBySeller(int sellerId) {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension FROM products p " +
                      "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
                      "WHERE p.seller_id = ?"; 
@@ -631,18 +654,17 @@ public class ProductRepository {
                     String minOrder = rs.getString("min_order");
                     String brand = rs.getString("brand");
                     int foundSellerId = rs.getInt("seller_id");
+                    double weight = rs.getDouble("weight"); 
 
                     String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, brand,
-                        hexColor, null, foundSellerId
+                        hexColor, null, foundSellerId, weight 
                     );
 
-                    // --- START REVISION: Caching main image ---
                     product.setLoadedImages(getOrCacheMainImage(id, imageData));
-                    // --- AKHIR REVISI ---
                     products.add(product);
                 }
             }
@@ -661,7 +683,7 @@ public class ProductRepository {
      * @return Sebuah daftar objek FavoriteItem yang direkomendasikan.
      */
     public static List<FavoriteItem> getProductsByBrand(String brand, int excludeProductId) {
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension FROM products p " +
                      "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
                      "WHERE p.`brand` = ? AND p.product_id != ? LIMIT 6"; 
@@ -687,18 +709,17 @@ public class ProductRepository {
                     String minOrder = rs.getString("min_order");
                     String foundBrand = rs.getString("brand");
                     int sellerId = rs.getInt("seller_id");
+                    double weight = rs.getDouble("weight"); 
                     
                     String hexColor = DEFAULT_IMAGE_COLOR_HEX;
 
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, foundBrand,
-                        hexColor, null, sellerId
+                        hexColor, null, sellerId, weight 
                     );
 
-                    // --- START REVISION: Caching main image ---
                     product.setLoadedImages(getOrCacheMainImage(id, imageData));
-                    // --- AKHIR REVISI ---
                     recommendedProducts.add(product);
                 }
             }
@@ -717,7 +738,7 @@ public class ProductRepository {
      */
     public static List<FavoriteItem> searchProductsByName(String searchText) throws SQLException {
         List<FavoriteItem> searchResults = new ArrayList<>();
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension FROM products p " +
                      "LEFT JOIN product_images pi ON p.product_id = pi.product_id AND pi.is_main_image = TRUE " +
                      "WHERE p.name LIKE ? OR p.description LIKE ?"; 
@@ -741,6 +762,7 @@ public class ProductRepository {
                     String minOrder = rs.getString("min_order");
                     String brand = rs.getString("brand");
                     int sellerId = rs.getInt("seller_id");
+                    double weight = rs.getDouble("weight"); 
                     
                     String hexColor = DEFAULT_IMAGE_COLOR_HEX; 
 
@@ -750,12 +772,10 @@ public class ProductRepository {
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, brand,
-                        hexColor, null, sellerId
+                        hexColor, null, sellerId, weight 
                     );
 
-                    // --- START REVISION: Caching main image ---
                     product.setLoadedImages(getOrCacheMainImage(id, imageData));
-                    // --- AKHIR REVISI ---
                     searchResults.add(product);
                 }
             }
@@ -798,12 +818,10 @@ public class ProductRepository {
                     }
                 }
             }
-            // --- START REVISION: Clear cache on image save ---
             // Clear cache untuk produk ini agar gambar baru dimuat
             if (generatedId != -1) {
                 productImageCache.remove(productId);
             }
-            // --- AKHIR REVISI ---
             System.out.println("Image saved for product ID: " + productId + ", Image ID: " + generatedId);
         } catch (SQLException e) {
             System.err.println("Error saving product image: " + e.getMessage());
@@ -824,11 +842,12 @@ public class ProductRepository {
      * @param minOrder Kuantitas pesanan minimum (misal: "1 Buah").
      * @param brand Merek produk.
      * @param sellerId ID pengguna yang menjual produk ini.
+     * @param weight Berat produk dalam kg.
      * @return ID yang dihasilkan dari produk baru, atau -1 jika penyisipan gagal.
      * @throws SQLException Jika terjadi kesalahan database.
      */
-    public static int saveProduct(String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand, Integer sellerId) throws SQLException {
-        String sql = "INSERT INTO products (name, description, price, original_price, stock, `condition`, min_order, `brand`, seller_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
+    public static int saveProduct(String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand, Integer sellerId, double weight) throws SQLException {
+        String sql = "INSERT INTO products (name, description, price, original_price, stock, `condition`, min_order, `brand`, seller_id, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
         int generatedProductId = -1;
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -846,6 +865,7 @@ public class ProductRepository {
             } else {
                 pstmt.setNull(9, java.sql.Types.INTEGER);
             }
+            pstmt.setDouble(10, weight); 
 
             int affectedRows = pstmt.executeUpdate();
 
@@ -856,12 +876,9 @@ public class ProductRepository {
                     }
                 }
             }
-            // --- START REVISION: Clear cache on product save ---
-            // Clear cache jika ada produk baru ditambahkan (memaksa reload pada get all)
             if (generatedProductId != -1) {
-                clearImageCache(); // Clear seluruh cache agar data baru di-reflect
+                clearImageCache();
             }
-            // --- AKHIR REVISI ---
             System.out.println("Product saved: " + name + ", Product ID: " + generatedProductId);
         } catch (SQLException e) {
             System.err.println("Error saving product: " + e.getMessage());
@@ -911,9 +928,7 @@ public class ProductRepository {
             }
 
             conn.commit(); 
-            // --- START REVISION: Clear cache on product delete ---
             productImageCache.remove(productId); // Hapus produk ini dari cache
-            // --- AKHIR REVISI ---
             System.out.println("Product and its related data deleted for product ID: " + productId);
         } catch (SQLException e) {
             if (conn != null) {
@@ -948,11 +963,12 @@ public class ProductRepository {
      * @param condition Kondisi produk baru.
      * @param minOrder Kuantitas pesanan minimum baru.
      * @param brand Merek produk baru.
+     * @param weight Berat produk dalam kg.
      * @return True jika produk berhasil diperbarui, false jika tidak.
      * @throws SQLException Jika terjadi kesalahan database.
      */
-    public static boolean updateProduct(int productId, String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand) throws SQLException {
-        String sql = "UPDATE products SET name = ?, description = ?, price = ?, original_price = ?, stock = ?, `condition` = ?, min_order = ?, `brand` = ? WHERE product_id = ?"; 
+    public static boolean updateProduct(int productId, String name, String description, double price, double originalPrice, int stock, String condition, String minOrder, String brand, double weight) throws SQLException {
+        String sql = "UPDATE products SET name = ?, description = ?, price = ?, original_price = ?, stock = ?, `condition` = ?, min_order = ?, `brand` = ?, weight = ? WHERE product_id = ?"; 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -964,13 +980,12 @@ public class ProductRepository {
             pstmt.setString(6, condition);
             pstmt.setString(7, minOrder);
             pstmt.setString(8, brand);
-            pstmt.setInt(9, productId);
-
+            pstmt.setDouble(9, weight); 
+            pstmt.setInt(10, productId); 
+            
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
-                // --- START REVISION: Clear cache on product update ---
-                productImageCache.remove(productId); // Hapus produk ini dari cache
-                // --- AKHIR REVISI ---
+                productImageCache.remove(productId);
                 System.out.println("Product updated: " + name + ", Product ID: " + productId);
                 return true;
             } else {
@@ -983,6 +998,7 @@ public class ProductRepository {
         }
     }
 
+
     /**
      * Menghapus semua gambar yang terkait dengan produk tertentu dari tabel 'product_images'.
      * @param productId ID produk yang gambarnya akan dihapus.
@@ -994,9 +1010,7 @@ public class ProductRepository {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, productId);
             int affectedRows = pstmt.executeUpdate();
-            // --- START REVISION: Clear cache on image delete ---
             productImageCache.remove(productId); 
-            // --- AKHIR REVISI ---
             System.out.println(affectedRows + " images deleted for product ID: " + productId);
         } catch (SQLException e) {
             System.err.println("Error deleting product images for product ID " + productId + ": " + e.getMessage());
@@ -1029,11 +1043,9 @@ public class ProductRepository {
             pstmt.setInt(1, imageId);
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
-                // --- START REVISION: Clear cache for affected product ---
                 if (productId != -1) {
                     productImageCache.remove(productId);
                 }
-                // --- AKHIR REVISI ---
                 System.out.println("Image ID " + imageId + " deleted successfully.");
             } else {
                 System.out.println("Image ID " + imageId + " not found for deletion.");
@@ -1077,9 +1089,7 @@ public class ProductRepository {
             }
 
             conn.commit(); 
-            // --- START REVISION: Clear cache on main image change ---
             productImageCache.remove(productId); // Hapus produk ini dari cache agar gambar utama baru dimuat
-            // --- AKHIR REVISI ---
             System.out.println("Image ID " + imageId + " set as main for Product ID " + productId);
         } catch (SQLException e) {
             if (conn != null) {
@@ -1144,7 +1154,7 @@ public class ProductRepository {
      */
     public static List<FavoriteItem> getFavoriteItemsForUser(int userId) throws SQLException {
         List<FavoriteItem> favoriteProducts = new ArrayList<>();
-        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, " +
+        String sql = "SELECT p.product_id, p.name, p.description, p.price, p.original_price, p.stock, p.`condition`, p.min_order, p.`brand`, p.seller_id, p.weight, " + 
                      "pi.image_data, pi.file_extension " +
                      "FROM favorites f " +
                      "JOIN products p ON f.product_id = p.product_id " +
@@ -1167,6 +1177,7 @@ public class ProductRepository {
                     String minOrder = rs.getString("min_order");
                     String brand = rs.getString("brand");
                     int sellerId = rs.getInt("seller_id");
+                    double weight = rs.getDouble("weight"); 
                     byte[] imageData = rs.getBytes("image_data");
                     String fileExtension = rs.getString("file_extension");
 
@@ -1175,12 +1186,10 @@ public class ProductRepository {
                     FavoriteItem product = new FavoriteItem(
                         id, name, description, price, originalPrice,
                         stock, condition, minOrder, brand,
-                        hexColor, null, sellerId
+                        hexColor, null, sellerId, weight 
                     );
 
-                    // --- START REVISION: Caching main image ---
                     product.setLoadedImages(getOrCacheMainImage(id, imageData));
-                    // --- AKHIR REVISI ---
                     favoriteProducts.add(product);
                 }
             }
@@ -1240,13 +1249,7 @@ public class ProductRepository {
             pstmt.setInt(1, userId);
             pstmt.setInt(2, productId);
             int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
-                System.out.println("Product " + productId + " removed from favorites for user " + userId + ".");
-                return true;
-            } else {
-                System.out.println("Product " + productId + " not found in favorites for user " + userId + ".");
-                return false;
-            }
+            return affectedRows > 0;
         } catch (SQLException e) {
             System.err.println("Error removing product " + productId + " from favorites for user " + userId + ": " + e.getMessage());
             throw e;
@@ -1312,7 +1315,7 @@ public class ProductRepository {
     public static List<CartItem> getCartItemsForUser(int userId) {
         List<CartItem> cartItems = new ArrayList<>();
         String sql = "SELECT ci.product_id, ci.quantity, " + 
-                     "p.name, p.price, p.original_price, " + 
+                     "p.name, p.price, p.original_price, p.weight, " + 
                      "pi.image_data, pi.file_extension " + 
                      "FROM cart_items ci " + 
                      "JOIN products p ON ci.product_id = p.product_id " + 
@@ -1330,13 +1333,14 @@ public class ProductRepository {
                     String name = rs.getString("name");
                     double price = rs.getDouble("price");
                     double originalPrice = rs.getDouble("original_price");
+                    double weight = rs.getDouble("weight"); 
                     byte[] imageData = rs.getBytes("image_data");
                     String fileExtension = rs.getString("file_extension");
                     String imageColor = DEFAULT_IMAGE_COLOR_HEX;
 
                     CartItem item = new CartItem(
                         productId, name, price, originalPrice, quantity,
-                        imageColor, imageData, fileExtension // imageData akan diubah jadi Image di konstruktor CartItem
+                        imageColor, imageData, fileExtension, weight 
                     );
                     cartItems.add(item);
                 }
@@ -1604,7 +1608,6 @@ public class ProductRepository {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); 
 
-            // 1. Insert ke tabel orders
             String orderSql = "INSERT INTO orders (user_id, order_number, order_date, total_amount, " + 
                               "shipping_address_id, shipping_service_name, shipping_cost, payment_method, order_status, delivery_estimate, created_at) " + 
                               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"; 
@@ -1618,12 +1621,12 @@ public class ProductRepository {
                 orderStmt.setDate(3, java.sql.Date.valueOf(orderDate));
                 orderStmt.setDouble(4, totalAmount);
                 orderStmt.setInt(5, shippingAddress.getId()); 
-                orderStmt.setString(6, shippingService.name);
-                orderStmt.setDouble(7, shippingService.price);
+                orderStmt.setString(6, shippingService.getProviderName());
+                orderStmt.setDouble(7, shippingService.getPrice()); 
                 orderStmt.setString(8, paymentMethod);
                 orderStmt.setString(9, "Pending Payment"); 
                 orderStmt.setString(10, shippingService.arrivalEstimate);
-
+                
                 int affectedRows = orderStmt.executeUpdate();
                 if (affectedRows == 0) {
                     throw new SQLException("Membuat pesanan gagal, tidak ada baris yang terpengaruh.");
@@ -1638,7 +1641,6 @@ public class ProductRepository {
                 }
             }
 
-            // 2. Insert ke tabel order_items untuk setiap item keranjang
             String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, price_per_item, original_price_per_item) VALUES (?, ?, ?, ?, ?, ?)"; 
             try (PreparedStatement itemStmt = conn.prepareStatement(itemSql)) {
                 for (CartItem item : cartItems) {
@@ -1653,8 +1655,6 @@ public class ProductRepository {
                 itemStmt.executeBatch();
             }
 
-
-            // 3. Mengosongkan keranjang pengguna setelah pesanan berhasil dibuat
             clearCart(userId);
 
             conn.commit(); 
@@ -1772,7 +1772,7 @@ public class ProductRepository {
                         rs.getInt("quantity"),
                         rs.getDouble("price_per_item"),
                         rs.getDouble("original_price_per_item"),
-                        rs.getBytes("image_data"), // imageData akan diubah jadi Image di konstruktor OrderItem
+                        rs.getBytes("image_data"), 
                         rs.getString("brand"),
                         rs.getString("file_extension"),
                         sellerName
@@ -1909,7 +1909,7 @@ public class ProductRepository {
         return items;
     }
 
-    /**
+   /**
     * Mengambil detail lengkap sebuah pesanan berdasarkan ID Pesanan.
     * Metode ini tidak memfilter berdasarkan user_id, digunakan untuk melihat detail
     * pesanan tertentu (misalnya oleh seller/admin atau untuk detail umum).

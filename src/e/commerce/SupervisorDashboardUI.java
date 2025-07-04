@@ -7,6 +7,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
+import javax.swing.text.JTextComponent; 
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
@@ -19,7 +20,11 @@ import java.text.NumberFormat;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.sql.*;
+import java.sql.*; 
+
+// PENTING: Import ini harus tetap ada dan merujuk ke definisi FavoriteItem Anda yang sebenarnya
+import e.commerce.FavoritesUI.FavoriteItem; 
+
 
 public class SupervisorDashboardUI extends JFrame {
     private JPanel mainPanel;
@@ -36,12 +41,10 @@ public class SupervisorDashboardUI extends JFrame {
     private ChatFloatingButton chatFloatingButton;
     private ChatPopupUI chatPopupUI;
 
-    // Field untuk Export Services
     private ExportExcelService exportService;
     private ExportPdfService exportPdfService;
     private JLabel exportStatusLabel; 
 
-    // Warna-warna yang sudah Anda definisikan
     private static final Color ORANGE_PRIMARY = new Color(255, 102, 0);
     private static final Color ORANGE_LIGHT = new Color(255, 153, 51);
     private static final Color WHITE = Color.WHITE;
@@ -57,6 +60,61 @@ public class SupervisorDashboardUI extends JFrame {
     private static final Color BLUE_PRIMARY = new Color(74, 110, 255);
     private static final Color SELLER_TEXT_COLOR = new Color(70, 130, 180);
 
+    // --- Placeholder focus listener class (disalin dari AddressUI) ---
+    private class PlaceholderFocusListener implements FocusListener {
+        private JTextComponent component;
+        private String placeholder;
+        private Color placeholderColor;
+        private Color originalForeground;
+
+        public PlaceholderFocusListener(JTextComponent component, String placeholder, Color placeholderColor) {
+            this.component = component;
+            this.placeholder = placeholder;
+            this.placeholderColor = placeholderColor;
+            // Dapatkan warna asli teks sebelum placeholder diterapkan
+            this.originalForeground = component.getForeground();
+        }
+
+        @Override
+        public void focusGained(FocusEvent e) {
+            if (component.getText().equals(placeholder) && component.getForeground().equals(placeholderColor)) {
+                component.setText("");
+                component.setForeground(originalForeground);
+            }
+        }
+
+        @Override
+        public void focusLost(FocusEvent e) {
+            if (component.getText().isEmpty()) {
+                component.setText(placeholder);
+                component.setForeground(placeholderColor);
+            }
+        }
+    }
+
+    // --- Helper method untuk setup placeholder (disalin dari AddressUI) ---
+    private void setupPlaceholder(JTextComponent component, String placeholder) {
+        // Hanya terapkan placeholder jika teks kosong atau masih placeholder lama
+        if (component.getText().isEmpty() || component.getText().equals(component.getClientProperty("placeholder"))) {
+             component.setText(placeholder);
+             component.setForeground(GRAY_TEXT_COLOR);
+             component.putClientProperty("placeholder", placeholder); 
+        }
+        
+        // Pastikan listener hanya ditambahkan sekali
+        boolean listenerExists = false;
+        for (FocusListener listener : component.getFocusListeners()) {
+            if (listener instanceof PlaceholderFocusListener && ((PlaceholderFocusListener) listener).component == component) {
+                listenerExists = true;
+                break;
+            }
+        }
+        if (!listenerExists) {
+            component.addFocusListener(new PlaceholderFocusListener(component, placeholder, GRAY_TEXT_COLOR));
+        }
+    }
+
+
     public SupervisorDashboardUI() {
         currentUser = Authentication.getCurrentUser();
         if (currentUser == null || (!currentUser.getRole().equals("supervisor") && !currentUser.getRole().equals("admin"))) {
@@ -66,7 +124,6 @@ public class SupervisorDashboardUI extends JFrame {
             return;
         }
 
-        // Inisialisasi Export Services dengan currentUser
         exportService = new ExportExcelService(currentUser);
         exportPdfService = new ExportPdfService(currentUser);
 
@@ -87,7 +144,7 @@ public class SupervisorDashboardUI extends JFrame {
         
         JPanel productPanel = createProductManagementPanel();
         JPanel ordersPanel = createOrdersPanel();
-        ProfileUI profilePanel = new ProfileUI();
+        ProfileUI profilePanel = new ProfileUI(); 
         
         mainPanel.add(productPanel, "Produk");
         mainPanel.add(ordersPanel, "Pesanan");
@@ -98,7 +155,7 @@ public class SupervisorDashboardUI extends JFrame {
         add(mainPanel);
 
         ViewController dummyVCForChatPopup = new ViewController() {
-            @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
+            @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ } // Menggunakan FavoritesUI.FavoriteItem
             @Override public void showFavoritesView() { /* do nothing */ }
             @Override public void showDashboardView() { /* do nothing */ }
             @Override public void showCartView() { /* do nothing */ }
@@ -106,7 +163,8 @@ public class SupervisorDashboardUI extends JFrame {
             @Override public void showOrdersView() { /* do nothing */ }
             @Override public void showCheckoutView() { /* do nothing */ }
             @Override public void showAddressView() { /* do nothing */ }
-            @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
+            @Override
+            public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) { /* do nothing */ }
             @Override public void showSuccessView(int orderId) { /* do nothing */ }
             @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
             @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
@@ -224,7 +282,6 @@ public class SupervisorDashboardUI extends JFrame {
                         loadProductsForSupervisor();
                     } else if (panelName.equals("Pesanan")) {
                         loadOrdersForSeller();
-                        // Reset status label ketika pindah ke panel Pesanan
                         if (exportStatusLabel != null) {
                             exportStatusLabel.setForeground(TEXT_DARK);
                             exportStatusLabel.setText("Siap untuk ekspor.");
@@ -387,7 +444,7 @@ public class SupervisorDashboardUI extends JFrame {
 
     public void loadProductsForSupervisor() {
         productTableModel.setRowCount(0);
-        List<FavoritesUI.FavoriteItem> productsToDisplay;
+        List<FavoritesUI.FavoriteItem> productsToDisplay; // MENGGUNAKAN FAVORITESUI.FavoriteItem
         if (currentUser.getRole().equals("supervisor")) {
             productsToDisplay = ProductRepository.getProductsBySeller(currentUser.getId());
         } else if (currentUser.getRole().equals("admin")) {
@@ -398,16 +455,16 @@ public class SupervisorDashboardUI extends JFrame {
         }
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("in", "ID"));
         currencyFormat.setMinimumFractionDigits(0);
-        for (FavoritesUI.FavoriteItem product : productsToDisplay) {
+        for (FavoritesUI.FavoriteItem product : productsToDisplay) { // MENGGUNAKAN FAVORITESUI.FavoriteItem
             String formattedPrice = currencyFormat.format(product.getPrice());
             productTableModel.addRow(new Object[]{
-                product.getId(),
+                product.getProductId(), 
                 product.getName(),
                 formattedPrice,
                 product.getStock(),
                 product.getBrand(),
                 product.getCondition(),
-                ""
+                "" // Aksi
             });
         }
     }
@@ -415,7 +472,7 @@ public class SupervisorDashboardUI extends JFrame {
     public void showProductDialog(Integer productId) {
         String title = (productId == null) ? "Tambah Produk Baru" : "Edit Produk";
         JDialog dialog = new JDialog(this, title, true);
-        dialog.setSize(450, 600);
+        dialog.setSize(450, 700); // Increased height to accommodate new field and maintain spacing
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
@@ -423,34 +480,49 @@ public class SupervisorDashboardUI extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
+        // Field: Nama Produk
         JLabel lblName = new JLabel("Nama Produk:");
         JTextField txtName = new JTextField(20);
         txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Harga
         JLabel lblPrice = new JLabel("Harga:");
         JTextField txtPrice = new JTextField(20);
         txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Harga Asli (opsional)
         JLabel lblOriginalPrice = new JLabel("Harga Asli (opsional):");
         JTextField txtOriginalPrice = new JTextField(20);
         txtOriginalPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Stok
         JLabel lblStock = new JLabel("Stok:");
         JTextField txtStock = new JTextField(20);
         txtStock.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        
+        // --- TAMBAHAN: FIELD UNTUK BERAT ---
+        JLabel lblWeight = new JLabel("Berat (kg):");
+        JTextField txtWeight = new JTextField(20);
+        txtWeight.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        setupPlaceholder(txtWeight, "Contoh: 0.5 (kg)");
+        // --- AKHIR TAMBAHAN ---
 
+        // Field: Kondisi
         JLabel lblCondition = new JLabel("Kondisi:");
         JComboBox<String> comboCondition = new JComboBox<>(new String[]{"Baru", "Bekas"});
         comboCondition.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Pesanan Minimum
         JLabel lblMinOrder = new JLabel("Pesanan Minimum:");
         JTextField txtMinOrder = new JTextField(20);
         txtMinOrder.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Merek
         JLabel lblBrand = new JLabel("Merek:");
         JTextField txtBrand = new JTextField(20);
         txtBrand.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
+        // Field: Deskripsi
         JLabel lblDescription = new JLabel("Deskripsi:");
         JTextArea txtDescription = new JTextArea(5, 20);
         txtDescription.setLineWrap(true);
@@ -458,6 +530,7 @@ public class SupervisorDashboardUI extends JFrame {
         JScrollPane descScrollPane = new JScrollPane(txtDescription);
         descScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
+        // Field: Gambar Produk
         JLabel lblImage = new JLabel("Gambar Produk:");
         JPanel imageControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JTextField txtImagePath = new JTextField(20);
@@ -475,7 +548,8 @@ public class SupervisorDashboardUI extends JFrame {
             btnBrowseImage.setVisible(false);
             txtImagePath.setVisible(false);
             imageControlPanel.add(btnManageImages);
-            FavoritesUI.FavoriteItem productToEdit = ProductRepository.getProductById(productId);
+            // MENGGUNAKAN FAVORITESUI.FavoriteItem
+            FavoritesUI.FavoriteItem productToEdit = ProductRepository.getProductById(productId); 
             if (productToEdit != null) {
                 txtName.setText(productToEdit.getName());
                 txtPrice.setText(String.valueOf(productToEdit.getPrice()));
@@ -487,6 +561,7 @@ public class SupervisorDashboardUI extends JFrame {
                 txtMinOrder.setText(productToEdit.getMinOrder());
                 txtBrand.setText(productToEdit.getBrand());
                 txtDescription.setText(productToEdit.getDescription());
+                txtWeight.setText(String.valueOf(productToEdit.getWeight())); // Memuat berat saat edit
             } else {
                 JOptionPane.showMessageDialog(dialog, "Produk dengan ID " + productId + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -559,8 +634,9 @@ public class SupervisorDashboardUI extends JFrame {
             String minOrder = txtMinOrder.getText().trim();
             String brand = txtBrand.getText().trim();
             String description = txtDescription.getText().trim();
+            String weightText = txtWeight.getText().trim(); 
 
-            if (name.isEmpty() || priceText.isEmpty() || stockText.isEmpty() || minOrder.isEmpty() || brand.isEmpty() || description.isEmpty()) {
+            if (name.isEmpty() || priceText.isEmpty() || stockText.isEmpty() || minOrder.isEmpty() || brand.isEmpty() || description.isEmpty() || weightText.isEmpty()) { 
                 JOptionPane.showMessageDialog(dialog, "Semua kolom kecuali Harga Asli harus diisi!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -569,9 +645,10 @@ public class SupervisorDashboardUI extends JFrame {
                 double price = Double.parseDouble(priceText);
                 double originalPrice = originalPriceText.isEmpty() ? 0.0 : Double.parseDouble(originalPriceText);
                 int stock = Integer.parseInt(stockText);
+                double weight = Double.parseDouble(weightText); // Parsing berat
 
-                if (price <= 0 || stock < 0) {
-                    JOptionPane.showMessageDialog(dialog, "Harga harus lebih besar dari 0 dan stok tidak boleh negatif!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
+                if (price <= 0 || stock < 0 || weight <= 0) { // Validasi berat
+                    JOptionPane.showMessageDialog(dialog, "Harga dan berat harus lebih besar dari 0, dan stok tidak boleh negatif!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
@@ -588,7 +665,8 @@ public class SupervisorDashboardUI extends JFrame {
                             return;
                         }
 
-                        int newProductId = ProductRepository.saveProduct(name, description, price, originalPrice, stock, condition, minOrder, brand, userIdForProduct);
+                        // Panggilan saveProduct dengan argumen weight
+                        int newProductId = ProductRepository.saveProduct(name, description, price, originalPrice, stock, condition, minOrder, brand, userIdForProduct, weight);
 
                         if (newProductId != -1 && !imagesToUpload.isEmpty()) {
                             for (int i = 0; i < imagesToUpload.size(); i++) {
@@ -597,7 +675,8 @@ public class SupervisorDashboardUI extends JFrame {
                         }
                         JOptionPane.showMessageDialog(dialog, "Produk berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        boolean updateProductSuccess = ProductRepository.updateProduct(productId, name, description, price, originalPrice, stock, condition, minOrder, brand);
+                        // Panggilan updateProduct dengan argumen weight
+                        boolean updateProductSuccess = ProductRepository.updateProduct(productId, name, description, price, originalPrice, stock, condition, minOrder, brand, weight);
 
                         if (updateProductSuccess) {
                             JOptionPane.showMessageDialog(dialog, "Produk berhasil diperbarui!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
@@ -614,13 +693,15 @@ public class SupervisorDashboardUI extends JFrame {
                 }
 
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(dialog, "Harga, Harga Asli, dan Stok harus berupa angka!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(dialog, "Harga, Harga Asli, Stok, dan Berat harus berupa angka yang valid!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
             }
         });
 
         buttonPanel.add(btnCancel);
         buttonPanel.add(btnSave);
 
+        // Menambahkan komponen ke panel
         panel.add(lblName); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtName);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblPrice); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtPrice);
@@ -628,6 +709,8 @@ public class SupervisorDashboardUI extends JFrame {
         panel.add(lblOriginalPrice); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtOriginalPrice);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblStock); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtStock);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        panel.add(lblWeight); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtWeight); // Tambahkan field Berat
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblCondition); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(comboCondition);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -691,13 +774,11 @@ public class SupervisorDashboardUI extends JFrame {
         filterPanel.add(Box.createHorizontalGlue());
         filterPanel.add(exportButton);
         
-        // --- Perbaikan: HANYA SATU KALI INISIALISASI exportStatusLabel ---
         exportStatusLabel = new JLabel("Siap untuk ekspor.");
         exportStatusLabel.setForeground(TEXT_DARK);
         exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         filterPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         filterPanel.add(exportStatusLabel);
-        // --- Akhir Perbaikan ---
 
         String[] columns = {"ID Pesanan", "Pelanggan", "Tanggal Pesanan", "Total Harga", "Status", "Aksi"};
         orderTableModel = new DefaultTableModel(columns, 0) {
@@ -751,15 +832,14 @@ public class SupervisorDashboardUI extends JFrame {
             JOptionPane.QUESTION_MESSAGE,
             null,
             options,
-            options[0] // Default pilihan
+            options[0]
         );
 
-        if (choice == 0) { // Excel
+        if (choice == 0) {
             exportSalesData(ExportFormat.EXCEL);
-        } else if (choice == 1) { // PDF
+        } else if (choice == 1) {
             exportSalesData(ExportFormat.PDF);
         } else {
-            // Pengguna menutup dialog atau membatalkan
             exportStatusLabel.setForeground(TEXT_DARK);
             exportStatusLabel.setText("Ekspor dibatalkan.");
         }
@@ -774,14 +854,11 @@ public class SupervisorDashboardUI extends JFrame {
         String fileExtension;
         String dialogTitle;
         
-        // Variabel local currentExportExcelService dan currentExportPdfService dihapus
-        // dan digantikan dengan penggunaan langsung field kelas exportService dan exportPdfService
-
         if (format == ExportFormat.EXCEL) {
             defaultFileName = "LaporanPenjualan.xlsx";
             fileExtension = "xlsx";
             dialogTitle = "Simpan Laporan Penjualan (Excel)";
-        } else { // PDF
+        } else {
             defaultFileName = "LaporanPenjualan.pdf";
             fileExtension = "pdf";
             dialogTitle = "Simpan Laporan Penjualan (PDF)";
@@ -823,10 +900,8 @@ public class SupervisorDashboardUI extends JFrame {
                     try {
                         System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService for " + format.name() + ".");
                         if (format == ExportFormat.EXCEL) {
-                            // Menggunakan field kelas 'exportService' secara langsung
                             exportService.exportSalesDataToExcel(finalPath);
-                        } else { // PDF
-                            // Menggunakan field kelas 'exportPdfService' secara langsung
+                        } else {
                             exportPdfService.exportSalesDataToPdf(finalPath);
                         }
                         message = "Data berhasil diekspor ke:<br>" + finalPath;
@@ -837,7 +912,7 @@ public class SupervisorDashboardUI extends JFrame {
                         msgColor = CANCEL_RED;
                         System.err.println("DEBUG: Export failed in SwingWorker.");
                         ex.printStackTrace();
-                    } catch (Throwable ex) { // Tangkap Throwable untuk PDFBox Font related errors
+                    } catch (Throwable ex) {
                         message = "Terjadi kesalahan kritis saat ekspor ke " + format.name() + ": " + ex.getMessage();
                         msgColor = CANCEL_RED;
                         System.err.println("DEBUG: Critical error in SwingWorker during PDF export: " + ex.getClass().getName());
@@ -1079,13 +1154,13 @@ public class SupervisorDashboardUI extends JFrame {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
             setOpaque(true);
 
-            JButton viewDetailsBtn = new JButton("Lihat Detail"); // Declare locally since it's only rendered, not interacted with directly via field
+            JButton viewDetailsBtn = new JButton("Lihat Detail");
             viewDetailsBtn.setBackground(BLUE_PRIMARY);
             viewDetailsBtn.setForeground(WHITE);
             viewDetailsBtn.setFont(new Font("Arial", Font.PLAIN, 12));
             viewDetailsBtn.setFocusPainted(false);
 
-            JComboBox<String> statusDropdown = new StatusComboBox(""); // Declare locally
+            JComboBox<String> statusDropdown = new StatusComboBox("");
             statusDropdown.setFont(new Font("Arial", Font.PLAIN, 12));
             statusDropdown.setBackground(Color.WHITE);
             statusDropdown.setForeground(TEXT_DARK);
@@ -1104,9 +1179,8 @@ public class SupervisorDashboardUI extends JFrame {
             } else {
                 setBackground(table.getBackground());
             }
-            // Access components from the JPanel directly if they are already added
-            JButton viewDetailsBtn = (JButton) getComponent(0); // Assuming it's the first component
-            JComboBox<String> statusDropdown = (JComboBox<String>) getComponent(1); // Assuming it's the second
+            JButton viewDetailsBtn = (JButton) getComponent(0);
+            JComboBox<String> statusDropdown = (JComboBox<String>) getComponent(1);
 
             String orderStatusDb = (String) table.getValueAt(row, 5);
 
@@ -1277,7 +1351,7 @@ public class SupervisorDashboardUI extends JFrame {
                 detailDialog.setLayout(new BorderLayout());
 
                 ViewController dummyVCForOrderDetail = new ViewController() {
-                    @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
+                    @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ } // Menggunakan FavoritesUI.FavoriteItem
                     @Override public void showFavoritesView() { /* do nothing */ }
                     @Override public void showDashboardView() { /* do nothing */ }
                     @Override public void showCartView() { /* do nothing */ }
@@ -1285,7 +1359,7 @@ public class SupervisorDashboardUI extends JFrame {
                     @Override public void showOrdersView() { /* do nothing */ }
                     @Override public void showCheckoutView() { /* do nothing */ }
                     @Override public void showAddressView() { /* do nothing */ }
-                    @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) { /* do nothing */ }
+                    @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) { /* do nothing */ }
                     @Override public void showSuccessView(int orderId) { /* do nothing */ }
                     @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
                     @Override public void showChatWithSeller(int sellerId, String sellerUsername) {

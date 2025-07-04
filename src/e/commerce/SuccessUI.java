@@ -1,5 +1,3 @@
-// Di SuccessUI.java
-
 package e.commerce;
 
 import javax.swing.*;
@@ -78,7 +76,7 @@ public class SuccessUI extends JPanel {
 
         JPanel leftSection = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftSection.setBackground(Color.WHITE);
-        JButton backButton = new JButton("← Kembali");
+        JButton backButton = new JButton("← Kembali"); // Translated
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(DARK_TEXT_COLOR);
         backButton.setBackground(Color.WHITE);
@@ -96,12 +94,12 @@ public class SuccessUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Selesai"}; // Translated
         String[] iconPaths = {
-            "/Resources/Images/cart_icon.png", 
-            "/Resources/Images/address_icon.png", 
-            "/Resources/Images/payment_icon.png", 
-            "/Resources/Images/success_icon.png"  
+            "/Resources/Images/cart_icon.png",
+            "/Resources/Images/address_icon.png",
+            "/Resources/Images/payment_icon.png",
+            "/Resources/Images/success_icon.png"
         };
 
         for (int i = 0; i < steps.length; i++) {
@@ -110,17 +108,16 @@ public class SuccessUI extends JPanel {
             stepContainer.setBackground(Color.WHITE);
             stepContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            JLabel stepIcon = new JLabel(); 
-
+            JLabel stepIcon = new JLabel();
             try {
                 ImageIcon originalIcon = new ImageIcon(getClass().getResource(iconPaths[i]));
                 Image originalImage = originalIcon.getImage();
                 Image scaledImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
                 stepIcon.setIcon(new ImageIcon(scaledImage));
             } catch (Exception e) {
-                System.err.println("Error loading icon for step '" + steps[i] + "': " + e.getMessage());
-                stepIcon.setText("?"); 
-                stepIcon.setFont(new Font("Arial", Font.PLAIN, 20)); 
+                System.err.println("Error memuat ikon untuk langkah '" + steps[i] + "': " + e.getMessage()); // Translated
+                stepIcon.setText("?");
+                stepIcon.setFont(new Font("Arial", Font.PLAIN, 20));
                 stepIcon.setForeground(Color.RED);
             }
 
@@ -130,9 +127,9 @@ public class SuccessUI extends JPanel {
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Success")) {
+            if (steps[i].equals("Selesai")) { // Translated step name
                 if (stepIcon.getIcon() != null) {
-                } else { 
+                } else {
                     stepIcon.setForeground(ORANGE_THEME);
                 }
                 stepLabel.setForeground(ORANGE_THEME);
@@ -199,35 +196,35 @@ public class SuccessUI extends JPanel {
         panel.add(checkmarkContainer);
         panel.add(Box.createVerticalStrut(30));
 
-        JLabel congratsLabel = new JLabel("Selamat");
+        JLabel congratsLabel = new JLabel("Selamat"); // Translated
         congratsLabel.setFont(new Font("Arial", Font.BOLD, 28));
         congratsLabel.setForeground(DARK_TEXT_COLOR);
         congratsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(congratsLabel);
         panel.add(Box.createVerticalStrut(20));
 
-        JLabel messageLabel = new JLabel("Pesanan Anda telah berhasil ditempatkan!");
+        JLabel messageLabel = new JLabel("Pesanan Anda telah berhasil ditempatkan!"); // Translated
         messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         messageLabel.setForeground(GRAY_TEXT_COLOR);
         messageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(messageLabel);
         panel.add(Box.createVerticalStrut(40));
 
-        JLabel orderNumberTitle = new JLabel("Nomor Pesanan");
+        JLabel orderNumberTitle = new JLabel("Nomor Pesanan"); // Translated
         orderNumberTitle.setFont(new Font("Arial", Font.BOLD, 16));
         orderNumberTitle.setForeground(DARK_TEXT_COLOR);
         orderNumberTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(orderNumberTitle);
         panel.add(Box.createVerticalStrut(10));
 
-        orderNumberLabel = new JLabel("Memuat..."); 
+        orderNumberLabel = new JLabel("Memuat..."); // Translated
         orderNumberLabel.setFont(new Font("Arial", Font.PLAIN, 16));
         orderNumberLabel.setForeground(ORANGE_THEME);
         orderNumberLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(orderNumberLabel);
         panel.add(Box.createVerticalStrut(15));
 
-        JButton viewOrderButton = new JButton("Lihat Pesanan");
+        JButton viewOrderButton = new JButton("Lihat Pesanan"); // Translated
         viewOrderButton.setBackground(Color.WHITE);
         viewOrderButton.setForeground(ORANGE_THEME);
         viewOrderButton.setBorder(new LineBorder(ORANGE_THEME, 1));
@@ -239,13 +236,13 @@ public class SuccessUI extends JPanel {
         viewOrderButton.setMaximumSize(new Dimension(200, 40));
         viewOrderButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showOrdersView(); 
+                viewController.showOrdersView();
             }
         });
         panel.add(viewOrderButton);
         panel.add(Box.createVerticalStrut(20));
 
-        JButton continueShoppingButton = new JButton("LANJUTKAN BELANJA");
+        JButton continueShoppingButton = new JButton("LANJUTKAN BELANJA"); // Translated
         continueShoppingButton.setBackground(ORANGE_THEME);
         continueShoppingButton.setForeground(Color.WHITE);
         continueShoppingButton.setBorderPainted(false);
@@ -267,7 +264,7 @@ public class SuccessUI extends JPanel {
 
     private void loadAndDisplayOrderDetails() {
         if (orderId == -1) {
-            orderNumberLabel.setText("N/A (Pesanan Gagal)");
+            orderNumberLabel.setText("N/A (Pesanan Gagal)"); // Translated
             return;
         }
 
@@ -284,12 +281,12 @@ public class SuccessUI extends JPanel {
             if (foundOrder != null) {
                 orderNumberLabel.setText(foundOrder.getOrderNumber());
             } else {
-                orderNumberLabel.setText("Pesanan #" + orderId + " (Detail tidak ditemukan)");
+                orderNumberLabel.setText("Pesanan #" + orderId + " (Detail tidak ditemukan)"); // Translated
             }
         } catch (SQLException e) {
-            System.err.println("Error mengambil detail pesanan untuk SuccessUI: " + e.getMessage());
-            orderNumberLabel.setText("Error mengambil detail pesanan.");
-            JOptionPane.showMessageDialog(this, "Error mengambil detail pesanan: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+            System.err.println("Error mengambil detail pesanan untuk SuccessUI: " + e.getMessage()); // Translated
+            orderNumberLabel.setText("Error mengambil detail pesanan."); // Translated
+            JOptionPane.showMessageDialog(this, "Error mengambil detail pesanan: " + e.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE); // Translated
         }
     }
 
@@ -300,7 +297,7 @@ public class SuccessUI extends JPanel {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Pesanan Berhasil");
+            JFrame frame = new JFrame("Pesanan Berhasil"); // Translated
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
@@ -309,9 +306,9 @@ public class SuccessUI extends JPanel {
                 java.lang.reflect.Field field = Authentication.class.getDeclaredField("currentUser");
                 field.setAccessible(true);
                 field.set(null, dummyUser);
-                System.out.println("User dummy diatur untuk pengujian di SuccessUI.");
+                System.out.println("User dummy diatur untuk pengujian di SuccessUI."); // Translated
             } catch (Exception e) {
-                System.err.println("Gagal mengatur user dummy untuk pengujian di SuccessUI: " + e.getMessage());
+                System.err.println("Gagal mengatur user dummy untuk pengujian di SuccessUI: " + e.getMessage()); // Translated
             }
 
             ViewController dummyVC = new ViewController() {
@@ -323,7 +320,7 @@ public class SuccessUI extends JPanel {
                 @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
                 @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
-                @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) {
+                @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) {
                     System.out.println("Dummy: Tampilkan Tampilan Pembayaran (Sukses)");
                 }
                 @Override public void showSuccessView(int orderId) {
@@ -334,12 +331,12 @@ public class SuccessUI extends JPanel {
                     System.out.println("Dummy: Tampilkan Tampilan Detail Pesanan untuk ID: " + orderId);
                 }
                 @Override
-                public void showChatWithSeller(int sellerId, String sellerUsername) { //
+                public void showChatWithSeller(int sellerId, String sellerUsername) {
                     System.out.println("Dummy: Tampilkan Chat dengan Penjual ID: " + sellerId + " (" + sellerUsername + ")");
                 }
             };
 
-            SuccessUI successUI = new SuccessUI(dummyVC, 12345); 
+            SuccessUI successUI = new SuccessUI(dummyVC, 12345);
             frame.add(successUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

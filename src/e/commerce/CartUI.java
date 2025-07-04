@@ -88,12 +88,12 @@ public class CartUI extends JPanel {
         leftColumnPanel.setLayout(new BoxLayout(leftColumnPanel, BoxLayout.Y_AXIS));
         leftColumnPanel.setBackground(LIGHT_GRAY_BACKGROUND);
 
-        JPanel offersPanel = createOfferCouponPanel("Available Offers");
+        JPanel offersPanel = createOfferCouponPanel("Penawaran Tersedia"); // Translated
         offersPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         leftColumnPanel.add(offersPanel);
         leftColumnPanel.add(Box.createVerticalStrut(15));
 
-        JPanel couponsPanel = createOfferCouponPanel("Apply Coupons");
+        JPanel couponsPanel = createOfferCouponPanel("Terapkan Kupon"); // Translated
         couponsPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
         leftColumnPanel.add(couponsPanel);
         leftColumnPanel.add(Box.createVerticalStrut(15));
@@ -105,7 +105,7 @@ public class CartUI extends JPanel {
         myCartSectionPanel.setMinimumSize(new Dimension(400, 200));
         myCartSectionPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        myCartTitle = new JLabel("My Cart (" + cartItems.size() + ")");
+        myCartTitle = new JLabel("Keranjang Saya (" + cartItems.size() + ")"); // Translated
         myCartTitle.setFont(new Font("Arial", Font.BOLD, 18));
         myCartTitle.setForeground(DARK_TEXT_COLOR);
         myCartTitle.setBorder(new EmptyBorder(15, 20, 15, 20));
@@ -158,7 +158,7 @@ public class CartUI extends JPanel {
 
         JPanel leftSection = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftSection.setBackground(Color.WHITE);
-        JButton backButton = new JButton("← Back");
+        JButton backButton = new JButton("← Kembali"); // Translated
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(DARK_TEXT_COLOR);
         backButton.setBackground(Color.WHITE);
@@ -176,7 +176,7 @@ public class CartUI extends JPanel {
         JPanel navStepsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
         navStepsPanel.setBackground(Color.WHITE);
 
-        String[] steps = {"Cart", "Address", "Payment", "Success"};
+        String[] steps = {"Keranjang", "Alamat", "Pembayaran", "Selesai"}; // Translated
         String[] iconPaths = {
             "/Resources/Images/cart_icon.png", 
             "/Resources/Images/address_icon.png",
@@ -198,7 +198,7 @@ public class CartUI extends JPanel {
                 Image scaledImage = originalImage.getScaledInstance(24, 24, Image.SCALE_SMOOTH);
                 stepIcon.setIcon(new ImageIcon(scaledImage));
             } catch (Exception e) {
-                System.err.println("Error loading icon for step '" + steps[i] + "': " + e.getMessage());
+                System.err.println("Error memuat ikon untuk langkah '" + steps[i] + "': " + e.getMessage()); // Translated
                 stepIcon.setText("?");
                 stepIcon.setFont(new Font("Arial", Font.PLAIN, 20)); 
                 stepIcon.setForeground(Color.RED); 
@@ -210,7 +210,7 @@ public class CartUI extends JPanel {
             stepLabel.setFont(new Font("Arial", Font.PLAIN, 14));
             stepLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-            if (steps[i].equals("Cart")) {
+            if (steps[i].equals("Keranjang")) { // Translated step name
                 if (stepIcon.getIcon() != null) { 
                 } else { 
                     stepIcon.setForeground(ORANGE_THEME);
@@ -279,7 +279,7 @@ public class CartUI extends JPanel {
         panel.setMinimumSize(panel.getPreferredSize());
         panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 280));
 
-        panel.add(createSectionTitle("Payment Summary", null, null), BorderLayout.NORTH);
+        panel.add(createSectionTitle("Ringkasan Pembayaran", null, null), BorderLayout.NORTH); // Translated
 
         JPanel summaryDetails = new JPanel();
         summaryDetails.setLayout(new BoxLayout(summaryDetails, BoxLayout.Y_AXIS));
@@ -293,19 +293,19 @@ public class CartUI extends JPanel {
         deliveryLabel = new JLabel();
         finalTotalLabel = new JLabel();
 
-        summaryDetails.add(createSummaryRowPanel("Total MRP", totalMRPLabel, DARK_TEXT_COLOR, totalMRP));
+        summaryDetails.add(createSummaryRowPanel("Total MRP", totalMRPLabel, DARK_TEXT_COLOR, totalMRP)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Discount on MRP", discountOnMRPLabel, new Color(76, 175, 80), discountOnMRP));
+        summaryDetails.add(createSummaryRowPanel("Diskon pada MRP", discountOnMRPLabel, new Color(76, 175, 80), discountOnMRP)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Coupon savings", couponSavingsLabel, new Color(76, 175, 80), couponSavings));
+        summaryDetails.add(createSummaryRowPanel("Penghematan Kupon", couponSavingsLabel, new Color(76, 175, 80), couponSavings)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Applicable GST", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST));
+        summaryDetails.add(createSummaryRowPanel("PPN yang Berlaku", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Delivery", deliveryLabel, new Color(0, 150, 136), deliveryCharge, "Free"));
+        summaryDetails.add(createSummaryRowPanel("Pengiriman", deliveryLabel, new Color(0, 150, 136), deliveryCharge, "Gratis")); // Translated
         summaryDetails.add(Box.createVerticalStrut(10));
 
         JSeparator separator = new JSeparator(SwingConstants.HORIZONTAL);
@@ -315,7 +315,7 @@ public class CartUI extends JPanel {
 
         JPanel finalTotalRow = new JPanel(new BorderLayout());
         finalTotalRow.setBackground(Color.WHITE);
-        JLabel totalTextLabel = new JLabel("Total");
+        JLabel totalTextLabel = new JLabel("Total"); // Translated
         totalTextLabel.setFont(new Font("Arial", Font.BOLD, 16));
         totalTextLabel.setForeground(DARK_TEXT_COLOR);
         finalTotalRow.add(totalTextLabel, BorderLayout.WEST);
@@ -325,7 +325,7 @@ public class CartUI extends JPanel {
 
         panel.add(summaryDetails, BorderLayout.CENTER);
 
-        checkoutButton = new JButton("PLACE ORDER");
+        checkoutButton = new JButton("LANJUTKAN CHECKOUT"); // Translated
         checkoutButton.setBackground(ORANGE_THEME);
         checkoutButton.setForeground(Color.WHITE);
         checkoutButton.setBorderPainted(false);
@@ -337,8 +337,8 @@ public class CartUI extends JPanel {
             int selectedCount = getSelectedItemCount();
             if (selectedCount == 0) {
                 JOptionPane.showMessageDialog(this,
-                    "Mohon pilih setidaknya satu item untuk membuat pesanan.",
-                    "Checkout",
+                    "Mohon pilih setidaknya satu item untuk membuat pesanan.", // Translated
+                    "Checkout", // Translated
                     JOptionPane.INFORMATION_MESSAGE);
             }
             
@@ -347,8 +347,8 @@ public class CartUI extends JPanel {
                     viewController.showAddressView();
                 } else {
                     JOptionPane.showMessageDialog(this,
-                        "Melanjutkan untuk membuat pesanan\\nTotal: " + finalTotalLabel.getText(),
-                        "Buat Pesanan",
+                        "Melanjutkan untuk membuat pesanan\nTotal: " + finalTotalLabel.getText(), // Translated
+                        "Buat Pesanan", // Translated
                         JOptionPane.INFORMATION_MESSAGE);
                 }
             }
@@ -420,7 +420,7 @@ public class CartUI extends JPanel {
             emptyCartPanel.setBackground(Color.WHITE);
             emptyCartPanel.setPreferredSize(new Dimension(cartItemsContainer.getWidth(), 150));
             emptyCartPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 150));
-            JLabel emptyLabel = new JLabel("Your cart is empty.", SwingConstants.CENTER);
+            JLabel emptyLabel = new JLabel("Keranjang Anda kosong.", SwingConstants.CENTER); // Translated
             emptyLabel.setFont(new Font("Arial", Font.PLAIN, 18));
             emptyLabel.setForeground(GRAY_TEXT_COLOR);
             emptyCartPanel.add(emptyLabel);
@@ -445,7 +445,7 @@ public class CartUI extends JPanel {
         updateTotals();
 
         if (myCartTitle != null) {
-            myCartTitle.setText("My Cart (" + cartItems.size() + ")");
+            myCartTitle.setText("Keranjang Saya (" + cartItems.size() + ")"); // Translated
         }
         updateCheckoutButtonState();
     }
@@ -483,14 +483,14 @@ public class CartUI extends JPanel {
         JPanel actionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         actionsPanel.setBackground(Color.WHITE);
 
-        JLabel saveForLaterLabel = new JLabel("Save for Later");
+        JLabel saveForLaterLabel = new JLabel("Simpan untuk Nanti"); // Translated
         saveForLaterLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         saveForLaterLabel.setForeground(ORANGE_THEME);
         saveForLaterLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         saveForLaterLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                JOptionPane.showMessageDialog(itemPanel, "Product '" + item.getName() + "' saved for later.");
+                JOptionPane.showMessageDialog(itemPanel, "Produk '" + item.getName() + "' disimpan untuk nanti."); // Translated
             }
         });
         actionsPanel.add(saveForLaterLabel);
@@ -499,7 +499,7 @@ public class CartUI extends JPanel {
         separatorLabel.setForeground(GRAY_TEXT_COLOR);
         actionsPanel.add(separatorLabel);
 
-        JButton removeButton = new JButton("Remove");
+        JButton removeButton = new JButton("Hapus"); // Translated
         removeButton.setFont(new Font("Arial", Font.PLAIN, 12));
         removeButton.setForeground(ORANGE_THEME);
         removeButton.setBorderPainted(false);
@@ -508,16 +508,16 @@ public class CartUI extends JPanel {
         removeButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         removeButton.addActionListener(e -> {
             int confirmResult = JOptionPane.showConfirmDialog(this,
-                    "Are you sure you want to remove '" + item.getName() + "' from your cart?",
-                    "Confirm Removal", JOptionPane.YES_NO_OPTION);
+                    "Apakah Anda yakin ingin menghapus '" + item.getName() + "' dari keranjang Anda?", // Translated
+                    "Konfirmasi Penghapusan", JOptionPane.YES_NO_OPTION); // Translated
             if (confirmResult == JOptionPane.YES_OPTION) {
                 cartItems.remove(item);
                 if (currentUser != null) {
                     try {
                         ProductRepository.removeProductFromCart(currentUser.getId(), item.getId());
                     } catch (SQLException ex) {
-                        System.err.println("Error removing product from DB: " + ex.getMessage());
-                        JOptionPane.showMessageDialog(this, "Failed to remove product from database.", "Error", JOptionPane.ERROR_MESSAGE);
+                        System.err.println("Error menghapus produk dari DB: " + ex.getMessage()); // Translated
+                        JOptionPane.showMessageDialog(this, "Gagal menghapus produk dari database.", "Error", JOptionPane.ERROR_MESSAGE); // Translated
                     }
                 }
                 refreshCartItems();
@@ -568,8 +568,8 @@ public class CartUI extends JPanel {
                     try {
                         ProductRepository.updateCartItemQuantity(currentUser.getId(), item.getId(), item.getQuantity());
                     } catch (SQLException ex) {
-                        System.err.println("Error updating quantity in DB: " + ex.getMessage());
-                        JOptionPane.showMessageDialog(this, "Failed to update quantity in database.", "Error", JOptionPane.ERROR_MESSAGE);
+                        System.err.println("Error memperbarui jumlah di DB: " + ex.getMessage()); // Translated
+                        JOptionPane.showMessageDialog(this, "Gagal memperbarui jumlah di database.", "Error", JOptionPane.ERROR_MESSAGE); // Translated
                     }
                 }
                 updateTotals();
@@ -583,8 +583,8 @@ public class CartUI extends JPanel {
                 try {
                     ProductRepository.updateCartItemQuantity(currentUser.getId(), item.getId(), item.getQuantity());
                 } catch (SQLException ex) {
-                    System.err.println("Error updating quantity in DB: " + ex.getMessage());
-                    JOptionPane.showMessageDialog(this, "Failed to update quantity in database.", "Error", JOptionPane.ERROR_MESSAGE);
+                    System.err.println("Error memperbarui jumlah di DB: " + ex.getMessage()); // Translated
+                    JOptionPane.showMessageDialog(this, "Gagal memperbarui jumlah di database.", "Error", JOptionPane.ERROR_MESSAGE); // Translated
                 }
             }
             updateTotals();
@@ -608,10 +608,10 @@ public class CartUI extends JPanel {
                 updateTotals();
             } catch (NumberFormatException ex) {
                 quantityField.setText(String.valueOf(item.getQuantity()));
-                JOptionPane.showMessageDialog(this, "Quantity must be a valid number.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Jumlah harus berupa angka yang valid.", "Input Error", JOptionPane.ERROR_MESSAGE); // Translated
             } catch (SQLException ex) {
-                 System.err.println("Error updating quantity in DB: " + ex.getMessage());
-                 JOptionPane.showMessageDialog(this, "Failed to update quantity in database.", "Error", JOptionPane.ERROR_MESSAGE);
+                 System.err.println("Error memperbarui jumlah di DB: " + ex.getMessage()); // Translated
+                 JOptionPane.showMessageDialog(this, "Gagal memperbarui jumlah di database.", "Error", JOptionPane.ERROR_MESSAGE); // Translated
             }
         });
 
@@ -642,7 +642,7 @@ public class CartUI extends JPanel {
             originalPriceLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
 
             double discountPercentage = (1 - (item.getPrice() / item.getOriginalPrice())) * 100;
-            JLabel discountPercentageLabel = new JLabel(String.format(" %.0f%% off", discountPercentage));
+            JLabel discountPercentageLabel = new JLabel(String.format(" %.0f%% diskon", discountPercentage)); // Translated
             discountPercentageLabel.setFont(new Font("Arial", Font.BOLD, 12));
             discountPercentageLabel.setForeground(new Color(76, 175, 80));
             discountPercentageLabel.setAlignmentX(Component.RIGHT_ALIGNMENT); 
@@ -733,14 +733,14 @@ public class CartUI extends JPanel {
                         this.image = bImage;
                         this.hasImage = true;
                     } else {
-                        System.err.println("ImageIO.read returned null for BLOB image for fallbackColor: " + fallbackColor);
+                        System.err.println("ImageIO.read mengembalikan null untuk gambar BLOB untuk fallbackColor: " + fallbackColor); // Translated
                     }
                 } catch (IOException e) {
-                    System.err.println("Error loading image from BLOB for fallbackColor: " + fallbackColor + ": " + e.getMessage());
+                    System.err.println("Error memuat gambar dari BLOB untuk fallbackColor: " + fallbackColor + ": " + e.getMessage()); // Translated
                     e.printStackTrace();
                 }
             } else {
-                System.out.println("No BLOB image data provided for image panel (fallback to color for ID: " + fallbackColor + ").");
+                System.out.println("Tidak ada data gambar BLOB yang disediakan untuk panel gambar (fallback ke warna untuk ID: " + fallbackColor + ")."); // Translated
             }
         }
 
@@ -795,7 +795,7 @@ public class CartUI extends JPanel {
 
             g2d.setColor(color.darker());
             g2d.setFont(new Font("Arial", Font.BOLD, 10));
-            String text = "NO IMAGE";
+            String text = "TIDAK ADA GAMBAR"; // Translated
             FontMetrics fm = g2d.getFontMetrics();
             int textWidth = fm.stringWidth(text);
             int textHeight = fm.getHeight();
@@ -805,7 +805,7 @@ public class CartUI extends JPanel {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame frame = new JFrame("Keranjang Belanja");
+            JFrame frame = new JFrame("Keranjang Belanja"); // Translated
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 800);
 
@@ -819,12 +819,12 @@ public class CartUI extends JPanel {
                 @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)");}
                 @Override
                 public void showAddressView() {
-                    System.out.println("Dummy: Tampilkan Tampilan Alamat.");
+                    System.out.println("Dummy: Tampilkan Tampilan Alamat."); // Translated
                     // Dalam aplikasi nyata, ini akan beralih panel ke AddressUI
                 }
                 @Override
-                public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService) {
-                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan alamat dan pengiriman.");
+                public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan alamat dan pengiriman."); // Translated
                 }
                 @Override
                 public void showSuccessView(int orderId) {
@@ -836,7 +836,7 @@ public class CartUI extends JPanel {
                 }
                 @Override
                 public void showChatWithSeller(int sellerId, String sellerUsername) { 
-                    System.out.println("Dummy: Tampilkan Chat dengan Penjual ID: " + sellerId + " (" + sellerUsername + ")");
+                    System.out.println("Dummy: Tampilkan Chat dengan Penjual ID: " + sellerId + " (" + sellerUsername + ")"); // Translated
                 }
             };
 

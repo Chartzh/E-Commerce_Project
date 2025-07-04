@@ -25,7 +25,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private JLabel profileImageLabel;
     private Timer searchTimer;
     private FavoritesUI favoritesUI;
-    private CheckoutUI checkoutUI;
     private User currentUser;
     private ChatSellerUI chatSellerUI;
     private ChatFloatingButton chatFloatingButton;
@@ -78,7 +77,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
-        checkoutUI = new CheckoutUI(this);
 
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createDashboardPanel();
@@ -98,7 +96,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(ordersPanel, "Order");
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
-        mainPanel.add(checkoutUI, "Checkout");
         mainPanel.add(addressUI, "Address");
         mainPanel.add(searchResultPanel, "SearchResults"); 
 
@@ -264,7 +261,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     @Override
-    public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService) {
+    public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount) {
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof PaymentUI) {
                 mainPanel.remove(comp);
