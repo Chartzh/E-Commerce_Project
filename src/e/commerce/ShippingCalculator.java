@@ -305,14 +305,10 @@ public class ShippingCalculator {
             }
 
             if (provinceMatch) {
-                // Jika tidak ada daftar kabupaten spesifik, berarti zona mencakup seluruh provinsi tersebut
                 if (zoneKabupaten == null || zoneKabupaten.length == 0) {
                     return zoneName;
                 } else {
-                    // Cek kecocokan kabupaten
                     for (String zk : zoneKabupaten) {
-                        // Menggunakan contains karena nama kabupaten bisa bervariasi
-                        // contoh: "KOTA BEKASI" vs "BEKASI"
                         if (upperKabupaten.contains(zk)) { 
                             return zoneName;
                         }

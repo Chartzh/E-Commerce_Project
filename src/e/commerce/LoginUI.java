@@ -131,12 +131,12 @@ public class LoginUI extends JFrame {
         btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnLogin.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-        JLabel lblDontHaveAccount = new JLabel("Don't have an account?");
+        JLabel lblDontHaveAccount = new JLabel("Belum Punya Akun?");
         lblDontHaveAccount.setFont(new Font("Arial", Font.PLAIN, 14));
         lblDontHaveAccount.setForeground(Color.GRAY);
         lblDontHaveAccount.setHorizontalAlignment(JLabel.CENTER);
 
-        btnRegister = new JButton("Register Now");
+        btnRegister = new JButton("Daftar Sekarang");
         btnRegister.setFont(new Font("Arial", Font.PLAIN, 14));
         btnRegister.setBackground(Color.WHITE);
         btnRegister.setForeground(new Color(255, 102, 51));
@@ -200,8 +200,8 @@ public class LoginUI extends JFrame {
                         AdminDashboardUI adminDashboard = new AdminDashboardUI();
                         adminDashboard.setVisible(true);
                         break;
-                    case "supervisor":
-                        SupervisorDashboardUI supervisorDashboard = new SupervisorDashboardUI();
+                    case "seller":
+                        SellerDashboardUI supervisorDashboard = new SellerDashboardUI();
                         supervisorDashboard.setVisible(true);
                         break;
                     // [Perubahan ManagerRole]: Tambahkan case untuk "op_manager"

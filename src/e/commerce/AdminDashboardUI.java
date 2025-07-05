@@ -13,8 +13,6 @@ import java.sql.SQLException;
 import javax.swing.table.TableCellRenderer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-// Import untuk JFreeChart
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -23,8 +21,6 @@ import org.jfree.data.general.DefaultPieDataset;
 import org.jfree.data.general.PieDataset;
 import org.jfree.chart.ui.RectangleInsets;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
-
-// Missing JFreeChart imports
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.HorizontalAlignment;
 import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
@@ -39,16 +35,14 @@ public class AdminDashboardUI extends JFrame {
     private CardLayout cardLayout;
     private JTable userTable;
     private DefaultTableModel userTableModel;
-    private JButton[] navButtons; // To track sidebar buttons
+    private JButton[] navButtons;
 
-    // Label untuk menampilkan data dashboard
     private JLabel lblTotalUsersValue;
     private JLabel lblTotalProductsValue;
     private JLabel lblTotalTransactionsValue;
 
     public AdminDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
-        // [Perubahan ManagerRole]: Izinkan admin DAN op_manager untuk mengakses
         if (currentUser == null || (!currentUser.getRole().equalsIgnoreCase("admin") && !currentUser.getRole().equalsIgnoreCase("op_manager"))) {
             JOptionPane.showMessageDialog(this, "Akses ditolak! Hanya admin atau Operation Manager yang dapat mengakses halaman ini.", "Error", JOptionPane.ERROR_MESSAGE);
             LoginUI loginUI = new LoginUI();
@@ -63,11 +57,7 @@ public class AdminDashboardUI extends JFrame {
         setLocationRelativeTo(null);
 
         setLayout(new BorderLayout());
-
-        // **Tambahan Penting:** Mengatur latar belakang content pane JFrame
         getContentPane().setBackground(Color.WHITE);
-
-        // Set ikon (Placeholder for IconUtil)
         IconUtil.setIcon(this);
 
         // Sidebar
@@ -80,21 +70,14 @@ public class AdminDashboardUI extends JFrame {
 
         // Header
         JPanel headerPanel = createHeaderPanel(currentUser);
-
-        // Dashboard panel
-        JPanel dashboardPanel = createAdminDashboardPanel(); // Now implemented below
-
-        // User management panel
+        JPanel dashboardPanel = createAdminDashboardPanel(); 
         JPanel userManagementPanel = createUserManagementPanel();
-
-        // Profile panel
-        ProfileUI profilePanel = new ProfileUI(); // Pastikan ProfileUI ada dan berfungsi
+        ProfileUI profilePanel = new ProfileUI(); 
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(userManagementPanel, "UserManagement");
-        mainPanel.add(profilePanel, "Profile"); // Pastikan ini panel yang benar
+        mainPanel.add(profilePanel, "Profile"); 
 
-        // Content wrapper with header and main panel
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.add(headerPanel, BorderLayout.NORTH);
         contentWrapper.add(mainPanel, BorderLayout.CENTER);
@@ -102,9 +85,7 @@ public class AdminDashboardUI extends JFrame {
         add(sidebar, BorderLayout.WEST);
         add(contentWrapper, BorderLayout.CENTER);
 
-        // Load user data saat aplikasi dimulai, agar tabel terisi
         loadUserData();
-        // Refresh dashboard data on startup
         refreshDashboardData();
     }
 
@@ -126,8 +107,8 @@ public class AdminDashboardUI extends JFrame {
 
         // Navigation items
         String[] navItems = {"Dashboard", "User Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; // Settings akan mengarah ke Profile untuk saat ini
-        navButtons = new JButton[navItems.length]; // Initialize array to store buttons
+        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; 
+        navButtons = new JButton[navItems.length]; 
 
         for (int i = 0; i < navItems.length; i++) {
             JButton navButton = new JButton(navItems[i]);
@@ -146,12 +127,11 @@ public class AdminDashboardUI extends JFrame {
                 navButton.setForeground(Color.WHITE);
             }
 
-            navButtons[i] = navButton; // Store button in array
+            navButtons[i] = navButton; 
 
             final String panelName = panelNames[i];
             final int index = i;
             navButton.addActionListener(e -> {
-                // Update button colors
                 for (JButton btn : navButtons) {
                     btn.setBackground(new Color(245, 245, 245));
                     btn.setForeground(Color.BLACK);
@@ -159,16 +139,14 @@ public class AdminDashboardUI extends JFrame {
                 navButtons[index].setBackground(new Color(255, 99, 71));
                 navButtons[index].setForeground(Color.WHITE);
 
-                // Switch panel
                 cardLayout.show(mainPanel, panelName);
 
-                // Refresh user data if navigating to UserManagement
                 if (panelName.equals("UserManagement")) {
-                    loadUserData(); // Muat ulang data pengguna
+                    loadUserData(); 
                 }
-                // Refresh dashboard data if navigating to Dashboard
+         
                 if (panelName.equals("Dashboard")) {
-                    refreshDashboardData(); // Tambahkan metode ini
+                    refreshDashboardData(); 
                 }
             });
 
@@ -225,10 +203,9 @@ public class AdminDashboardUI extends JFrame {
         });
         headerPanel.add(searchField, BorderLayout.WEST);
 
-        // Right side (user profile)
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         rightPanel.setBackground(Color.WHITE);
-        rightPanel.setOpaque(true); // Pastikan panel ini opaque
+        rightPanel.setOpaque(true); 
         JLabel lblUser = new JLabel(currentUser.getUsername());
         lblUser.setFont(new Font("Arial", Font.PLAIN, 14));
         lblUser.setForeground(Color.BLACK);
@@ -241,7 +218,7 @@ public class AdminDashboardUI extends JFrame {
         btnLogout.setFocusPainted(false);
         btnLogout.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnLogout.addActionListener(e -> {
-            int response = JOptionPane.showConfirmDialog(AdminDashboardUI.this, // Tetap gunakan AdminDashboardUI.this
+            int response = JOptionPane.showConfirmDialog(AdminDashboardUI.this, 
                     "Apakah Anda yakin ingin logout?",
                     "Konfirmasi",
                     JOptionPane.YES_NO_OPTION);
@@ -263,7 +240,6 @@ public class AdminDashboardUI extends JFrame {
 
     private void refreshDashboardData() {
         int totalUsers = getTotalUserCount();
-        // Assuming ProductRepository methods exist for product and order counts
         int totalProducts = ProductRepository.getTotalProductCount();
         int totalTransactions = ProductRepository.getTotalOrderCount();
 
@@ -276,110 +252,93 @@ public class AdminDashboardUI extends JFrame {
     private PieDataset createDataset() {
         DefaultPieDataset dataset = new DefaultPieDataset();
         dataset.setValue("Admin", getTotalUserCountByRole("admin"));
-        dataset.setValue("Seller", getTotalUserCountByRole("supervisor")); // Map supervisor to Seller
-        dataset.setValue("Operation Manager", getTotalUserCountByRole("op_manager")); // [Perubahan ManagerRole]: Tambahkan Operation Manager
+        dataset.setValue("Seller", getTotalUserCountByRole("seller")); 
+        dataset.setValue("Operation Manager", getTotalUserCountByRole("op_manager")); 
         dataset.setValue("User", getTotalUserCountByRole("user"));
         return dataset;
     }
 
-    // Metode untuk membuat objek JFreeChart dengan desain modern dan minimalis
     private JFreeChart createPieChartInternal() {
         PieDataset dataset = createDataset();
         JFreeChart chart = ChartFactory.createPieChart(
-                "Distribusi Pengguna", // Judul yang lebih ringkas
+                "Distribusi Pengguna", 
                 dataset,
-                false, // Hapus legenda default, kita akan buat custom
-                true,  // Tooltips tetap ada
+                false, 
+                true, 
                 false
         );
 
-        // === STYLING MODERN DAN MINIMALIS ===
 
-        // 1. Background chart bersih
         chart.setBackgroundPaint(Color.WHITE);
-        chart.setBorderVisible(false); // Hapus border chart
+        chart.setBorderVisible(false); 
 
-        // 2. Judul dengan typography modern
-        chart.getTitle().setFont(new Font("Inter", Font.PLAIN, 20)); // Font modern, weight normal
-        chart.getTitle().setPaint(new Color(30, 30, 30)); // Almost black, lebih soft
+        chart.getTitle().setFont(new Font("Inter", Font.PLAIN, 20)); 
+        chart.getTitle().setPaint(new Color(30, 30, 30));
         chart.getTitle().setPosition(RectangleEdge.TOP);
-        chart.getTitle().setHorizontalAlignment(HorizontalAlignment.LEFT); // Align kiri untuk modern look
+        chart.getTitle().setHorizontalAlignment(HorizontalAlignment.LEFT); 
 
-        // 3. Plot styling minimalis
         PiePlot plot = (PiePlot) chart.getPlot();
 
-        // Warna palette modern dan konsisten
-        Color adminColor = new Color(99, 102, 241);    // Indigo modern
-        Color sellerColor = new Color(16, 185, 129);   // Emerald modern
-        Color opManagerColor = new Color(255, 193, 7); // [Perubahan ManagerRole]: Warna baru untuk Operation Manager
-        Color userColor = new Color(245, 158, 11);     // Amber modern
+        Color adminColor = new Color(99, 102, 241);    
+        Color sellerColor = new Color(16, 185, 129);  
+        Color opManagerColor = new Color(255, 193, 7); 
+        Color userColor = new Color(245, 158, 11);    
 
         plot.setSectionPaint("Admin", adminColor);
         plot.setSectionPaint("Seller", sellerColor);
-        plot.setSectionPaint("Operation Manager", opManagerColor); // [Perubahan ManagerRole]: Set warna untuk peran baru
+        plot.setSectionPaint("Operation Manager", opManagerColor); 
         plot.setSectionPaint("User", userColor);
 
-        // 4. Hapus semua elemen visual yang tidak perlu
-        plot.setOutlineVisible(false);           // Hapus outline pie
-        plot.setShadowPaint(null);              // Hapus shadow untuk flat design
-        plot.setBackgroundPaint(Color.WHITE);    // Background plot putih
-        plot.setBackgroundAlpha(0.0f);          // Transparan
+        plot.setOutlineVisible(false);          
+        plot.setShadowPaint(null);              
+        plot.setBackgroundPaint(Color.WHITE);   
+        plot.setBackgroundAlpha(0.0f);          
 
-        // 5. Label styling minimalis
         plot.setLabelFont(new Font("Inter", Font.PLAIN, 11));
-        plot.setLabelPaint(new Color(75, 85, 99)); // Text gray modern
-        plot.setLabelBackgroundPaint(new Color(255, 255, 255, 200)); // Semi-transparent white
-        plot.setLabelOutlinePaint(null);        // Hapus outline label
-        plot.setLabelShadowPaint(null);         // Hapus shadow label
-        plot.setLabelLinkPaint(new Color(209, 213, 219)); // Light gray untuk connector
-        plot.setLabelLinkStroke(new BasicStroke(1.0f)); // Thin connector line
+        plot.setLabelPaint(new Color(75, 85, 99)); 
+        plot.setLabelBackgroundPaint(new Color(255, 255, 255, 200)); 
+        plot.setLabelOutlinePaint(null);       
+        plot.setLabelShadowPaint(null);        
+        plot.setLabelLinkPaint(new Color(209, 213, 219)); 
+        plot.setLabelLinkStroke(new BasicStroke(1.0f)); 
 
         plot.setLabelGenerator(new StandardPieSectionLabelGenerator(
-            "{0}: {2}\n({1})", // Format: "Role: percentage\n(count)"
-            NumberFormat.getNumberInstance(), // Untuk nilai absolut
-            new DecimalFormat("0.0%") // Untuk persentase
+            "{0}: {2}\n({1})", 
+            NumberFormat.getNumberInstance(), 
+            new DecimalFormat("0.0%")
         ));
 
-        // 6. Geometry yang lebih modern
-        plot.setCircular(true);                 // Perfect circle
-        plot.setInteriorGap(0.02);             // Minimal gap
-        plot.setStartAngle(90);                // Start dari atas (12 o'clock)
-        plot.setDirection(Rotation.CLOCKWISE);  // Searah jarum jam
+        plot.setCircular(true);                 
+        plot.setInteriorGap(0.02);            
+        plot.setStartAngle(90);              
+        plot.setDirection(Rotation.CLOCKWISE);  
 
-        // 7. Spacing dan padding modern
-        plot.setLabelGap(0.05);                // Gap antara pie dan label
-        plot.setMaximumLabelWidth(0.20);       // Max width label
+        plot.setLabelGap(0.05);               
+        plot.setMaximumLabelWidth(0.20);       
 
-        // 8. Hover effect untuk interaktivity (opsional)
-        plot.setExplodePercent("Admin", 0.02);  // Slight explode untuk highlight
+        plot.setExplodePercent("Admin", 0.02);  
 
-        // 9. No data message yang lebih elegant
         plot.setNoDataMessage("Belum ada data pengguna");
         plot.setNoDataMessageFont(new Font("Inter", Font.ITALIC, 14));
-        plot.setNoDataMessagePaint(new Color(156, 163, 175)); // Gray-400
+        plot.setNoDataMessagePaint(new Color(156, 163, 175)); 
 
-        // 10. Chart padding untuk breathing room
         try {
-            chart.setPadding(new RectangleInsets(20, 30, 20, 30)); // Top, Left, Bottom, Right
+            chart.setPadding(new RectangleInsets(20, 30, 20, 30)); 
         } catch (Exception e) {
-            // Fallback jika RectangleInsets tidak tersedia
             System.out.println("Chart padding tidak dapat diset - versi JFreeChart mungkin lama");
         }
 
         return chart;
     }
 
-    // Method helper untuk membuat ChartPanel dengan styling konsisten
     private ChartPanel createModernChartPanel(JFreeChart chart) {
         ChartPanel chartPanel = new ChartPanel(chart) {
             @Override
             public void paintComponent(Graphics g) {
-                // Anti-aliasing untuk rendering yang smooth
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // Background putih bersih
                 g2.setColor(Color.WHITE);
                 g2.fillRect(0, 0, getWidth(), getHeight());
 
@@ -388,40 +347,31 @@ public class AdminDashboardUI extends JFrame {
             }
         };
 
-        // Panel settings
         chartPanel.setBackground(Color.WHITE);
         chartPanel.setOpaque(true);
-        chartPanel.setBorder(null); // Hapus border default
+        chartPanel.setBorder(null); 
 
-        // Disable zoom dan pan untuk clean UX
         chartPanel.setDomainZoomable(false);
         chartPanel.setRangeZoomable(false);
-        chartPanel.setPopupMenu(null); // Hapus context menu
+        chartPanel.setPopupMenu(null); 
 
         return chartPanel;
     }
 
-    // Method untuk membuat wrapper panel yang lebih modern
     private JPanel createModernChartWrapper() {
         final JFreeChart chart = createPieChartInternal();
 
-        // Main wrapper dengan modern styling
         JPanel chartWrapperPanel = new JPanel(new BorderLayout());
         chartWrapperPanel.setBackground(Color.WHITE);
         chartWrapperPanel.setOpaque(true);
 
-        // Modern border dengan subtle shadow effect
         chartWrapperPanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(229, 231, 235), 1), // Border abu-abu sangat muda
-            BorderFactory.createEmptyBorder(24, 24, 24, 24) // Generous padding
+            BorderFactory.createLineBorder(new Color(229, 231, 235), 1), 
+            BorderFactory.createEmptyBorder(24, 24, 24, 24) 
         ));
 
-        // Rounded corners effect (jika menggunakan custom border)
-        // chartWrapperPanel.setBorder(new RoundedBorder(8, new Color(229, 231, 235)));
+        chartWrapperPanel.setPreferredSize(new Dimension(480, 320)); 
 
-        chartWrapperPanel.setPreferredSize(new Dimension(480, 320)); // Aspect ratio yang lebih baik
-
-        // Chart panel dengan styling modern
         ChartPanel chartPanel = createModernChartPanel(chart);
         chartWrapperPanel.add(chartPanel, BorderLayout.CENTER);
 
@@ -458,13 +408,11 @@ public class AdminDashboardUI extends JFrame {
         }
     }
 
-    // New method: createAdminDashboardPanel
     private JPanel createAdminDashboardPanel() {
         JPanel dashboardPanel = new JPanel(new BorderLayout());
         dashboardPanel.setBackground(Color.WHITE);
         dashboardPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Top section for summary cards
         JPanel summaryCardsPanel = new JPanel(new GridLayout(1, 3, 20, 0));
         summaryCardsPanel.setBackground(Color.WHITE);
 
@@ -478,16 +426,14 @@ public class AdminDashboardUI extends JFrame {
 
         dashboardPanel.add(summaryCardsPanel, BorderLayout.NORTH);
 
-        // Chart and User Counts Panel
         JPanel chartAndDetailsPanel = new JPanel(new BorderLayout());
         chartAndDetailsPanel.setBackground(Color.WHITE);
         chartAndDetailsPanel.setOpaque(true);
-        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0)); // Add some top padding
+        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0)); 
 
         chartAndDetailsPanel.add(createModernChartWrapper(), BorderLayout.CENTER);
-        // chartAndDetailsPanel.add(createUserCountsPanel(), BorderLayout.EAST); // Ini sudah dihapus sebelumnya
 
-        dashboardPanel.add(chartAndDetailsPanel, BorderLayout.CENTER); // Changed to CENTER
+        dashboardPanel.add(chartAndDetailsPanel, BorderLayout.CENTER); 
 
         return dashboardPanel;
     }
@@ -575,24 +521,21 @@ public class AdminDashboardUI extends JFrame {
     private JPanel createUserManagementPanel() {
         JPanel userManagementPanel = new JPanel(new BorderLayout());
         userManagementPanel.setBackground(Color.WHITE);
-        userManagementPanel.setOpaque(true); // Pastikan panel ini opaque
+        userManagementPanel.setOpaque(true); 
         userManagementPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Title panel
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setBackground(Color.WHITE);
-        titlePanel.setOpaque(true); // Pastikan panel ini opaque
+        titlePanel.setOpaque(true); 
         JLabel lblTitle = new JLabel("Kelola Pengguna");
         lblTitle.setFont(new Font("Arial", Font.BOLD, 20));
         titlePanel.add(lblTitle, BorderLayout.WEST);
 
-        // Search and add user panel
         JPanel actionPanel = new JPanel(new BorderLayout());
         actionPanel.setBackground(Color.WHITE);
-        actionPanel.setOpaque(true); // Pastikan panel ini opaque
+        actionPanel.setOpaque(true); 
         actionPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        // Search field
         JTextField searchField = new JTextField(20);
         searchField.setBorder(new LineBorder(Color.LIGHT_GRAY, 1, true));
         searchField.setPreferredSize(new Dimension(200, 30));
@@ -620,35 +563,30 @@ public class AdminDashboardUI extends JFrame {
             }
         });
 
-        // Panel for search components
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         searchPanel.setBackground(Color.WHITE);
-        searchPanel.setOpaque(true); // Pastikan panel ini opaque
+        searchPanel.setOpaque(true);
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
 
-        // Panel for add button
         JPanel addPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         addPanel.setBackground(Color.WHITE);
-        addPanel.setOpaque(true); // Pastikan panel ini opaque
+        addPanel.setOpaque(true); 
         addPanel.add(addUserButton);
 
         actionPanel.add(searchPanel, BorderLayout.WEST);
         actionPanel.add(addPanel, BorderLayout.EAST);
 
-        // User table
-        // MENAMBAH KOLOM "STATUS"
         String[] columnNames = {"ID", "Username", "Email", "Role", "Status", "Aksi"};
         userTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 5; // Hanya kolom "Aksi" yang bisa diedit
+                return column == 5; 
             }
             @Override
             public Class<?> getColumnClass(int column) {
-                // Mengatur kelas untuk kolom aksi agar renderer dan editor bekerja
                 if (column == 5) {
-                    return JPanel.class; // Karena ButtonRenderer/Editor menggunakan JPanel
+                    return JPanel.class;
                 }
                 return super.getColumnClass(column);
             }
@@ -662,15 +600,15 @@ public class AdminDashboardUI extends JFrame {
         userTable.getTableHeader().setForeground(Color.WHITE);
 
         // Custom renderer for action buttons
-        userTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer()); // Kolom ke-5 adalah Aksi
-        userTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox())); // Kolom ke-5 adalah Aksi
+        userTable.getColumnModel().getColumn(5).setCellRenderer(new ButtonRenderer()); 
+        userTable.getColumnModel().getColumn(5).setCellEditor(new ButtonEditor(new JCheckBox())); 
 
         JScrollPane scrollPane = new JScrollPane(userTable);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
 
         userManagementPanel.add(titlePanel, BorderLayout.NORTH);
-        userManagementPanel.add(actionPanel, BorderLayout.CENTER); // Changed to CENTER
-        userManagementPanel.add(scrollPane, BorderLayout.SOUTH); // Keeping SOUTH, consider CENTER if the table should expand
+        userManagementPanel.add(actionPanel, BorderLayout.CENTER); 
+        userManagementPanel.add(scrollPane, BorderLayout.SOUTH); 
 
         return userManagementPanel;
     }
@@ -680,7 +618,6 @@ public class AdminDashboardUI extends JFrame {
 
         try {
             Connection conn = DatabaseConnection.getConnection();
-            // Ambil juga kolom is_verified
             String query = "SELECT id, username, email, role, is_verified FROM users ORDER BY id";
             PreparedStatement stmt = conn.prepareStatement(query);
             ResultSet rs = stmt.executeQuery();
@@ -691,17 +628,16 @@ public class AdminDashboardUI extends JFrame {
                 row[1] = rs.getString("username");
                 row[2] = rs.getString("email");
                 String role = rs.getString("role");
-                // [Perubahan ManagerRole]: Tampilkan "Operation Manager" jika peran adalah "op_manager"
-                if (role.equalsIgnoreCase("supervisor")) {
+                if (role.equalsIgnoreCase("seller")) {
                     row[3] = "Seller";
                 } else if (role.equalsIgnoreCase("op_manager")) {
                     row[3] = "Operation Manager";
                 }
                 else {
-                    row[3] = role; // Untuk 'admin' dan 'user'
+                    row[3] = role;
                 }
-                row[4] = rs.getBoolean("is_verified") ? "Aktif" : "Nonaktif"; // Tampilkan status aktif/nonaktif
-                row[5] = "Aksi"; // Placeholder untuk tombol aksi
+                row[4] = rs.getBoolean("is_verified") ? "Aktif" : "Nonaktif"; 
+                row[5] = "Aksi";
                 userTableModel.addRow(row);
             }
 
@@ -727,7 +663,7 @@ public class AdminDashboardUI extends JFrame {
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setString(1, "%" + keyword + "%");
             stmt.setString(2, "%" + keyword + "%");
-            stmt.setString(3, "%" + keyword + "%"); // Filter juga berdasarkan kata kunci peran yang dimasukkan
+            stmt.setString(3, "%" + keyword + "%"); 
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
@@ -736,8 +672,7 @@ public class AdminDashboardUI extends JFrame {
                 row[1] = rs.getString("username");
                 row[2] = rs.getString("email");
                 String role = rs.getString("role");
-                // [Perubahan ManagerRole]: Tampilkan "Operation Manager" jika peran adalah "op_manager"
-                if (role.equalsIgnoreCase("supervisor")) {
+                if (role.equalsIgnoreCase("seller")) {
                     row[3] = "Seller";
                 } else if (role.equalsIgnoreCase("op_manager")) {
                     row[3] = "Operation Manager";
@@ -799,18 +734,16 @@ public class AdminDashboardUI extends JFrame {
         JPasswordField txtPassword = new JPasswordField(20);
 
         JLabel lblRole = new JLabel("Role:");
-        // [Perubahan ManagerRole]: Tambahkan "op_manager" ke opsi
-        String[] internalRoles = {"user", "supervisor", "op_manager", "admin"};
+        String[] internalRoles = {"user", "seller", "op_manager", "admin"};
         JComboBox<String> cmbRole = new JComboBox<>(internalRoles);
-        // Mengatur renderer kustom untuk menampilkan "Seller" alih-alih "supervisor" dan "Operation Manager"
         cmbRole.setRenderer(new BasicComboBoxRenderer() {
             @Override
             public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value != null) {
-                    if (value.toString().equalsIgnoreCase("supervisor")) {
+                    if (value.toString().equalsIgnoreCase("seller")) {
                         setText("Seller");
-                    } else if (value.toString().equalsIgnoreCase("op_manager")) { // [Perubahan ManagerRole]: Render "op_manager"
+                    } else if (value.toString().equalsIgnoreCase("op_manager")) { 
                         setText("Operation Manager");
                     } else {
                         setText(value.toString());
@@ -860,7 +793,7 @@ public class AdminDashboardUI extends JFrame {
                 String username = txtUsername.getText().trim();
                 String email = txtEmail.getText().trim();
                 String password = new String(txtPassword.getPassword());
-                String role = (String) cmbRole.getSelectedItem(); // Mengambil nilai internal ("supervisor", "op_manager")
+                String role = (String) cmbRole.getSelectedItem(); 
                 boolean isVerified = chkIsVerified.isSelected();
 
                 if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
@@ -894,7 +827,7 @@ public class AdminDashboardUI extends JFrame {
                     insertStmt.setString(1, username);
                     insertStmt.setString(2, email);
                     insertStmt.setString(3, hashedPassword);
-                    insertStmt.setString(4, role); // Menyimpan nilai internal ke database
+                    insertStmt.setString(4, role); 
                     insertStmt.setBoolean(5, isVerified);
 
                     int result = insertStmt.executeUpdate();
@@ -932,8 +865,8 @@ public class AdminDashboardUI extends JFrame {
     }
 
     class ButtonRenderer extends JPanel implements TableCellRenderer {
-        private JButton editRoleButton; // Mengganti nama
-        private JButton toggleStatusButton; // Tombol baru
+        private JButton editRoleButton; 
+        private JButton toggleStatusButton;
 
         public ButtonRenderer() {
             setLayout(new FlowLayout(FlowLayout.CENTER, 5, 0));
@@ -964,10 +897,10 @@ public class AdminDashboardUI extends JFrame {
             String status = (String) table.getModel().getValueAt(row, 4);
             if ("Aktif".equals(status)) {
                 toggleStatusButton.setText("Nonaktifkan");
-                toggleStatusButton.setBackground(new Color(220, 53, 69)); // Merah untuk Nonaktifkan
+                toggleStatusButton.setBackground(new Color(220, 53, 69));
             } else {
                 toggleStatusButton.setText("Aktifkan");
-                toggleStatusButton.setBackground(new Color(40, 167, 69)); // Hijau untuk Aktifkan
+                toggleStatusButton.setBackground(new Color(40, 167, 69)); 
             }
             return this;
         }
@@ -992,7 +925,8 @@ public class AdminDashboardUI extends JFrame {
             editRoleButton.setFocusPainted(false);
             editRoleButton.setBorderPainted(false);
 
-            toggleStatusButton = new JButton(); // Teks akan diatur secara dinamis
+            toggleStatusButton = new JButton(); 
+            toggleStatusButton = new JButton(); 
             toggleStatusButton.setForeground(Color.WHITE);
             toggleStatusButton.setFocusPainted(false);
             toggleStatusButton.setBorderPainted(false);
@@ -1046,13 +980,12 @@ public class AdminDashboardUI extends JFrame {
                 if (action.equals("Edit")) {
                     showEditUserDialog(userId, selectedRow);
                 } else if (action.equals("ToggleStatus")) {
-                    // Ambil status saat ini dari tabel (kolom 4)
                     boolean currentStatus = ((String) userTable.getValueAt(selectedRow, 4)).equals("Aktif");
                     toggleUserStatus(userId, currentStatus);
                 }
             }
             isPushed = false;
-            return ""; // Penting untuk mengembalikan nilai dummy
+            return ""; 
         }
 
         @Override
@@ -1080,13 +1013,12 @@ public class AdminDashboardUI extends JFrame {
         
         String roleFromTable = (String) userTable.getValueAt(row, 3);
         String actualRole; 
-        // [Perubahan ManagerRole]: Konversi tampilan peran ke nilai database
         if (roleFromTable.equalsIgnoreCase("Seller")) {
-            actualRole = "supervisor";
+            actualRole = "seller";
         } else if (roleFromTable.equalsIgnoreCase("Operation Manager")) {
             actualRole = "op_manager";
         } else {
-            actualRole = roleFromTable; // Untuk peran seperti "admin", "user"
+            actualRole = roleFromTable;
         }
 
         boolean isVerified = ((String) userTable.getValueAt(row, 4)).equals("Aktif");
@@ -1096,7 +1028,7 @@ public class AdminDashboardUI extends JFrame {
         formPanel.add(new JLabel("ID Pengguna:"), gbc);
         gbc.gridx = 1;
         JTextField txtUserId = new JTextField(String.valueOf(userId));
-        txtUserId.setEditable(false); // ID tidak bisa diedit
+        txtUserId.setEditable(false); 
         formPanel.add(txtUserId, gbc);
 
         gbc.gridx = 0;
@@ -1104,7 +1036,7 @@ public class AdminDashboardUI extends JFrame {
         formPanel.add(new JLabel("Username:"), gbc);
         gbc.gridx = 1;
         JTextField txtUsername = new JTextField(username);
-        txtUsername.setEditable(false); // Username tidak bisa diedit
+        txtUsername.setEditable(false); 
         formPanel.add(txtUsername, gbc);
 
         gbc.gridx = 0;
@@ -1112,27 +1044,24 @@ public class AdminDashboardUI extends JFrame {
         formPanel.add(new JLabel("Email:"), gbc);
         gbc.gridx = 1;
         JTextField txtEmail = new JTextField(email);
-        txtEmail.setEditable(false); // Email tidak bisa diedit
+        txtEmail.setEditable(false); 
         formPanel.add(txtEmail, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 3;
         formPanel.add(new JLabel("Role:"), gbc);
         gbc.gridx = 1;
-        // [Perubahan ManagerRole]: Tambahkan "op_manager" ke opsi
-        String[] internalRoles = {"user", "supervisor", "op_manager", "admin"};
+        String[] internalRoles = {"user", "seller", "op_manager", "admin"};
         JComboBox<String> cmbRole = new JComboBox<>(internalRoles);
-        // Mengatur nilai yang dipilih berdasarkan peran sebenarnya dari database
         cmbRole.setSelectedItem(actualRole);
-        // Mengatur renderer kustom untuk menampilkan "Seller" dan "Operation Manager"
         cmbRole.setRenderer(new BasicComboBoxRenderer() {
             @Override
             public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
                 if (value != null) {
-                    if (value.toString().equalsIgnoreCase("supervisor")) {
+                    if (value.toString().equalsIgnoreCase("seller")) {
                         setText("Seller");
-                    } else if (value.toString().equalsIgnoreCase("op_manager")) { // [Perubahan ManagerRole]: Render "op_manager"
+                    } else if (value.toString().equalsIgnoreCase("op_manager")) { 
                         setText("Operation Manager");
                     } else {
                         setText(value.toString());
@@ -1178,17 +1107,16 @@ public class AdminDashboardUI extends JFrame {
         btnSave.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String updatedRole = (String) cmbRole.getSelectedItem(); // Mengambil nilai internal (e.g., "supervisor", "op_manager")
+                String updatedRole = (String) cmbRole.getSelectedItem(); 
                 boolean updatedIsVerified = chkIsVerified.isSelected();
 
-                // [Perubahan ManagerRole]: Konversi tampilan peran ke nilai database untuk penyimpanan
                 String roleToSave;
                 if (updatedRole.equalsIgnoreCase("Seller")) {
-                    roleToSave = "supervisor";
+                    roleToSave = "seller";
                 } else if (updatedRole.equalsIgnoreCase("Operation Manager")) {
                     roleToSave = "op_manager";
                 } else {
-                    roleToSave = updatedRole; // Untuk "admin", "user"
+                    roleToSave = updatedRole; 
                 }
 
                 try {
@@ -1196,15 +1124,14 @@ public class AdminDashboardUI extends JFrame {
 
                     String updateQuery = "UPDATE users SET role = ?, is_verified = ? WHERE id = ?";
                     PreparedStatement updateStmt = conn.prepareStatement(updateQuery);
-                    updateStmt.setString(1, roleToSave); // Menyimpan nilai internal ke database
+                    updateStmt.setString(1, roleToSave); 
                     updateStmt.setBoolean(2, updatedIsVerified);
                     updateStmt.setInt(3, userId);
 
                     int result = updateStmt.executeUpdate();
 
                     if (result > 0) {
-                        // Perbarui tabel dengan nilai yang ditampilkan (misalnya "Seller", "Operation Manager")
-                        userTable.setValueAt(updatedRole, row, 3); // Langsung gunakan updatedRole untuk tampilan
+                        userTable.setValueAt(updatedRole, row, 3); 
                         userTable.setValueAt(updatedIsVerified ? "Aktif" : "Nonaktif", row, 4);
 
                         JOptionPane.showMessageDialog(editUserDialog,
@@ -1248,7 +1175,6 @@ public class AdminDashboardUI extends JFrame {
 
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                // Panggil metode dari ProductRepository untuk memperbarui status
                 boolean success = ProductRepository.updateUserVerificationStatus(userId, !currentStatus);
 
                 if (success) {
@@ -1256,7 +1182,7 @@ public class AdminDashboardUI extends JFrame {
                             "Pengguna berhasil " + (currentStatus ? "dinonaktifkan" : "diaktifkan") + "!",
                             "Sukses",
                             JOptionPane.INFORMATION_MESSAGE);
-                    loadUserData(); // Muat ulang data untuk merefleksikan perubahan
+                    loadUserData(); 
                 } else {
                     JOptionPane.showMessageDialog(this,
                             "Gagal " + actionMessage + " pengguna!",
@@ -1290,14 +1216,11 @@ public class AdminDashboardUI extends JFrame {
             adminRs.next();
             int adminCount = adminRs.getInt(1);
 
-            // Mengambil data dari 'supervisor' tetapi menampilkan sebagai 'Seller'
-            String sellerQuery = "SELECT COUNT(*) FROM users WHERE role = 'supervisor'";
+            String sellerQuery = "SELECT COUNT(*) FROM users WHERE role = 'seller'";
             PreparedStatement sellerStmt = conn.prepareStatement(sellerQuery);
             ResultSet sellerRs = sellerStmt.executeQuery();
             sellerRs.next();
             int sellerCount = sellerRs.getInt(1);
-
-            // [Perubahan ManagerRole]: Ambil data untuk 'op_manager'
             String opManagerQuery = "SELECT COUNT(*) FROM users WHERE role = 'op_manager'";
             PreparedStatement opManagerStmt = conn.prepareStatement(opManagerQuery);
             ResultSet opManagerRs = opManagerStmt.executeQuery();
@@ -1310,13 +1233,13 @@ public class AdminDashboardUI extends JFrame {
             userRs.next();
             int userCount = userRs.getInt(1);
 
-            String activeQuery = "SELECT COUNT(*) FROM users WHERE is_verified = TRUE"; // Jumlah aktif
+            String activeQuery = "SELECT COUNT(*) FROM users WHERE is_verified = TRUE"; 
             PreparedStatement activeStmt = conn.prepareStatement(activeQuery);
             ResultSet activeRs = activeStmt.executeQuery();
             activeRs.next();
             int activeCount = activeRs.getInt(1);
 
-            String inactiveQuery = "SELECT COUNT(*) FROM users WHERE is_verified = FALSE"; // Jumlah nonaktif
+            String inactiveQuery = "SELECT COUNT(*) FROM users WHERE is_verified = FALSE"; 
             PreparedStatement inactiveStmt = conn.prepareStatement(inactiveQuery);
             ResultSet inactiveRs = inactiveStmt.executeQuery();
             inactiveRs.next();
@@ -1325,11 +1248,11 @@ public class AdminDashboardUI extends JFrame {
             JOptionPane.showMessageDialog(this,
                     "Statistik Pengguna:\n\n" +
                     "Total Pengguna: " + totalUsers + "\n" +
-                    "Jumlah Aktif: " + activeCount + "\n" + // Tampilkan jumlah aktif
-                    "Jumlah Nonaktif: " + inactiveCount + "\n" + // Tampilkan jumlah nonaktif
+                    "Jumlah Aktif: " + activeCount + "\n" + 
+                    "Jumlah Nonaktif: " + inactiveCount + "\n" + 
                     "Jumlah Admin: " + adminCount + "\n" +
-                    "Jumlah Seller: " + sellerCount + "\n" + // Tampilkan sebagai "Seller"
-                    "Jumlah Operation Manager: " + opManagerCount + "\n" + // [Perubahan ManagerRole]: Tampilkan jumlah Operation Manager
+                    "Jumlah Seller: " + sellerCount + "\n" + 
+                    "Jumlah Operation Manager: " + opManagerCount + "\n" +
                     "Jumlah User: " + userCount,
                     "Statistik Pengguna",
                     JOptionPane.INFORMATION_MESSAGE);
@@ -1345,7 +1268,6 @@ public class AdminDashboardUI extends JFrame {
 
     private void exportUserData() {
         try {
-            // Sesuaikan header CSV untuk kolom status
             StringBuilder csvData = new StringBuilder();
             csvData.append("ID,Username,Email,Role,Status\n");
 
@@ -1353,11 +1275,10 @@ public class AdminDashboardUI extends JFrame {
                 csvData.append(userTable.getValueAt(i, 0)).append(",");
                 csvData.append(userTable.getValueAt(i, 1)).append(",");
                 csvData.append(userTable.getValueAt(i, 2)).append(",");
-                // Ekspor peran internal, bukan yang ditampilkan (Seller, Operation Manager)
                 String roleForExport = (String) userTable.getValueAt(i, 3);
                 if (roleForExport.equalsIgnoreCase("Seller")) {
-                     roleForExport = "supervisor"; // Konversi kembali untuk ekspor yang akurat
-                } else if (roleForExport.equalsIgnoreCase("Operation Manager")) { // [Perubahan ManagerRole]: Konversi kembali "Operation Manager"
+                     roleForExport = "seller"; 
+                } else if (roleForExport.equalsIgnoreCase("Operation Manager")) { 
                     roleForExport = "op_manager";
                 }
                 csvData.append(roleForExport).append(",");

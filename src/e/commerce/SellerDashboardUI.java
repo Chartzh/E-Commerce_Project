@@ -26,7 +26,7 @@ import java.sql.*;
 import e.commerce.FavoritesUI.FavoriteItem; 
 
 
-public class SupervisorDashboardUI extends JFrame {
+public class SellerDashboardUI extends JFrame {
     private JPanel mainPanel;
     private CardLayout cardLayout;
     private DefaultTableModel productTableModel;
@@ -115,9 +115,9 @@ public class SupervisorDashboardUI extends JFrame {
     }
 
 
-    public SupervisorDashboardUI() {
+    public SellerDashboardUI() {
         currentUser = Authentication.getCurrentUser();
-        if (currentUser == null || (!currentUser.getRole().equals("supervisor") && !currentUser.getRole().equals("admin"))) {
+        if (currentUser == null || (!currentUser.getRole().equals("seller") && !currentUser.getRole().equals("admin"))) {
             LoginUI loginUI = new LoginUI();
             loginUI.setVisible(true);
             dispose();
@@ -210,7 +210,7 @@ public class SupervisorDashboardUI extends JFrame {
             @Override
             public void windowOpened(WindowEvent e) {
                 if (getComponentListeners().length > 0 && getComponentListeners()[0] instanceof ComponentAdapter) {
-                    getComponentListeners()[0].componentResized(new ComponentEvent(SupervisorDashboardUI.this, ComponentEvent.COMPONENT_RESIZED));
+                    getComponentListeners()[0].componentResized(new ComponentEvent(SellerDashboardUI.this, ComponentEvent.COMPONENT_RESIZED));
                 }
             }
         });
@@ -255,7 +255,7 @@ public class SupervisorDashboardUI extends JFrame {
                 navButton.setBackground(CANCEL_RED);
                 navButton.setForeground(WHITE);
                 navButton.addActionListener(e -> {
-                    int response = JOptionPane.showConfirmDialog(SupervisorDashboardUI.this,
+                    int response = JOptionPane.showConfirmDialog(SellerDashboardUI.this,
                                     "Apakah Anda yakin ingin logout?",
                                     "Konfirmasi Logout",
                                     JOptionPane.YES_NO_OPTION);
@@ -445,7 +445,7 @@ public class SupervisorDashboardUI extends JFrame {
     public void loadProductsForSupervisor() {
         productTableModel.setRowCount(0);
         List<FavoritesUI.FavoriteItem> productsToDisplay; // MENGGUNAKAN FAVORITESUI.FavoriteItem
-        if (currentUser.getRole().equals("supervisor")) {
+        if (currentUser.getRole().equals("seller")) {
             productsToDisplay = ProductRepository.getProductsBySeller(currentUser.getId());
         } else if (currentUser.getRole().equals("admin")) {
             productsToDisplay = ProductRepository.getAllProducts();
@@ -1061,10 +1061,10 @@ public class SupervisorDashboardUI extends JFrame {
 
     class ButtonEditor extends DefaultCellEditor {
         protected JButton button;
-        protected SupervisorDashboardUI parent;
+        protected SellerDashboardUI parent;
         protected int currentProductId;
 
-        public ButtonEditor(JCheckBox checkBox, SupervisorDashboardUI parent) {
+        public ButtonEditor(JCheckBox checkBox, SellerDashboardUI parent) {
             super(checkBox);
             this.parent = parent;
             button = new JButton();
@@ -1201,13 +1201,13 @@ public class SupervisorDashboardUI extends JFrame {
 
     class OrderActionButtonEditor extends DefaultCellEditor {
         protected JButton button;
-        protected SupervisorDashboardUI parent;
+        protected SellerDashboardUI parent;
         protected int currentOrderId;
         private JComboBox<String> statusChooser;
         private JTable currentTable;
         private int editingRow;
 
-        public OrderActionButtonEditor(JCheckBox checkBox, SupervisorDashboardUI parent) {
+        public OrderActionButtonEditor(JCheckBox checkBox, SellerDashboardUI parent) {
             super(checkBox);
             this.parent = parent;
             button = new JButton();
@@ -1443,7 +1443,7 @@ public class SupervisorDashboardUI extends JFrame {
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new SupervisorDashboardUI().setVisible(true);
+            new SellerDashboardUI().setVisible(true);
         });
     }
 }

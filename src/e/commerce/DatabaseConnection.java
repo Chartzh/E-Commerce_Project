@@ -152,7 +152,7 @@ public class DatabaseConnection {
             if (countTableRows(conn, "users") == 0) { //
                 // [Perbaikan]: Pastikan register() di Authentication.java sudah benar untuk dummy user
                 boolean adminRegistered = Authentication.register("admin_user", "admin@example.com", "adminpass", "admin", true); //
-                boolean supervisorRegistered = Authentication.register("supervisor_user", "supervisor@example.com", "supervisorpass", "supervisor", true); //
+                boolean supervisorRegistered = Authentication.register("seller_user", "seller@example.com", "sellerpass", "seller", true); //
                 boolean opManagerRegistered = Authentication.register("op_manager_user", "manager@example.com", "managerpass", "op_manager", true); //
                 boolean userRegistered = Authentication.register("user_customer", "customer@example.com", "customerpass", "user", true); //
 

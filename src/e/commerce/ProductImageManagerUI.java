@@ -18,7 +18,7 @@ public class ProductImageManagerUI extends JDialog {
     private int productId;
     private JPanel imagePanelContainer;
     private JScrollPane scrollPane;
-    private SupervisorDashboardUI parentDashboard;
+    private SellerDashboardUI parentDashboard;
 
     private static class LoadedImageData {
         public int imageId;
@@ -49,7 +49,7 @@ public class ProductImageManagerUI extends JDialog {
 
     private List<LoadedImageData> currentImages;
 
-    public ProductImageManagerUI(SupervisorDashboardUI parent, int productId) {
+    public ProductImageManagerUI(SellerDashboardUI parent, int productId) {
         super(parent, "Manage Product Images for Product ID: " + productId, true);
         this.parentDashboard = parent;
         this.productId = productId;
