@@ -11,7 +11,7 @@
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ProductRepository.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ProductDetailUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ChatPopupUI.java</file>
-            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/SupervisorDashboardUI.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/SellerDashboardUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ManagerDashboardUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/IconUtil.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ExportPdfService.java</file>
@@ -27,6 +27,11 @@
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/CartUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/FavoritesUI.java</file>
             <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ProfileUI.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/LoginUI.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/RegisterUI.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/OrderHistory.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/ProductReview.java</file>
+            <file>file:/C:/UIN%20Jakarta/Kuliah/Semester%202/Pemrograman%20Lanjut/E-Commerce_Project-main/src/e/commerce/Main.java</file>
         </group>
     </open-files>
 </project-private>

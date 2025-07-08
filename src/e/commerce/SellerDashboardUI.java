@@ -170,6 +170,7 @@ public class SellerDashboardUI extends JFrame {
             @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
                 chatPopupUI.startChatWith(sellerId, sellerUsername);
             }
+            @Override public void showProductReviewView(int productId, String productName, String productImage, double productPrice, String sellerName) {}
         };
 
         chatFloatingButton = new ChatFloatingButton(this, dummyVCForChatPopup);
@@ -1365,6 +1366,7 @@ public class SellerDashboardUI extends JFrame {
                     @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
                         chatPopupUI.startChatWith(sellerId, sellerUsername);
                     }
+                    @Override public void showProductReviewView(int productId, String productName, String productImage, double productPrice, String sellerName) { }
                 };
 
                 OrderDetailUI orderDetailUIPanel = new OrderDetailUI(dummyVCForOrderDetail, orderId);

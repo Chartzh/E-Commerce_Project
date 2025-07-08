@@ -15,4 +15,5 @@ public interface ViewController {
     void showSuccessView(int orderId);
     void showOrderDetailView(int orderId);
     void showChatWithSeller(int sellerId, String sellerUsername);
+    void showProductReviewView(int productId, String productName, String productImage, double productPrice, String sellerName);
 }

@@ -15,7 +15,6 @@ import java.util.TimerTask;
 import java.sql.SQLException;
 import e.commerce.ProductRepository.ChatMessage;
 
-// Import Address dan ShippingService dari AddressUI untuk tipe parameter
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
 
@@ -34,11 +33,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private PaymentUI paymentUI;
     private SuccessUI successUI;
 
-    // --- Banner Image Paths ---
     private static final String BANNER_1_PATH = "/Resources/Images/Banner1.png";
     private static final String BANNER_2_PATH = "/Resources/Images/Banner2.png";
 
-    // --- Variables for Banner Carousel ---
     private JPanel bannerCarouselContainer;
     private JPanel bannerImagePanel;
     private CardLayout bannerCardLayout;
@@ -53,8 +50,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     private JPanel searchResultPanel;
     private JPanel searchContentCardPanel;
-    private CardLayout searchContentCardLayout; 
-    private JPanel noResultsPanel; 
+    private CardLayout searchContentCardLayout;
+    private JPanel noResultsPanel;
     private JPanel productsGridPanel;
     private JLabel searchTitleLabel;
 
@@ -89,7 +86,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         addressUI = new AddressUI(this);
 
-        searchResultPanel = createSearchResultPanel(); 
+        searchResultPanel = createSearchResultPanel();
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(profilePanel, "Profile");
@@ -97,22 +94,22 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(cartPanel, "Cart");
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(addressUI, "Address");
-        mainPanel.add(searchResultPanel, "SearchResults"); 
+        mainPanel.add(searchResultPanel, "SearchResults");
 
         add(headerPanel);
         add(mainPanel);
-        
-        chatFloatingButton = new ChatFloatingButton(this, this); 
-        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize()); 
-        chatFloatingButton.setLocation(getWidth() - chatFloatingButton.getWidth() - 30, getHeight() - chatFloatingButton.getHeight() - 30);
-        
-        JLayeredPane layeredPane = getRootPane().getLayeredPane();
-        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER); 
 
-        
-        chatPopupUI = new ChatPopupUI(this, this); 
-        chatPopupUI.pack(); 
-        chatPopupUI.setLocationRelativeTo(this); 
+        chatFloatingButton = new ChatFloatingButton(this, this);
+        chatFloatingButton.setSize(chatFloatingButton.getPreferredSize());
+        chatFloatingButton.setLocation(getWidth() - chatFloatingButton.getWidth() - 30, getHeight() - chatFloatingButton.getHeight() - 30);
+
+        JLayeredPane layeredPane = getRootPane().getLayeredPane();
+        layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER);
+
+
+        chatPopupUI = new ChatPopupUI(this, this);
+        chatPopupUI.pack();
+        chatPopupUI.setLocationRelativeTo(this);
 
 
         addComponentListener(new ComponentAdapter() {
@@ -187,14 +184,14 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(favoritesUI, "Favorites");
 
         cardLayout.show(mainPanel, "Favorites");
-        chatFloatingButton.setVisible(true); 
+        chatFloatingButton.setVisible(true);
         updateHeaderCartAndFavCounts();
     }
 
     @Override
     public void showDashboardView() {
         cardLayout.show(mainPanel, "Dashboard");
-        chatFloatingButton.setVisible(true); 
+        chatFloatingButton.setVisible(true);
         updateHeaderCartAndFavCounts();
     }
 
@@ -242,7 +239,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     @Override
     public void showCheckoutView() {
         cardLayout.show(mainPanel, "Checkout");
-        chatFloatingButton.setVisible(false); 
+        chatFloatingButton.setVisible(false);
     }
 
     @Override
@@ -257,7 +254,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(newAddressUI, "Address");
         cardLayout.show(mainPanel, "Address");
         System.out.println("Navigasi ke Halaman Alamat.");
-        chatFloatingButton.setVisible(false); 
+        chatFloatingButton.setVisible(false);
     }
 
     @Override
@@ -272,7 +269,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(newPaymentUI, "Payment");
         cardLayout.show(mainPanel, "Payment");
         System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman.");
-        chatFloatingButton.setVisible(false); 
+        chatFloatingButton.setVisible(false);
     }
 
     @Override
@@ -304,6 +301,23 @@ public class UserDashboardUI extends JFrame implements ViewController {
         cardLayout.show(mainPanel, "OrderDetail");
         System.out.println("Navigasi ke Halaman Detail Pesanan untuk ID: " + orderId);
         chatFloatingButton.setVisible(false);
+    }
+
+    @Override
+    public void showProductReviewView(int productId, String productName, String productImage, double productPrice, String sellerName) {
+        for (Component comp : mainPanel.getComponents()) {
+            if (comp instanceof ProductReview) {
+                mainPanel.remove(comp);
+                break;
+            }
+        }
+        ProductReview productReviewPanel = new ProductReview(this, productId, productName, productImage, productPrice, sellerName);
+        mainPanel.add(productReviewPanel, "ProductReview");
+        cardLayout.show(mainPanel, "ProductReview");
+        this.setTitle("Review Produk: " + productName);
+        chatFloatingButton.setVisible(false);
+        this.revalidate();
+        this.repaint();
     }
 
     private JPanel createHeaderPanel(User currentUser) {
@@ -584,10 +598,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     private void performSearch(String searchText) {
         System.out.println("Mencari: " + searchText);
-        
+
         searchTitleLabel.setText("Hasil Pencarian untuk \"" + searchText + "\"");
-        
-        productsGridPanel.removeAll(); 
+
+        productsGridPanel.removeAll();
 
         List<FavoritesUI.FavoriteItem> searchResults;
         try {
@@ -610,10 +624,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
             productsGridPanel.repaint();
             searchContentCardLayout.show(searchContentCardPanel, "RESULTS");
         }
-        
+
         cardLayout.show(mainPanel, "SearchResults");
         SwingUtilities.invokeLater(() -> {
-            JScrollPane scrollPane = (JScrollPane) searchResultPanel.getComponent(1); 
+            JScrollPane scrollPane = (JScrollPane) searchResultPanel.getComponent(1);
             if (scrollPane != null && scrollPane.getViewport() != null) {
                 scrollPane.getVerticalScrollBar().setValue(0);
             }
@@ -859,7 +873,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         }.execute();
     }
 
-    private void showPrevBanner() { 
+    private void showPrevBanner() {
         if (carouselTimer != null && carouselTimer.isRunning()) {
             carouselTimer.stop();
         }
@@ -868,7 +882,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         startBannerCarousel();
     }
 
-    private void showNextBanner() { 
+    private void showNextBanner() {
         if (carouselTimer != null && carouselTimer.isRunning()) {
             carouselTimer.stop();
         }
@@ -878,7 +892,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
 
-    private void startBannerCarousel() { 
+    private void startBannerCarousel() {
         if (carouselTimer != null && carouselTimer.isRunning()) {
             carouselTimer.stop();
         }
@@ -892,7 +906,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         carouselTimer.start();
     }
 
-    private void stopBannerCarousel() { 
+    private void stopBannerCarousel() {
         if (carouselTimer != null) {
             carouselTimer.stop();
         }
@@ -908,7 +922,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel contentPanel = new JPanel();
         contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
         contentPanel.setBackground(Color.WHITE);
-        // MODIFIED: Increased top and bottom padding for contentPanel
         contentPanel.setBorder(new EmptyBorder(30, 20, 30, 20));
 
         JPanel categoriesPanel = new JPanel(new GridLayout(2, 3, 15, 15));
@@ -916,7 +929,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         categoriesPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
         String[] categoryNames = {"Earphone", "Wear Gadget", "Laptop", "Gaming Console", "VR Oculus", "Speaker"};
-        
+
         Color[] backgroundColors = {
                 new Color(255, 89, 0),
                 new Color(255, 215, 0),
@@ -928,7 +941,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         String[] categoryImagePaths = {
             "/Resources/Images/earphone_category.png",
-            "/Resources/Images/wear_category.png", 
+            "/Resources/Images/wear_category.png",
             "/Resources/Images/laptop_category.png",
             "/Resources/Images/console_category.png",
             "/Resources/Images/vr_category.png",
@@ -941,7 +954,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
             categoriesPanel.add(categoryCard);
         }
 
-        JPanel featuresPanel = new JPanel(new GridLayout(1, 4, 100, 0)); 
+        JPanel featuresPanel = new JPanel(new GridLayout(1, 4, 100, 0));
         featuresPanel.setBackground(Color.WHITE);
         featuresPanel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
@@ -954,11 +967,11 @@ public class UserDashboardUI extends JFrame implements ViewController {
         String[] featureIconPaths = {
             "/Resources/Images/shipping_icon.png",
             "/Resources/Images/money_back_icon.png",
-            "/Resources/Images/support_icon.png",    
-            "/Resources/Images/secure_payment_icon.png" 
+            "/Resources/Images/support_icon.png",
+            "/Resources/Images/secure_payment_icon.png"
         };
         for (int i = 0; i < featureTexts.length; i++) {
-            JPanel featureItemPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0)); 
+            JPanel featureItemPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
             featureItemPanel.setBackground(Color.WHITE);
 
             JLabel featureIconLabel = new JLabel();
@@ -966,11 +979,11 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 ImageIcon originalIcon = new ImageIcon(getClass().getResource(featureIconPaths[i]));
                 Image originalImage = originalIcon.getImage();
 
-                Image scaledImage = originalImage.getScaledInstance(50, 50, Image.SCALE_SMOOTH); 
+                Image scaledImage = originalImage.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
                 featureIconLabel.setIcon(new ImageIcon(scaledImage));
             } catch (Exception e) {
                 System.err.println("Error loading feature icon from: " + featureIconPaths[i] + " - " + e.getMessage());
-                featureIconLabel.setText("!"); 
+                featureIconLabel.setText("!");
             }
 
             JLabel featureTextLabel = new JLabel(featureTexts[i]);
@@ -979,7 +992,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
             featureItemPanel.add(featureIconLabel);
             featureItemPanel.add(featureTextLabel);
-            
+
             featuresPanel.add(featureItemPanel);
         }
 
@@ -1017,10 +1030,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
          bestSellerPanel.add(bestSellerProducts, BorderLayout.CENTER);
 
         contentPanel.add(categoriesPanel);
-        // MODIFIED: Added rigid areas for spacing around featuresPanel
-        contentPanel.add(Box.createRigidArea(new Dimension(0, 30))); // Space above featuresPanel
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 30)));
         contentPanel.add(featuresPanel);
-        contentPanel.add(Box.createRigidArea(new Dimension(0, 30))); // Space below featuresPanel
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 30)));
         contentPanel.add(bestSellerPanel);
 
         dashboardPanel.add(contentPanel);
@@ -1036,14 +1048,14 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     private JPanel createSearchResultPanel() {
-        JPanel panel = new JPanel(new BorderLayout()); 
+        JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JPanel headerResultsPanel = new JPanel(new BorderLayout());
         headerResultsPanel.setBackground(Color.WHITE);
         headerResultsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        
+
         JButton backButton = new JButton("← Back");
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
         backButton.setForeground(new Color(50, 50, 50));
@@ -1054,29 +1066,24 @@ public class UserDashboardUI extends JFrame implements ViewController {
         backButton.addActionListener(e -> showDashboardView());
         headerResultsPanel.add(backButton, BorderLayout.WEST);
 
-        searchTitleLabel = new JLabel("Hasil Pencarian"); 
+        searchTitleLabel = new JLabel("Hasil Pencarian");
         searchTitleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         searchTitleLabel.setForeground(Color.BLACK);
         searchTitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         headerResultsPanel.add(searchTitleLabel, BorderLayout.CENTER);
-        
+
         panel.add(headerResultsPanel, BorderLayout.NORTH);
 
-        // Kontainer utama untuk konten yang bisa diskrol di hasil pencarian.
-        // Ini akan menampung searchContentCardPanel (yang berisi "no results" atau grid produk)
-        // dan Box.createVerticalGlue().
         JPanel mainContentForScroll = new JPanel();
         mainContentForScroll.setLayout(new BoxLayout(mainContentForScroll, BoxLayout.Y_AXIS));
         mainContentForScroll.setBackground(Color.WHITE);
-        mainContentForScroll.setAlignmentX(Component.LEFT_ALIGNMENT); 
-        
-        // Inisialisasi CardLayout dan panel-panelnya di sini
+        mainContentForScroll.setAlignmentX(Component.LEFT_ALIGNMENT);
+
         searchContentCardLayout = new CardLayout();
         searchContentCardPanel = new JPanel(searchContentCardLayout);
         searchContentCardPanel.setBackground(Color.WHITE);
 
-        // Panel untuk "Tidak ada produk"
-        noResultsPanel = new JPanel(new GridBagLayout()); 
+        noResultsPanel = new JPanel(new GridBagLayout());
         noResultsPanel.setBackground(Color.WHITE);
         JLabel noResultsLabel = new JLabel("Tidak ada produk yang ditemukan.", SwingConstants.CENTER);
         noResultsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
@@ -1085,23 +1092,20 @@ public class UserDashboardUI extends JFrame implements ViewController {
         gbcNoResults.gridx = 0;
         gbcNoResults.gridy = 0;
         gbcNoResults.weightx = 1.0;
-        gbcNoResults.weighty = 1.0; 
+        gbcNoResults.weighty = 1.0;
         gbcNoResults.fill = GridBagConstraints.BOTH;
         noResultsPanel.add(noResultsLabel, gbcNoResults);
-        noResultsPanel.add(Box.createVerticalGlue(), new GridBagConstraints(0,1,1,1,1.0,1.0,GridBagConstraints.NORTH,GridBagConstraints.VERTICAL, new Insets(0,0,0,0), 0,0)); 
+        noResultsPanel.add(Box.createVerticalGlue(), new GridBagConstraints(0,1,1,1,1.0,1.0,GridBagConstraints.NORTH,GridBagConstraints.VERTICAL, new Insets(0,0,0,0), 0,0));
 
-        // Panel untuk menampilkan grid produk
-        productsGridPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15)); 
+        productsGridPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 15));
         productsGridPanel.setBackground(Color.WHITE);
-        productsGridPanel.setAlignmentX(Component.LEFT_ALIGNMENT); 
+        productsGridPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         searchContentCardPanel.add(noResultsPanel, "NO_RESULTS");
         searchContentCardPanel.add(productsGridPanel, "RESULTS");
-        
+
         mainContentForScroll.add(searchContentCardPanel);
 
-        // Tambahkan vertical glue di sini untuk mendorong konten ke atas
-        // dan menyerap sisa ruang vertikal yang tidak terpakai.
         mainContentForScroll.add(Box.createVerticalGlue());
 
         JScrollPane scrollPane = new JScrollPane(mainContentForScroll);
@@ -1110,7 +1114,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         scrollPane.setBorder(null);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
-        panel.add(scrollPane, BorderLayout.CENTER); 
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
     }
@@ -1132,11 +1136,9 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
                 int panelWidth = getWidth();
                 int panelHeight = getHeight();
-                
-                // --- START REVISION for "full" image display in product card ---
-                // Gambar latar belakang penuh panel
-                g2d.setColor(item.getBgColor()); 
-                g2d.fillRect(0, 0, panelWidth, panelHeight); 
+
+                g2d.setColor(item.getBgColor());
+                g2d.fillRect(0, 0, panelWidth, panelHeight);
 
                 Image mainImage = null;
                 if (item.getLoadedImages() != null && !item.getLoadedImages().isEmpty()) {
@@ -1155,28 +1157,22 @@ public class UserDashboardUI extends JFrame implements ViewController {
                     int originalWidth = mainImage.getWidth(null);
                     int originalHeight = mainImage.getHeight(null);
 
-                    // Penskalaan yang mengisi seluruh area panel (fill mode)
-                    // Pilih skala yang lebih besar agar gambar menutupi seluruh dimensi panel
                     double scaleX = (double) panelWidth / originalWidth;
                     double scaleY = (double) panelHeight / originalHeight;
-                    double scale = Math.max(scaleX, scaleY); 
+                    double scale = Math.max(scaleX, scaleY);
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    // Posisi gambar agar terpusat
                     int drawX = (panelWidth - scaledWidth) / 2;
                     int drawY = (panelHeight - scaledHeight) / 2;
 
-                    // Gambar di panel. Clipping tidak perlu jika gambar sudah discale untuk memenuhi
-                    // dan tidak ada border yang ingin dipertahankan.
                     g2d.drawImage(mainImage, drawX, drawY, scaledWidth, scaledHeight, null);
                 }
-                // --- AKHIR REVISI ---
             }
         };
         imagePanel.setOpaque(true);
-        imagePanel.setPreferredSize(new Dimension(180, 180)); 
+        imagePanel.setPreferredSize(new Dimension(180, 180));
 
         JPanel imageContainer = new JPanel();
         imageContainer.setLayout(new OverlayLayout(imageContainer));
@@ -1337,8 +1333,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
     leftContentPanel.add(Box.createVerticalGlue());
 
     gbc.gridx = 0;
-    // Berikan bobot yang lebih kecil untuk teks/tombol, agar gambar mendapatkan lebih banyak ruang
-    gbc.weightx = 0.6; 
+    gbc.weightx = 0.6;
     contentContainer.add(leftContentPanel, gbc);
 
     if (imagePath != null) {
@@ -1383,18 +1378,18 @@ public class UserDashboardUI extends JFrame implements ViewController {
                     int scaledWidth = (int) (originalWidth * scaleY);
                     int scaledHeight = panelHeight;
                     int drawX = panelWidth - scaledWidth;
-                    int offsetPixelsLeft = 30; 
-                                               
+                    int offsetPixelsLeft = 30;
+
                     drawX += offsetPixelsLeft;
-                                             
+
                     int finalDrawX;
                     if (scaledWidth > panelWidth) {
-                        float cropRatioFromLeft = 0.2f; 
+                        float cropRatioFromLeft = 0.2f;
                         int pixelsToCutFromLeft = (int) ((scaledWidth - panelWidth) * cropRatioFromLeft);
                         finalDrawX = -pixelsToCutFromLeft;
                     } else {
                         finalDrawX = panelWidth - scaledWidth;
-                        finalDrawX -= 10; 
+                        finalDrawX -= 10;
                     }
 
                     int drawY = -4;
@@ -1412,11 +1407,11 @@ public class UserDashboardUI extends JFrame implements ViewController {
             }
         };
         imageRenderPanel.setOpaque(false);
-        imageRenderPanel.setMinimumSize(new Dimension(120, 180)); 
-        imageRenderPanel.setPreferredSize(new Dimension(120, 180)); 
+        imageRenderPanel.setMinimumSize(new Dimension(120, 180));
+        imageRenderPanel.setPreferredSize(new Dimension(120, 180));
 
         gbc.gridx = 1;
-        gbc.weightx = 1; 
+        gbc.weightx = 1;
         contentContainer.add(imageRenderPanel, gbc);
     }
 
@@ -1487,7 +1482,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
                         }
                     }
                 }
-                
+
                 if (rightPanel != null) {
                     for (Component innerComp : rightPanel.getComponents()) {
                         if (innerComp instanceof JLabel) {

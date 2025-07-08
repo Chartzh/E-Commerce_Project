@@ -11,8 +11,8 @@ import java.awt.event.ActionListener;
 import java.util.List;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.LocalDateTime; 
-import java.time.Duration;      
+import java.time.LocalDateTime;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.Locale;
@@ -21,10 +21,10 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.sql.Connection; 
-import java.sql.PreparedStatement; 
-import java.sql.ResultSet;       
-import java.sql.Timestamp;       
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
 
 import e.commerce.ProductRepository.Order;
 import e.commerce.ProductRepository.OrderItem;
@@ -54,7 +54,7 @@ public class OrderHistory extends JPanel {
     private ViewController viewController;
 
     // PATH UNTUK IKON KALENDER
-    private static final String CALENDAR_ICON_PATH = "/Resources/Images/calendar_icon.png"; 
+    private static final String CALENDAR_ICON_PATH = "/Resources/Images/calendar_icon.png";
 
     public OrderHistory(ViewController viewController) {
         this.viewController = viewController;
@@ -69,7 +69,7 @@ public class OrderHistory extends JPanel {
         }
 
         initializeComponents();
-        populateData(); 
+        populateData();
     }
 
     private void initializeComponents() {
@@ -93,90 +93,37 @@ public class OrderHistory extends JPanel {
         add(footerPanel, BorderLayout.SOUTH);
     }
 
-    private JPanel createHeaderPanel() {
+private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(WHITE);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 30, 0));
 
-        JLabel titleLabel = new JLabel("Riwayat Pesanan");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
-        titleLabel.setForeground(TEXT_DARK);
-
-        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        datePanel.setBackground(WHITE);
-
-        LocalDate today = LocalDate.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-
-        JPanel fromDatePanel = createDateField(today.minusMonths(1).format(formatter));
-        JLabel toLabel = new JLabel("Sampai");
-        toLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        toLabel.setForeground(TEXT_DARK);
-        toLabel.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
-
-        JPanel toDatePanel = createDateField(today.format(formatter));
-
-        datePanel.add(fromDatePanel);
-        datePanel.add(toLabel);
-        datePanel.add(toDatePanel);
-
-        JButton backToDashboardButton = new JButton("← Back");
-        backToDashboardButton.setFont(new Font("Arial", Font.BOLD, 14));
-        backToDashboardButton.setForeground(TEXT_DARK);
-        backToDashboardButton.setBackground(WHITE);
-        backToDashboardButton.setBorderPainted(false);
-        backToDashboardButton.setFocusPainted(false);
-        backToDashboardButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        backToDashboardButton.addActionListener(e -> {
+        // Tombol "Kembali" di kiri
+        JButton backButton = new JButton("← Kembali"); // Ubah teks tombol
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.setForeground(TEXT_DARK);
+        backButton.setBackground(WHITE);
+        backButton.setBorderPainted(false);
+        backButton.setFocusPainted(false);
+        backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        backButton.addActionListener(e -> {
             if (viewController != null) {
                 viewController.showDashboardView();
             }
         });
+        headerPanel.add(backButton, BorderLayout.WEST); // Letakkan di WEST
 
-        JPanel rightHeaderControls = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
-        rightHeaderControls.setBackground(WHITE);
-        rightHeaderControls.add(backToDashboardButton);
-        rightHeaderControls.add(datePanel);
 
-        headerPanel.add(titleLabel, BorderLayout.WEST);
-        headerPanel.add(rightHeaderControls, BorderLayout.EAST);
+        JLabel titleLabel = new JLabel("Riwayat Pesanan");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 32));
+        titleLabel.setForeground(TEXT_DARK);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER); // Tengahkan judul
+        headerPanel.add(titleLabel, BorderLayout.CENTER); // Letakkan di CENTER
+
+        // Tambahkan panel kosong ke timur jika tidak ada lagi kontrol di sana
+        headerPanel.add(Box.createRigidArea(new Dimension(10, 0)), BorderLayout.EAST);
 
         return headerPanel;
-    }
-
-    private JPanel createDateField(String dateText) {
-        JPanel datePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        datePanel.setBackground(WHITE);
-        datePanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(GRAY_BORDER, 1),
-            BorderFactory.createEmptyBorder(8, 12, 8, 12)
-        ));
-
-        JLabel calendarIcon = new JLabel();
-        try {
-            ImageIcon originalIcon = new ImageIcon(getClass().getResource(CALENDAR_ICON_PATH));
-            if (originalIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
-                Image scaledImage = originalIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH); 
-                calendarIcon.setIcon(new ImageIcon(scaledImage));
-            } else {
-                calendarIcon.setText("📅"); 
-                calendarIcon.setFont(new Font("Arial", Font.PLAIN, 14));
-            }
-        } catch (Exception e) {
-            System.err.println("Error loading calendar icon: " + e.getMessage());
-            calendarIcon.setText("📅"); 
-            calendarIcon.setFont(new Font("Arial", Font.PLAIN, 14));
-        }
-
-
-        JLabel dateLabel = new JLabel(dateText);
-        dateLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        dateLabel.setForeground(TEXT_DARK);
-
-        datePanel.add(calendarIcon);
-        datePanel.add(dateLabel);
-
-        return datePanel;
     }
 
     private JPanel createFilterPanel() {
@@ -203,12 +150,12 @@ public class OrderHistory extends JPanel {
                 populateData(filterText);
             });
 
-            if (i == 0) { 
+            if (i == 0) {
                 filterBtn.setSelected(true);
-                filterBtn.setBackground(ORANGE_PRIMARY); 
-                filterBtn.setForeground(WHITE); 
+                filterBtn.setBackground(ORANGE_PRIMARY);
+                filterBtn.setForeground(WHITE);
                 filterBtn.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 3, 0, ORANGE_PRIMARY), 
+                    BorderFactory.createMatteBorder(0, 0, 3, 0, ORANGE_PRIMARY),
                     BorderFactory.createEmptyBorder(12, 20, 9, 20)
                 ));
             } else {
@@ -324,7 +271,7 @@ public class OrderHistory extends JPanel {
         JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         leftPanel.setBackground(WHITE);
 
-        leftPanel.add(Box.createHorizontalStrut(20)); 
+        leftPanel.add(Box.createHorizontalStrut(20));
 
 
         JPanel rightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -361,10 +308,10 @@ public class OrderHistory extends JPanel {
                     LocalDateTime orderCreatedAt = getOrderCreatedAtFromDb(order.getId());
                     if (orderCreatedAt != null) {
                         Duration duration = Duration.between(orderCreatedAt, LocalDateTime.now());
-                        if (duration.toDays() >= 10) { 
+                        if (duration.toDays() >= 10) {
                             ProductRepository.updateOrderStatus(order.getId(), "Delivered");
-                            order.setOrderStatus("Delivered"); 
-                            dbOrderStatus = "Delivered"; 
+                            order.setOrderStatus("Delivered");
+                            dbOrderStatus = "Delivered";
                             System.out.println("DEBUG: Pesanan ID " + order.getId() + " otomatis menjadi Selesai karena sudah lebih dari 10 hari.");
                         }
                     }
@@ -397,14 +344,12 @@ public class OrderHistory extends JPanel {
                 List<OrderItem> orderItems = order.getItems();
 
                 String statusAndDeliveryDetails = dbOrderStatus + "|" + order.getDeliveryEstimate();
-
-                String actionStatus = displayStatus;
-
                 Object[] rowData = {
                     orderDetailsHtml,
-                    orderItems,
+                    orderItems, // List of OrderItem
                     statusAndDeliveryDetails,
-                    actionStatus
+                    // Untuk Aksi, kita perlu meneruskan objek Order agar ActionCellEditor dapat mengakses detail
+                    order
                 };
                 tableModel.addRow(rowData);
                 grandTotal += order.getTotalAmount();
@@ -417,7 +362,7 @@ public class OrderHistory extends JPanel {
 
         totalPriceLabel.setText("Total Harga: " + formatCurrency(grandTotal));
     }
-    
+
     // Metode untuk mendapatkan created_at dari database (dipindahkan ke sini dari ActionCellEditor)
     private LocalDateTime getOrderCreatedAtFromDb(int orderId) throws SQLException {
         Connection conn = null;
@@ -517,7 +462,7 @@ public class OrderHistory extends JPanel {
             if (items != null && !items.isEmpty()) {
                 OrderItem firstItem = items.get(0);
 
-                Image mainImage = firstItem.getLoadedImage(); 
+                Image mainImage = firstItem.getLoadedImage();
 
                 if (mainImage != null) {
                     Image scaledImage = mainImage.getScaledInstance(
@@ -650,7 +595,8 @@ public class OrderHistory extends JPanel {
         private JButton buyNowBtn;
         private JButton cancelOrderBtn;
         private JButton confirmPaymentBtn;
-        private JButton orderReceivedBtn; 
+        private JButton orderReceivedBtn;
+        private JButton reviewProductBtn; 
 
         public ActionCellRenderer() {
             setLayout(new FlowLayout(FlowLayout.LEFT, 5, 15));
@@ -684,42 +630,75 @@ public class OrderHistory extends JPanel {
             confirmPaymentBtn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
             confirmPaymentBtn.setFocusPainted(false);
 
-            orderReceivedBtn = new JButton("Pesanan Diterima"); 
+            orderReceivedBtn = new JButton("Pesanan Diterima");
             orderReceivedBtn.setFont(new Font("Arial", Font.BOLD, 11));
-            orderReceivedBtn.setBackground(SUCCESS_GREEN); 
+            orderReceivedBtn.setBackground(SUCCESS_GREEN);
             orderReceivedBtn.setForeground(WHITE);
             orderReceivedBtn.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
             orderReceivedBtn.setFocusPainted(false);
+
+            reviewProductBtn = new JButton("Beri Review");
+            reviewProductBtn.setFont(new Font("Arial", Font.BOLD, 12));
+            reviewProductBtn.setBackground(ORANGE_PRIMARY);
+            reviewProductBtn.setForeground(WHITE);
+            reviewProductBtn.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+            reviewProductBtn.setFocusPainted(false);
 
 
             add(detailButton);
             add(buyNowBtn);
             add(cancelOrderBtn);
             add(confirmPaymentBtn);
-            add(orderReceivedBtn); 
+            add(orderReceivedBtn);
+            add(reviewProductBtn);
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value,
                 boolean isSelected, boolean hasFocus, int row, int column) {
-            String status = (String) value;
-
-            detailButton.setVisible(true); 
+            
+            Order order = (Order) value; // Value adalah objek Order
+            String status = order.getOrderStatus(); // Ambil status dari objek Order
+            
+            detailButton.setVisible(true);
             buyNowBtn.setVisible(false);
             cancelOrderBtn.setVisible(false);
             confirmPaymentBtn.setVisible(false);
-            orderReceivedBtn.setVisible(false); 
+            orderReceivedBtn.setVisible(false);
+            reviewProductBtn.setVisible(false); // Sembunyikan secara default
 
-            if ("Selesai".equalsIgnoreCase(status)) { 
+            if ("Delivered".equalsIgnoreCase(status)) { // Status di DB
                 buyNowBtn.setVisible(true);
-            } else if ("Dikirim".equalsIgnoreCase(status)) { 
-                orderReceivedBtn.setVisible(true); 
-            } else if ("Dikemas".equalsIgnoreCase(status)) {
+                boolean hasReviewedAnyItem = false;
+                if (currentUser != null && order.getItems() != null && !order.getItems().isEmpty()) {
+                    for (OrderItem item : order.getItems()) {
+                        try {
+                            if (ProductRepository.hasUserReviewedProduct(currentUser.getId(), item.getProductId())) {
+                                hasReviewedAnyItem = true;
+                                break;
+                            }
+                        } catch (SQLException e) {
+                            System.err.println("Error checking review status for product " + item.getProductName() + ": " + e.getMessage());
+                            hasReviewedAnyItem = true; // Anggap sudah direview untuk menghindari error berulang
+                        }
+                    }
+                }
+                
+                if (!hasReviewedAnyItem) {
+                    reviewProductBtn.setVisible(true); // Tampilkan jika belum ada item yang direview
+                } else {
+                    reviewProductBtn.setVisible(false); // Sembunyikan jika setidaknya ada satu item yang direview
+                }
+                // --- Akhir Perbaikan ---
+
+            } else if ("Shipped".equalsIgnoreCase(status)) {
+                orderReceivedBtn.setVisible(true);
+            } else if ("Processing".equalsIgnoreCase(status)) {
                 cancelOrderBtn.setVisible(true);
-            } else if ("Belum Bayar".equalsIgnoreCase(status)) {
+            } else if ("Pending Payment".equalsIgnoreCase(status)) {
                 confirmPaymentBtn.setVisible(true);
                 cancelOrderBtn.setVisible(true);
-            } else if ("Dibatalkan".equalsIgnoreCase(status)) {
+            } else if ("Cancelled".equalsIgnoreCase(status)) {
                 buyNowBtn.setVisible(true);
             }
 
@@ -742,56 +721,33 @@ public class OrderHistory extends JPanel {
             renderer = new ActionCellRenderer();
 
             renderer.detailButton.addActionListener(e -> {
-                String orderNumber = getOrderNumberFromRow(currentRow);
-                try {
-                    List<Order> orders = ProductRepository.getOrdersForUser(currentUser.getId());
-                    int orderIdToShow = -1;
-                    for (Order order : orders) {
-                        if (order.getOrderNumber().equals(orderNumber)) {
-                            orderIdToShow = order.getId();
-                            break;
-                        }
-                    }
-
-                    if (orderIdToShow != -1) {
-                        if (viewController != null) {
-                            viewController.showOrderDetailView(orderIdToShow);
-                        } else {
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Menampilkan detail untuk pesanan: " + orderNumber + " (ID: " + orderIdToShow + ")", "Detail Pesanan", JOptionPane.INFORMATION_MESSAGE);
-                        }
+                Order order = (Order) table.getModel().getValueAt(currentRow, 3); // Ambil objek Order
+                if (order != null) {
+                    if (viewController != null) {
+                        viewController.showOrderDetailView(order.getId());
                     } else {
-                        JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(OrderHistory.this, "Menampilkan detail untuk pesanan: " + order.getOrderNumber() + " (ID: " + order.getId() + ")", "Detail Pesanan", JOptionPane.INFORMATION_MESSAGE);
                     }
-                } catch (SQLException ex) {
-                    System.err.println("Error saat mengambil detail pesanan: " + ex.getMessage());
-                    JOptionPane.showMessageDialog(OrderHistory.this, "Gagal memuat detail pesanan: " + ex.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(OrderHistory.this, "Detail pesanan tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
                 fireEditingStopped();
             });
 
 
             renderer.buyNowBtn.addActionListener(e -> {
-                String orderNumber = getOrderNumberFromRow(currentRow);
-                JOptionPane.showMessageDialog(OrderHistory.this, "Beli Lagi diklik untuk pesanan: " + orderNumber + "!", "Aksi Pesanan", JOptionPane.INFORMATION_MESSAGE);
+                Order order = (Order) table.getModel().getValueAt(currentRow, 3);
+                JOptionPane.showMessageDialog(OrderHistory.this, "Beli Lagi diklik untuk pesanan: " + order.getOrderNumber() + "!", "Aksi Pesanan", JOptionPane.INFORMATION_MESSAGE);
                 fireEditingStopped();
             });
 
             renderer.cancelOrderBtn.addActionListener(e -> {
                 int confirm = JOptionPane.showConfirmDialog(OrderHistory.this, "Apakah Anda yakin ingin membatalkan pesanan ini?", "Konfirmasi Pembatalan", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    String orderNumber = getOrderNumberFromRow(currentRow);
+                    Order order = (Order) table.getModel().getValueAt(currentRow, 3);
                     try {
-                        List<Order> orders = ProductRepository.getOrdersForUser(currentUser.getId());
-                        Order orderToCancel = null;
-                        for (Order order : orders) {
-                            if (order.getOrderNumber().equals(orderNumber)) {
-                                orderToCancel = order;
-                                break;
-                            }
-                        }
-
-                        if (orderToCancel != null) {
-                            LocalDateTime orderCreatedAt = getOrderCreatedAtFromDb(orderToCancel.getId());
+                        if (order != null) {
+                            LocalDateTime orderCreatedAt = getOrderCreatedAtFromDb(order.getId());
                             if (orderCreatedAt == null) {
                                 JOptionPane.showMessageDialog(OrderHistory.this, "Tanggal pembuatan pesanan tidak ditemukan. Tidak dapat membatalkan.", "Error", JOptionPane.ERROR_MESSAGE);
                                 fireEditingStopped();
@@ -799,17 +755,17 @@ public class OrderHistory extends JPanel {
                             }
 
                             Duration duration = Duration.between(orderCreatedAt, LocalDateTime.now());
-                            if (duration.toHours() >= 1) { 
+                            if (duration.toHours() >= 1) {
                                 JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan tidak dapat dibatalkan. Pembatalan hanya diperbolehkan dalam 1 jam setelah pesanan masuk status 'Dikemas'.", "Pembatasan Pembatalan", JOptionPane.WARNING_MESSAGE);
                                 fireEditingStopped();
                                 return;
                             }
 
-                            ProductRepository.updateOrderStatus(orderToCancel.getId(), "Cancelled");
+                            ProductRepository.updateOrderStatus(order.getId(), "Cancelled");
                             populateData();
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " telah dibatalkan.", "Pesanan Dibatalkan", JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + order.getOrderNumber() + " telah dibatalkan.", "Pesanan Dibatalkan", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (SQLException ex) {
                         System.err.println("Error membatalkan pesanan: " + ex.getMessage());
@@ -822,23 +778,14 @@ public class OrderHistory extends JPanel {
             renderer.confirmPaymentBtn.addActionListener(e -> {
                 int confirm = JOptionPane.showConfirmDialog(OrderHistory.this, "Apakah Anda yakin sudah melakukan pembayaran dan ingin mengonfirmasi?", "Konfirmasi Pembayaran", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    String orderNumber = getOrderNumberFromRow(currentRow);
+                    Order order = (Order) table.getModel().getValueAt(currentRow, 3);
                     try {
-                        List<Order> orders = ProductRepository.getOrdersForUser(currentUser.getId());
-                        int orderIdToConfirm = -1;
-                        for (Order order : orders) {
-                            if (order.getOrderNumber().equals(orderNumber)) {
-                                orderIdToConfirm = order.getId();
-                                break;
-                            }
-                        }
-
-                        if (orderIdToConfirm != -1) {
-                            ProductRepository.updateOrderStatus(orderIdToConfirm, "Processing");
+                        if (order != null) {
+                            ProductRepository.updateOrderStatus(order.getId(), "Processing");
                             populateData();
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pembayaran untuk pesanan " + orderNumber + " telah dikonfirmasi. Pesanan akan segera diproses.", "Pembayaran Dikonfirmasi", JOptionPane.INFORMATION_MESSAGE);
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pembayaran untuk pesanan " + order.getOrderNumber() + " telah dikonfirmasi. Pesanan akan segera diproses.", "Pembayaran Dikonfirmasi", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan tidak ditemukan di database.", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (SQLException ex) {
                         System.err.println("Error mengonfirmasi pembayaran: " + ex.getMessage());
@@ -848,32 +795,71 @@ public class OrderHistory extends JPanel {
                 fireEditingStopped();
             });
 
-            // Tombol "Pesanan Diterima"
             renderer.orderReceivedBtn.addActionListener(e -> {
                 int confirm = JOptionPane.showConfirmDialog(OrderHistory.this, "Apakah Anda yakin sudah menerima pesanan ini?", "Konfirmasi Penerimaan", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
-                    String orderNumber = getOrderNumberFromRow(currentRow);
+                    Order order = (Order) table.getModel().getValueAt(currentRow, 3);
                     try {
-                        List<Order> orders = ProductRepository.getOrdersForUser(currentUser.getId());
-                        int orderIdToComplete = -1;
-                        for (Order order : orders) {
-                            if (order.getOrderNumber().equals(orderNumber)) {
-                                orderIdToComplete = order.getId();
-                                break;
-                            }
-                        }
-
-                        if (orderIdToComplete != -1) {
-                            ProductRepository.updateOrderStatus(orderIdToComplete, "Delivered"); 
-                            populateData(); 
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " telah ditandai sebagai diterima.", "Penerimaan Pesanan", JOptionPane.INFORMATION_MESSAGE);
+                        if (order != null) {
+                            ProductRepository.updateOrderStatus(order.getId(), "Delivered");
+                            populateData();
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + order.getOrderNumber() + " telah ditandai sebagai diterima.", "Penerimaan Pesanan", JOptionPane.INFORMATION_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan " + orderNumber + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Pesanan tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     } catch (SQLException ex) {
                         System.err.println("Error mengonfirmasi penerimaan pesanan: " + ex.getMessage());
                         JOptionPane.showMessageDialog(OrderHistory.this, "Gagal mengonfirmasi penerimaan pesanan: " + ex.getMessage(), "Error Database", JOptionPane.ERROR_MESSAGE);
                     }
+                }
+                fireEditingStopped();
+            });
+
+            // Aksi untuk tombol "Beri Review"
+            renderer.reviewProductBtn.addActionListener(e -> {
+                Order order = (Order) table.getModel().getValueAt(currentRow, 3);
+                try {
+                    if (order != null && order.getItems() != null && !order.getItems().isEmpty()) {
+                        // Untuk kesederhanaan, review item pertama di order
+                        OrderItem firstItem = order.getItems().get(0);
+                        int productId = firstItem.getProductId();
+                        String productName = firstItem.getProductName();
+                        // Asumsi productImage di OrderItem adalah path atau bisa dikonversi ke path
+                        // atau Anda perlu memuatnya dari database di ProductReview
+                        // Untuk saat ini, kita akan mencoba mendapatkan path dari OrderItem.
+                        // Jika ProductImage adalah BLOB di OrderItem, Anda tidak bisa langsung
+                        // mengirimnya sebagai String path. Anda mungkin perlu mengubah
+                        // OrderItem untuk menyimpan path juga atau mengubah ProductReview
+                        // untuk menerima BLOB. Untuk konsistensi, saya asumsikan
+                        // productImagePath di ProductReview adalah string path.
+                        String productImage = ""; // Default kosong
+                        if (firstItem.getLoadedImage() != null) {
+                            // Jika OrderItem memuat image sebagai BLOB, kita tidak bisa langsung
+                            // mendapatkan path-nya. Perlu mekanisme berbeda untuk mendapatkan path
+                            // atau membuat ProductReview menerima BLOB.
+                            // Untuk kasus ini, kita akan mengirim path kosong, dan ProductReview
+                            // akan mencoba mengambil gambar dari path jika ada.
+                            // Jika gambar produk disimpan sebagai BLOB di DB dan di OrderItem,
+                            // maka Anda perlu mengambil BLOB itu di OrderReview untuk ditampilkan.
+                            // Untuk saat ini, kita biarkan kosong jika tidak ada path.
+                            // Atau, jika Anda punya path standar, gunakan itu.
+                        }
+                        
+                        double productPrice = firstItem.getPricePerItem();
+                        String sellerName = firstItem.getSellerName();
+
+                        if (viewController != null) {
+                            viewController.showProductReviewView(productId, productName, productImage, productPrice, sellerName);
+                        } else {
+                            JOptionPane.showMessageDialog(OrderHistory.this, "Membuka halaman review untuk produk: " + productName, "Review Produk", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(OrderHistory.this, "Tidak ada produk untuk direview pada pesanan ini.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (Exception ex) { // Catch semua Exception untuk debugging
+                    System.err.println("Error saat menyiapkan review produk: " + ex.getMessage());
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(OrderHistory.this, "Gagal memuat detail produk untuk review: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
                 fireEditingStopped();
             });
@@ -883,15 +869,19 @@ public class OrderHistory extends JPanel {
         public Component getTableCellEditorComponent(JTable table, Object value,
                 boolean isSelected, int row, int column) {
             currentRow = row;
+            // Penting: ActionCellRenderer sekarang menerima Order object, bukan String status
+            // Jadi panggil getTableCellRendererComponent dengan objek Order yang sebenarnya
             renderer.getTableCellRendererComponent(table, value, isSelected, true, row, column);
             return renderer;
         }
 
         @Override
         public Object getCellEditorValue() {
-            return "";
+            return ""; // Tidak perlu mengembalikan nilai
         }
-
+        
+        // Metode ini mungkin tidak lagi relevan jika orderNumber diambil langsung dari objek Order
+        // Tapi tetap ada jika digunakan di tempat lain yang memparsing HTML
         private String getOrderNumberFromRow(int row) {
             String orderDetailsHtml = (String) table.getModel().getValueAt(row, 0);
             String orderNumber = "";
@@ -902,7 +892,7 @@ public class OrderHistory extends JPanel {
             }
             return orderNumber;
         }
-        
+
         private LocalDateTime getOrderCreatedAtFromDb(int orderId) throws SQLException {
             Connection conn = null;
             PreparedStatement stmt = null;

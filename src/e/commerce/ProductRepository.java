@@ -1,5 +1,3 @@
-// package e.commerce;
-// (Isi package dan import lainnya tetap sama seperti file Anda)
 package e.commerce;
 
 import java.sql.Connection;
@@ -17,14 +15,14 @@ import java.awt.Image;
 import java.util.Map;
 import java.util.HashMap;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.LocalDateTime; // Pastikan ini ada
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
-import java.sql.Timestamp;
+import java.sql.Timestamp; // Pastikan ini ada
 
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
-import e.commerce.FavoritesUI.FavoriteItem; // Pastikan import ini benar
+import e.commerce.FavoritesUI.FavoriteItem;
 import java.awt.Graphics2D;
 import java.io.IOException;
 
@@ -163,7 +161,40 @@ public class ProductRepository {
         
         return images;
     }
-    // --- END REVISION: Image Caching ---
+  
+    public static class Review {
+        private int id; // product_reviews.id
+        private int productId; // product_reviews.product_id
+        private int userId; // product_reviews.user_id
+        private String userName; // users.username (join)
+        private int rating; // product_reviews.rating
+        private String reviewText; // product_reviews.review_text
+        private LocalDateTime createdAt; // product_reviews.created_at
+        private byte[] reviewImageData; // product_reviews.review_image (BLOB)
+        private Image loadedReviewImage; // Gambar testimoni yang dimuat
+
+        public Review(int id, int productId, int userId, String userName, int rating, String reviewText, LocalDateTime createdAt, byte[] reviewImageData) {
+            this.id = id;
+            this.productId = productId;
+            this.userId = userId;
+            this.userName = userName;
+            this.rating = rating;
+            this.reviewText = reviewText;
+            this.createdAt = createdAt;
+            this.reviewImageData = reviewImageData;
+            this.loadedReviewImage = loadImageFromBytes(reviewImageData); // Memuat gambar saat objek dibuat
+        }
+
+        // --- Getters ---
+        public int getId() { return id; }
+        public int getProductId() { return productId; }
+        public int getUserId() { return userId; }
+        public String getUserName() { return userName; }
+        public int getRating() { return rating; }
+        public String getReviewText() { return reviewText; }
+        public LocalDateTime getCreatedAt() { return createdAt; }
+        public Image getLoadedReviewImage() { return loadedReviewImage; }
+    }
 
 
     /**
@@ -1250,7 +1281,8 @@ public class ProductRepository {
             pstmt.setInt(2, productId);
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
-        } catch (SQLException e) {
+        }
+        catch (SQLException e) {
             System.err.println("Error removing product " + productId + " from favorites for user " + userId + ": " + e.getMessage());
             throw e;
         }
@@ -1576,7 +1608,7 @@ public class ProductRepository {
                     // Query lama ini tidak mengambil 'last_message', jadi kita lewatkan string kosong.
                     users.add(new ChatUser(rs.getInt("id"), rs.getString("username"), "")); 
                }
-}
+            }
         } catch (SQLException e) {
             System.err.println("Error fetching recent chat users: " + e.getMessage());
             throw e;
@@ -2023,4 +2055,204 @@ public class ProductRepository {
             throw e;
         }
     }
+    
+    /**
+     * Memeriksa apakah produk tertentu ada di daftar favorit pengguna.
+     * @param userId ID pengguna.
+     * @param productId ID produk.
+     * @return true jika produk ada di favorit, false jika tidak.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean isProductInFavorites(int userId, int productId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM favorites WHERE user_id = ? AND product_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, productId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking if product is in favorites for user " + userId + ", product " + productId + ": " + e.getMessage());
+            throw e;
+        }
+        return false;
+    }
+
+    /**
+     * Menambahkan review produk baru ke database.
+     *
+     * @param userId ID pengguna yang memberikan review.
+     * @param productId ID produk yang direview.
+     * @param rating Rating bintang (1-5).
+     * @param reviewText Teks review.
+     * @param reviewImageData Data gambar testimoni sebagai byte array (BLOB), bisa null.
+     * @throws SQLException Jika terjadi kesalahan database saat menyimpan review.
+     */
+    public static void addProductReview(int userId, int productId, int rating, String reviewText, byte[] reviewImageData) throws SQLException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            // Sesuaikan nama kolom jika Anda mengubahnya di database (misal: review_image)
+            String sql = "INSERT INTO product_reviews (user_id, product_id, rating, review_text, created_at, review_image) VALUES (?, ?, ?, ?, NOW(), ?)";
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, userId);
+            stmt.setInt(2, productId);
+            stmt.setInt(3, rating);
+            stmt.setString(4, reviewText);
+            
+            if (reviewImageData != null) {
+                stmt.setBytes(5, reviewImageData);
+            } else {
+                stmt.setNull(5, java.sql.Types.BLOB);
+            }
+            
+            stmt.executeUpdate();
+            System.out.println("Review added for product ID: " + productId + " by user ID: " + userId + (reviewImageData != null ? " with image." : "."));
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, null);
+        }
+    }
+    
+     /**
+     * Memeriksa apakah seorang pengguna sudah mereview produk tertentu.
+     * @param userId ID pengguna yang diperiksa.
+     * @param productId ID produk yang diperiksa.
+     * @return true jika pengguna sudah mereview produk, false jika belum.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static boolean hasUserReviewedProduct(int userId, int productId) throws SQLException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "SELECT COUNT(*) FROM product_reviews WHERE user_id = ? AND product_id = ?";
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, userId);
+            stmt.setInt(2, productId);
+            rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+            return false;
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, rs);
+        }
+    }
+    
+     
+    
+    
+    /**
+     * Mengambil semua review untuk produk tertentu dari database.
+     * Menggabungkan dengan tabel users untuk mendapatkan username pemberi review.
+     * @param productId ID produk yang review-nya akan diambil.
+     * @return Daftar objek Review untuk produk tersebut, diurutkan dari yang terbaru.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static List<Review> getReviewsForProduct(int productId) throws SQLException {
+        List<Review> reviews = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "SELECT pr.id, pr.product_id, pr.user_id, u.username, pr.rating, pr.review_text, pr.created_at, pr.review_image " +
+                         "FROM product_reviews pr " +
+                         "JOIN users u ON pr.user_id = u.id " +
+                         "WHERE pr.product_id = ? " +
+                         "ORDER BY pr.created_at DESC"; // Urutkan dari yang terbaru
+
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, productId);
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                int fetchedProductId = rs.getInt("product_id");
+                int userId = rs.getInt("user_id");
+                String userName = rs.getString("username");
+                int rating = rs.getInt("rating");
+                String reviewText = rs.getString("review_text");
+                LocalDateTime createdAt = rs.getTimestamp("created_at").toLocalDateTime();
+                byte[] reviewImageData = rs.getBytes("review_image");
+
+                reviews.add(new Review(id, fetchedProductId, userId, userName, rating, reviewText, createdAt, reviewImageData));
+            }
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, rs);
+        }
+        return reviews;
+    }
+
+    /**
+     * Menghitung rata-rata rating dan jumlah rating untuk produk tertentu.
+     * @param productId ID produk.
+     * @return Array double: [rata-rata rating, total rating count]. Jika tidak ada review, [0.0, 0.0].
+     */
+    public static double[] getProductAverageRatingAndCount(int productId) throws SQLException {
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        double averageRating = 0.0;
+        int reviewCount = 0;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "SELECT AVG(rating) AS avg_rating, COUNT(id) AS review_count " +
+                         "FROM product_reviews WHERE product_id = ?";
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, productId);
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                averageRating = rs.getDouble("avg_rating");
+                reviewCount = rs.getInt("review_count");
+            }
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, rs);
+        }
+        return new double[]{averageRating, reviewCount};
+    }
+    
+    // Di dalam kelas ProductRepository.java
+
+    /**
+     * Menghitung jumlah review untuk setiap rating bintang (1-5) untuk produk tertentu.
+     * @param productId ID produk.
+     * @return Map<Integer, Integer> di mana kunci adalah rating (1-5) dan nilai adalah jumlah review.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static Map<Integer, Integer> getProductRatingSummary(int productId) throws SQLException {
+        Map<Integer, Integer> ratingSummary = new HashMap<>();
+        // Inisialisasi semua rating 1-5 dengan 0
+        for (int i = 1; i <= 5; i++) {
+            ratingSummary.put(i, 0);
+        }
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = DatabaseConnection.getConnection();
+            String sql = "SELECT rating, COUNT(id) AS count FROM product_reviews WHERE product_id = ? GROUP BY rating ORDER BY rating ASC";
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, productId);
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                ratingSummary.put(rs.getInt("rating"), rs.getInt("count"));
+            }
+        } finally {
+            DatabaseConnection.closeConnection(conn, stmt, rs);
+        }
+        return ratingSummary;
+    }
+
 }

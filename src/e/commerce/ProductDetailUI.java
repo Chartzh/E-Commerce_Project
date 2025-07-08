@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.sql.SQLException;
 import e.commerce.Authentication;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.HashMap;
 
 public class ProductDetailUI extends JPanel {
     private FavoritesUI.FavoriteItem currentProduct;
@@ -27,6 +30,17 @@ public class ProductDetailUI extends JPanel {
 
     private JScrollPane outerScrollPane;
 
+    // --- Warna Tema dari Logo Quantra ---
+    private static final Color QUANTRA_ORANGE_PRIMARY = new Color(255, 102, 0); // #FF6600
+    private static final Color QUANTRA_ORANGE_LIGHT = new Color(255, 153, 51); // Lebih terang
+    private static final Color QUANTRA_BLUE_SECONDARY = new Color(74, 110, 255); // Biru (dari tombol Detail/lainnya)
+    private static final Color TEXT_DARK = new Color(51, 51, 51);
+    private static final Color TEXT_GRAY = new Color(102, 102, 102);
+    private static final Color STAR_GOLD = new Color(255, 193, 7); // Emas untuk bintang rating
+    private static final Color STAR_GRAY_BACKGROUND = new Color(200, 200, 200); // Abu-abu untuk bintang non-aktif
+    private static final Color GRAY_BACKGROUND_LIGHT = new Color(248, 248, 248);
+
+
     // Konstruktor utama yang menerima produk dan ViewController
     public ProductDetailUI(FavoritesUI.FavoriteItem product, ViewController viewController) {
         this.currentProduct = product;
@@ -35,9 +49,7 @@ public class ProductDetailUI extends JPanel {
         // Periksa status favorit saat inisialisasi (di awal konstruktor)
         if (Authentication.getCurrentUser() != null) {
             try {
-                isFavorite = ProductRepository.getFavoriteItemsForUser(Authentication.getCurrentUser().getId())
-                                             .stream()
-                                             .anyMatch(item -> item.getId() == currentProduct.getId());
+                isFavorite = ProductRepository.isProductInFavorites(Authentication.getCurrentUser().getId(), currentProduct.getId());
             } catch (SQLException e) {
                 System.err.println("Error checking favorite status: " + e.getMessage());
                 isFavorite = false;
@@ -57,37 +69,36 @@ public class ProductDetailUI extends JPanel {
         JPanel headerPanel = createHeaderPanel();
         add(headerPanel, BorderLayout.NORTH);
 
-        JPanel mainContentPanel = new JPanel(new BorderLayout());
-        mainContentPanel.setBackground(Color.WHITE);
-        mainContentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JPanel contentWrapperPanel = new JPanel();
+        contentWrapperPanel.setLayout(new BoxLayout(contentWrapperPanel, BoxLayout.Y_AXIS));
+        contentWrapperPanel.setBackground(Color.WHITE);
 
-        JPanel contentPanel = new JPanel(new BorderLayout());
-        contentPanel.setBackground(Color.WHITE);
+        JPanel mainProductInfoSection = new JPanel(new BorderLayout());
+        mainProductInfoSection.setBackground(Color.WHITE);
+        mainProductInfoSection.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         JPanel imageSection = createImageSection();
-        contentPanel.add(imageSection, BorderLayout.WEST);
+        mainProductInfoSection.add(imageSection, BorderLayout.WEST);
 
         JPanel detailSection = createDetailSection();
-        contentPanel.add(detailSection, BorderLayout.CENTER);
+        mainProductInfoSection.add(detailSection, BorderLayout.CENTER);
 
-        mainContentPanel.add(contentPanel, BorderLayout.CENTER);
+        contentWrapperPanel.add(mainProductInfoSection);
 
-        JPanel tabsSection = createTabsSection();
-        mainContentPanel.add(tabsSection, BorderLayout.SOUTH);
+        // --- START NEW: Review Section ---
+        JPanel reviewSection = createReviewSection();
+        contentWrapperPanel.add(reviewSection);
+        // --- END NEW: Review Section ---
+
 
         JPanel recommendationSection = createRecommendationSection();
-        JPanel combinedContent = new JPanel();
-        combinedContent.setLayout(new BoxLayout(combinedContent, BoxLayout.Y_AXIS));
-        combinedContent.setBackground(Color.WHITE);
-        combinedContent.add(mainContentPanel);
-        combinedContent.add(recommendationSection);
-        // combinedContent.add(Box.createVerticalGlue()); // Ini sudah ditambahkan sebelumnya
+        contentWrapperPanel.add(recommendationSection);
 
-        outerScrollPane = new JScrollPane(combinedContent);
+        outerScrollPane = new JScrollPane(contentWrapperPanel); // ScrollPane untuk seluruh konten
         outerScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         outerScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         outerScrollPane.setBorder(null);
-        outerScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+        outerScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Perbaiki kecepatan scroll
 
         add(outerScrollPane, BorderLayout.CENTER);
 
@@ -96,7 +107,7 @@ public class ProductDetailUI extends JPanel {
             public void componentShown(ComponentEvent e) {
                 SwingUtilities.invokeLater(() -> {
                     if (outerScrollPane != null) {
-                        outerScrollPane.getVerticalScrollBar().setValue(0);
+                        outerScrollPane.getVerticalScrollBar().setValue(0); // Scroll ke atas saat panel ditampilkan
                     }
                 });
             }
@@ -108,16 +119,16 @@ public class ProductDetailUI extends JPanel {
         headerPanel.setBackground(Color.WHITE);
         headerPanel.setBorder(new EmptyBorder(10, 20, 0, 20));
 
-        JButton backButton = new JButton("← Back");
+        JButton backButton = new JButton("← Kembali"); // Ubah teks tombol
         backButton.setFont(new Font("Arial", Font.BOLD, 14));
-        backButton.setForeground(new Color(50, 50, 50));
+        backButton.setForeground(TEXT_DARK); // Gunakan warna tema
         backButton.setBackground(Color.WHITE);
         backButton.setBorderPainted(false);
         backButton.setFocusPainted(false);
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showDashboardView();
+                viewController.showDashboardView(); // Kembali ke Dashboard
             }
         });
         headerPanel.add(backButton, BorderLayout.WEST);
@@ -146,7 +157,7 @@ public class ProductDetailUI extends JPanel {
                 int imageAreaX = (panelWidth - imageAreaSize) / 2;
                 int imageAreaY = (panelHeight - imageAreaSize) / 2;
 
-                g2d.setColor(currentProduct.getBgColor());
+                g2d.setColor(currentProduct.getBgColor()); // Latar belakang dari produk
                 g2d.fillRect(0, 0, panelWidth, panelHeight);
 
                 Image displayImage = null;
@@ -168,7 +179,8 @@ public class ProductDetailUI extends JPanel {
                     int originalWidth = displayImage.getWidth(null);
                     int originalHeight = displayImage.getHeight(null);
 
-                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
+                    // Skala gambar agar pas di area, tapi tetap menjaga aspek rasio
+                    double scale = Math.min((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
@@ -176,12 +188,8 @@ public class ProductDetailUI extends JPanel {
                     int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
                     int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
 
-                    Shape oldClip = g2d.getClip();
-                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
-
+                    // Menggambar gambar di tengah area persegi
                     g2d.drawImage(displayImage, drawX, drawY, scaledWidth, scaledHeight, null);
-
-                    g2d.setClip(oldClip);
                 }
             }
         };
@@ -199,7 +207,8 @@ public class ProductDetailUI extends JPanel {
                 thumbnailPanel.add(thumbnail);
             }
         } else {
-            for (int i = 0; i < 3; /* Limit to 3 placeholders */ i++) {
+            // Tampilkan setidaknya 3 placeholder thumbnail jika tidak ada gambar
+            for (int i = 0; i < 3; i++) {
                 JPanel thumbnail = createThumbnail(i);
                 thumbnailPanel.add(thumbnail);
             }
@@ -221,6 +230,7 @@ public class ProductDetailUI extends JPanel {
                 g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 
                 Image thumbImage = null;
+                // Ambil gambar dari list, pastikan index tidak out of bounds
                 if (currentProduct.getLoadedImages() != null && index < currentProduct.getLoadedImages().size()) {
                     thumbImage = currentProduct.getLoadedImages().get(index);
                 }
@@ -233,14 +243,14 @@ public class ProductDetailUI extends JPanel {
                 int imageAreaY = (panelHeight - imageAreaSize) / 2;
                 
                 g2d.setColor(currentProduct.getBgColor());
-                g2d.fillRect(0, 0, panelWidth, panelHeight);
-
+                g2d.fillRect(0, 0, panelWidth, panelHeight); // Gambar latar belakang warna produk
 
                 if (thumbImage == null) {
+                    // Placeholder jika gambar tidak ada
                     g2d.setColor(currentProduct.getBgColor().darker());
                     g2d.setFont(new Font("Arial", Font.PLAIN, 10));
                     FontMetrics fm = g2d.getFontMetrics();
-                    String text = "" + (index + 1);
+                    String text = "" + (index + 1); // Teks nomor thumbnail
                     int textWidth = fm.stringWidth(text);
                     int textHeight = fm.getHeight();
                     g2d.drawString(text, (panelWidth - textWidth) / 2, (panelHeight + textHeight / 2) / 2);
@@ -248,7 +258,8 @@ public class ProductDetailUI extends JPanel {
                     int originalWidth = thumbImage.getWidth(null);
                     int originalHeight = thumbImage.getHeight(null);
 
-                    double scale = Math.max((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
+                    // Skala gambar agar pas di area thumbnail
+                    double scale = Math.min((double) imageAreaSize / originalWidth, (double) imageAreaSize / originalHeight);
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
@@ -256,18 +267,15 @@ public class ProductDetailUI extends JPanel {
                     int drawX = imageAreaX + (imageAreaSize - scaledWidth) / 2;
                     int drawY = imageAreaY + (imageAreaSize - scaledHeight) / 2;
 
-                    Shape oldClip = g2d.getClip();
-                    g2d.clipRect(imageAreaX, imageAreaY, imageAreaSize, imageAreaSize);
-
+                    // Gambar di area clipping
                     g2d.drawImage(thumbImage, drawX, drawY, scaledWidth, scaledHeight, null);
-
-                    g2d.setClip(oldClip);
                 }
             }
         };
-        thumbnail.setPreferredSize(new Dimension(70, 60));
+        thumbnail.setPreferredSize(new Dimension(70, 60)); // Ukuran thumbnail
+        // Border thumbnail yang dipilih
         thumbnail.setBorder(BorderFactory.createLineBorder(
-                index == currentImageIndex ? new Color(255, 89, 0) : new Color(240, 240, 240),
+                index == currentImageIndex ? QUANTRA_ORANGE_PRIMARY : new Color(240, 240, 240), // Warna border sesuai tema
                 index == currentImageIndex ? 2 : 0
         ));
         thumbnail.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -291,7 +299,7 @@ public class ProductDetailUI extends JPanel {
         for (int i = 0; i < thumbnails.length; i++) {
             JPanel thumb = (JPanel) thumbnails[i];
             thumb.setBorder(BorderFactory.createLineBorder(
-                    i == currentImageIndex ? new Color(255, 89, 0) : new Color(240, 240, 240),
+                    i == currentImageIndex ? QUANTRA_ORANGE_PRIMARY : new Color(240, 240, 240), // Warna border sesuai tema
                     i == currentImageIndex ? 2 : 0
             ));
         }
@@ -310,9 +318,9 @@ public class ProductDetailUI extends JPanel {
         detailPanel.setPreferredSize(new Dimension(500, 500));
         detailPanel.setBorder(new EmptyBorder(0, 20, 0, 0));
 
-        JLabel titleLabel = new JLabel("<html>" + currentProduct.getName() + "<br><span style='font-weight:normal; color:gray;'>" + currentProduct.getDescription() + "</span></html>");
+        JLabel titleLabel = new JLabel("<html>" + currentProduct.getName() + "<br><span style='font-weight:normal; color:" + String.format("#%06X", (TEXT_GRAY.getRGB() & 0xFFFFFF)) + ";'>" + currentProduct.getDescription() + "</span></html>");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        titleLabel.setForeground(Color.BLACK);
+        titleLabel.setForeground(TEXT_DARK); // Warna tema
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("in", "ID"));
@@ -320,14 +328,14 @@ public class ProductDetailUI extends JPanel {
 
         JLabel priceLabel = new JLabel(currencyFormat.format(currentProduct.getPrice()));
         priceLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        priceLabel.setForeground(new Color(255, 89, 0));
+        priceLabel.setForeground(QUANTRA_ORANGE_PRIMARY); // Warna tema
         priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel originalPriceLabel = null;
         if (currentProduct.getOriginalPrice() > currentProduct.getPrice()) {
             originalPriceLabel = new JLabel("<html><strike>" + currencyFormat.format(currentProduct.getOriginalPrice()) + "</strike></html>");
             originalPriceLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-            originalPriceLabel.setForeground(Color.GRAY);
+            originalPriceLabel.setForeground(TEXT_GRAY); // Warna tema
             originalPriceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         }
 
@@ -375,12 +383,13 @@ public class ProductDetailUI extends JPanel {
 
         JLabel labelComp = new JLabel(label);
         labelComp.setFont(new Font("Arial", Font.PLAIN, 14));
-        labelComp.setForeground(Color.GRAY);
+        labelComp.setForeground(TEXT_GRAY); // Warna tema
         labelComp.setPreferredSize(new Dimension(120, 20));
 
         JLabel valueComp = new JLabel(value);
         valueComp.setFont(new Font("Arial", Font.BOLD, 14));
-        valueComp.setForeground(value.equals(currentProduct.getBrand()) ? new Color(0, 150, 136) : Color.BLACK);
+        // Jika brand, gunakan warna sekunder dari tema
+        valueComp.setForeground(value.equals(currentProduct.getBrand()) ? QUANTRA_BLUE_SECONDARY : TEXT_DARK);
 
         row.add(labelComp);
         row.add(valueComp);
@@ -400,7 +409,7 @@ public class ProductDetailUI extends JPanel {
         // Label "Jumlah"
         JLabel qtyLabel = new JLabel("Jumlah");
         qtyLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        qtyLabel.setForeground(Color.BLACK);
+        qtyLabel.setForeground(TEXT_DARK); // Warna tema
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 2;
@@ -417,7 +426,7 @@ public class ProductDetailUI extends JPanel {
 
         stockLabel = new JLabel("Stok Total: Sisa " + currentProduct.getStock());
         stockLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-        stockLabel.setForeground(Color.GRAY);
+        stockLabel.setForeground(TEXT_GRAY); // Warna tema
 
         quantitySpinner.addChangeListener(e -> updateSubtotal());
 
@@ -435,7 +444,7 @@ public class ProductDetailUI extends JPanel {
         // Label "Subtotal" dan nilainya
         JLabel subtotalTextLabel = new JLabel("Subtotal");
         subtotalTextLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        subtotalTextLabel.setForeground(Color.GRAY);
+        subtotalTextLabel.setForeground(TEXT_GRAY); // Warna tema
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 1;
@@ -446,7 +455,7 @@ public class ProductDetailUI extends JPanel {
 
         subtotalValueLabel = new JLabel();
         subtotalValueLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        subtotalValueLabel.setForeground(Color.BLACK);
+        subtotalValueLabel.setForeground(TEXT_DARK); // Warna tema
         updateSubtotal();
         gbc.gridx = 1;
         gbc.gridy = 2;
@@ -477,15 +486,15 @@ public class ProductDetailUI extends JPanel {
         addToCartBtn = new JButton("+ Keranjang");
         addToCartBtn.setPreferredSize(new Dimension(140, 40));
         addToCartBtn.setBackground(Color.WHITE);
-        addToCartBtn.setForeground(new Color(255, 89, 0));
-        addToCartBtn.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2));
+        addToCartBtn.setForeground(QUANTRA_ORANGE_PRIMARY); // Warna tema
+        addToCartBtn.setBorder(BorderFactory.createLineBorder(QUANTRA_ORANGE_PRIMARY, 2)); // Warna tema
         addToCartBtn.setFont(new Font("Arial", Font.BOLD, 14));
         addToCartBtn.setFocusPainted(false);
         addToCartBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         buyNowBtn = new JButton("Beli Langsung");
         buyNowBtn.setPreferredSize(new Dimension(140, 40));
-        buyNowBtn.setBackground(new Color(255, 89, 0));
+        buyNowBtn.setBackground(QUANTRA_ORANGE_PRIMARY); // Warna tema
         buyNowBtn.setForeground(Color.WHITE);
         buyNowBtn.setBorderPainted(false);
         buyNowBtn.setFont(new Font("Arial", Font.BOLD, 14));
@@ -573,7 +582,7 @@ public class ProductDetailUI extends JPanel {
             chatBtn.setPreferredSize(new Dimension(80, 28)); // Menambah tinggi dan lebar
         }
         chatBtn.setBackground(Color.WHITE);
-        chatBtn.setForeground(Color.GRAY);
+        chatBtn.setForeground(TEXT_GRAY); // Warna tema
         chatBtn.setBorderPainted(false);
         chatBtn.setFocusPainted(false);
         chatBtn.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -594,16 +603,16 @@ public class ProductDetailUI extends JPanel {
             wishlistBtn.setHorizontalTextPosition(SwingConstants.RIGHT);
             wishlistBtn.setPreferredSize(new Dimension(100, 28)); // Menambah tinggi dan lebar
         } else {
-            wishlistBtn = new JButton((isFavorite ? "❤️" : "🤍") + " Favorit");
+            // Gunakan karakter Unicode untuk hati jika ikon tidak dimuat
+            wishlistBtn = new JButton((isFavorite ? "️" : "") + " Favorit");
             wishlistBtn.setPreferredSize(new Dimension(110, 28)); // Menambah tinggi dan lebar
         }
         wishlistBtn.setBackground(Color.WHITE);
-        wishlistBtn.setForeground(Color.GRAY);
+        wishlistBtn.setForeground(TEXT_GRAY); // Warna tema
         wishlistBtn.setBorderPainted(false);
         wishlistBtn.setFocusPainted(false);
         wishlistBtn.setFont(new Font("Arial", Font.PLAIN, 12));
         wishlistBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        // --- AKHIR REVISI ---
 
         chatBtn.addActionListener(e -> {
             User currentUser = Authentication.getCurrentUser();
@@ -673,16 +682,33 @@ public class ProductDetailUI extends JPanel {
                         JOptionPane.showMessageDialog(this, "Gagal menghapus dari favorit.", "Error favorit", JOptionPane.ERROR_MESSAGE);
                     }
                 }
+                // Perbarui tampilan tombol setelah aksi favorit
+                updateWishlistButtonText(); // Memastikan teks tombol diperbarui
             } catch (SQLException ex) {
                 System.err.println("Error wishlist operation: " + ex.getMessage());
                 JOptionPane.showMessageDialog(this, "Terjadi kesalahan saat memproses wishlist. Periksa koneksi database Anda.", "Error Wishlist", JOptionPane.ERROR_MESSAGE);
             }
         });
+        updateWishlistButtonText(); // Set teks awal tombol wishlist
 
         additionalPanel.add(chatBtn);
         additionalPanel.add(wishlistBtn);
         return additionalPanel;
     }
+
+    // Metode baru untuk memperbarui teks/ikon tombol wishlist
+    private void updateWishlistButtonText() {
+        if (wishlistBtn != null) {
+            if (isFavorite) {
+                wishlistBtn.setText("Favorit");
+                wishlistBtn.setForeground(new Color(220, 53, 69)); // Merah untuk favorit
+            } else {
+                wishlistBtn.setText("Favorit");
+                wishlistBtn.setForeground(TEXT_GRAY);
+            }
+        }
+    }
+
 
     private JPanel createTabsSection() {
         JPanel tabsSection = new JPanel();
@@ -699,7 +725,7 @@ public class ProductDetailUI extends JPanel {
         for (int i = 0; i < tabNames.length; i++) {
             tabButtons[i] = new JButton(tabNames[i]);
             tabButtons[i].setBackground(Color.WHITE);
-            tabButtons[i].setForeground(i == 0 ? new Color(255, 89, 0) : Color.GRAY);
+            tabButtons[i].setForeground(i == 0 ? QUANTRA_ORANGE_PRIMARY : TEXT_GRAY); // Warna tema
             tabButtons[i].setBorderPainted(false);
             tabButtons[i].setFocusPainted(false);
             tabButtons[i].setFont(new Font("Arial", Font.BOLD, 14));
@@ -707,7 +733,7 @@ public class ProductDetailUI extends JPanel {
             tabButtons[i].setPreferredSize(new Dimension(120, 35));
 
             if (i == 0) {
-                tabButtons[i].setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, new Color(255, 89, 0)));
+                tabButtons[i].setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, QUANTRA_ORANGE_PRIMARY)); // Warna tema
             }
 
             final int tabIndex = i;
@@ -715,10 +741,10 @@ public class ProductDetailUI extends JPanel {
             tabButtons[i].addActionListener(e -> {
                 for (int j = 0; j < allButtons.length; j++) {
                     if (j == tabIndex) {
-                        allButtons[j].setForeground(new Color(255, 89, 0));
-                        allButtons[j].setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, new Color(255, 89, 0)));
+                        allButtons[j].setForeground(QUANTRA_ORANGE_PRIMARY); // Warna tema
+                        allButtons[j].setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, QUANTRA_ORANGE_PRIMARY)); // Warna tema
                     } else {
-                        allButtons[j].setForeground(Color.GRAY);
+                        allButtons[j].setForeground(TEXT_GRAY); // Warna tema
                         allButtons[j].setBorder(null);
                     }
                 }
@@ -740,7 +766,7 @@ public class ProductDetailUI extends JPanel {
                               "* PC AIO\n" +
                               "* LAPTOP..");
         detailContent.setFont(new Font("Arial", Font.PLAIN, 14));
-        detailContent.setForeground(Color.BLACK);
+        detailContent.setForeground(TEXT_DARK); // Warna tema
         detailContent.setBackground(Color.WHITE);
         detailContent.setEditable(false);
         detailContent.setOpaque(false);
@@ -749,7 +775,7 @@ public class ProductDetailUI extends JPanel {
 
         JLabel selengkapnyaLabel = new JLabel("Lihat Selengkapnya");
         selengkapnyaLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        selengkapnyaLabel.setForeground(new Color(0, 150, 136));
+        selengkapnyaLabel.setForeground(QUANTRA_BLUE_SECONDARY); // Warna tema
         selengkapnyaLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
         selengkapnyaLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
@@ -763,7 +789,286 @@ public class ProductDetailUI extends JPanel {
         return tabsSection;
     }
 
-    // Metode untuk membuat bagian rekomendasi
+    // --- START NEW: createReviewSection() ---
+    private JPanel createReviewSection() {
+        JPanel reviewSectionPanel = new JPanel(new BorderLayout());
+        reviewSectionPanel.setBackground(Color.WHITE);
+        reviewSectionPanel.setBorder(new EmptyBorder(30, 20, 30, 20)); // Padding di sekitar bagian review
+
+        JLabel sectionTitle = new JLabel("Our Customer Reviews");
+        sectionTitle.setFont(new Font("Arial", Font.BOLD, 24));
+        sectionTitle.setForeground(TEXT_DARK);
+        reviewSectionPanel.add(sectionTitle, BorderLayout.NORTH);
+
+        JPanel reviewContent = new JPanel();
+        reviewContent.setLayout(new BoxLayout(reviewContent, BoxLayout.Y_AXIS));
+        reviewContent.setBackground(Color.WHITE);
+        reviewContent.setBorder(new EmptyBorder(20, 0, 0, 0)); // Padding antara judul section dan konten review
+
+        // Panel Ringkasan Rating (Kiri: Rata-rata, Kanan: Progress Bar)
+        JPanel summaryPanel = new JPanel(new BorderLayout(20, 0));
+        summaryPanel.setBackground(GRAY_BACKGROUND_LIGHT); // Latar belakang abu-abu muda
+        summaryPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        summaryPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        JPanel averageRatingPanel = new JPanel();
+        averageRatingPanel.setLayout(new BoxLayout(averageRatingPanel, BoxLayout.Y_AXIS));
+        averageRatingPanel.setBackground(GRAY_BACKGROUND_LIGHT);
+        averageRatingPanel.setAlignmentX(Component.CENTER_ALIGNMENT); // Pusatkan konten di panel ini
+
+        JLabel avgRatingValueLabel = new JLabel("N/A");
+        avgRatingValueLabel.setFont(new Font("Arial", Font.BOLD, 48));
+        avgRatingValueLabel.setForeground(TEXT_DARK);
+        avgRatingValueLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JPanel avgStarsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 0));
+        avgStarsPanel.setBackground(GRAY_BACKGROUND_LIGHT);
+        
+        JLabel totalRatingsLabel = new JLabel("0 Ratings");
+        totalRatingsLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        totalRatingsLabel.setForeground(TEXT_GRAY);
+        totalRatingsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        averageRatingPanel.add(avgRatingValueLabel);
+        averageRatingPanel.add(avgStarsPanel);
+        averageRatingPanel.add(totalRatingsLabel);
+        summaryPanel.add(averageRatingPanel, BorderLayout.WEST);
+
+        JPanel progressBarPanel = new JPanel();
+        progressBarPanel.setLayout(new BoxLayout(progressBarPanel, BoxLayout.Y_AXIS));
+        progressBarPanel.setBackground(GRAY_BACKGROUND_LIGHT);
+        progressBarPanel.setBorder(new EmptyBorder(0, 10, 0, 0)); // Padding kiri untuk progress bar
+        summaryPanel.add(progressBarPanel, BorderLayout.CENTER);
+
+        // Panel Daftar Review
+        JPanel reviewListContainer = new JPanel();
+        reviewListContainer.setLayout(new BoxLayout(reviewListContainer, BoxLayout.Y_AXIS));
+        reviewListContainer.setBackground(Color.WHITE);
+        reviewListContainer.setBorder(new EmptyBorder(20, 0, 0, 0)); // Padding atas untuk daftar review
+
+        JScrollPane reviewScrollPane = new JScrollPane(reviewListContainer);
+        reviewScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        reviewScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        reviewScrollPane.setBorder(BorderFactory.createEmptyBorder()); // Hilangkan border default scroll pane
+        reviewScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+
+        // Muat data review di latar belakang
+        new SwingWorker<List<ProductRepository.Review>, Void>() {
+            double averageRating = 0.0;
+            int reviewCount = 0;
+            Map<Integer, Integer> ratingSummary = new HashMap<>(); 
+
+            @Override
+            protected List<ProductRepository.Review> doInBackground() throws Exception {
+                // Ambil rata-rata dan total count
+                double[] avgAndCount = ProductRepository.getProductAverageRatingAndCount(currentProduct.getId());
+                averageRating = avgAndCount[0];
+                reviewCount = (int) avgAndCount[1];
+
+                // Ambil summary per bintang
+                ratingSummary = ProductRepository.getProductRatingSummary(currentProduct.getId());
+
+                // Ambil daftar review
+                return ProductRepository.getReviewsForProduct(currentProduct.getId());
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    // Update Summary Panel
+                    avgRatingValueLabel.setText(String.format("%.1f", averageRating));
+                    totalRatingsLabel.setText(reviewCount + " Ratings");
+                    
+                    // Update bintang rata-rata
+                    avgStarsPanel.removeAll();
+                    for (int i = 1; i <= 5; i++) {
+                        JLabel star = new JLabel("★");
+                        // Perbaikan Font Bintang
+                        star.setFont(new Font("Dialog", Font.BOLD, 24)); // Gunakan "Dialog" atau "Segoe UI Emoji"
+                        star.setForeground(i <= Math.round(averageRating) ? STAR_GOLD : STAR_GRAY_BACKGROUND);
+                        avgStarsPanel.add(star);
+                    }
+                    avgStarsPanel.revalidate();
+                    avgStarsPanel.repaint();
+
+                    // Update Progress Bar Panel
+                    progressBarPanel.removeAll();
+                    for (int i = 5; i >= 1; i--) { // Dari 5 bintang ke 1 bintang
+                        int count = ratingSummary.getOrDefault(i, 0);
+                        progressBarPanel.add(createRatingProgressBar(i, count, reviewCount));
+                        progressBarPanel.add(Box.createVerticalStrut(5)); // Spasi antar bar
+                    }
+                    progressBarPanel.revalidate();
+                    progressBarPanel.repaint();
+
+                    // Tambahkan daftar review
+                    List<ProductRepository.Review> reviews = get();
+                    if (reviews.isEmpty()) {
+                        JLabel noReviewsLabel = new JLabel("Belum ada review untuk produk ini.");
+                        noReviewsLabel.setFont(new Font("Arial", Font.ITALIC, 14));
+                        noReviewsLabel.setForeground(TEXT_GRAY);
+                        noReviewsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+                        reviewListContainer.add(noReviewsLabel);
+                    } else {
+                        for (ProductRepository.Review review : reviews) {
+                            reviewListContainer.add(createReviewCard(review));
+                            reviewListContainer.add(Box.createVerticalStrut(15)); // Spasi antar review
+                        }
+                    }
+                    reviewListContainer.revalidate();
+                    reviewListContainer.repaint();
+
+                } catch (Exception e) {
+                    System.err.println("Error displaying reviews: " + e.getMessage());
+                    e.printStackTrace();
+                    reviewListContainer.removeAll();
+                    reviewListContainer.add(new JLabel("Gagal memuat review: " + e.getMessage()));
+                    reviewListContainer.revalidate();
+                    reviewListContainer.repaint();
+                }
+            }
+        }.execute();
+
+        reviewContent.add(summaryPanel);
+        reviewContent.add(reviewScrollPane); // Tambahkan scroll pane yang berisi daftar review
+        
+        reviewSectionPanel.add(reviewContent, BorderLayout.CENTER);
+
+        return reviewSectionPanel;
+    }
+
+    // Helper method untuk membuat progress bar rating
+    private JPanel createRatingProgressBar(int rating, int count, int totalReviews) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        panel.setBackground(GRAY_BACKGROUND_LIGHT);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setPreferredSize(new Dimension(300, 20)); // Beri ukuran tetap untuk konsistensi
+
+        JLabel ratingLabel = new JLabel(rating + ".0");
+        ratingLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        ratingLabel.setForeground(TEXT_DARK);
+        panel.add(ratingLabel);
+
+        JLabel starIcon = new JLabel("★");
+        // Perbaikan Font Bintang
+        starIcon.setFont(new Font("Dialog", Font.BOLD, 12)); // Gunakan "Dialog" atau "Segoe UI Emoji"
+        starIcon.setForeground(STAR_GOLD);
+        panel.add(starIcon);
+
+        JProgressBar progressBar = new JProgressBar(0, totalReviews > 0 ? totalReviews : 1);
+        progressBar.setValue(count);
+        progressBar.setForeground(STAR_GOLD);
+        progressBar.setBackground(new Color(230, 230, 230));
+        progressBar.setPreferredSize(new Dimension(150, 10)); // Ukuran progress bar
+        progressBar.setBorderPainted(false);
+        panel.add(progressBar);
+
+        JLabel countLabel = new JLabel(count + " Reviews");
+        countLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        countLabel.setForeground(TEXT_GRAY);
+        panel.add(countLabel);
+
+        return panel;
+    }
+
+    // Helper method untuk membuat kartu review individual
+    private JPanel createReviewCard(ProductRepository.Review review) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(Color.WHITE);
+        card.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230), 1));
+        card.setBorder(new EmptyBorder(15, 15, 15, 15));
+        card.setAlignmentX(Component.LEFT_ALIGNMENT); // Penting agar mengisi lebar di BoxLayout Y_AXIS
+
+        // Header Review (Nama, Bintang, Tanggal)
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(Color.WHITE);
+
+        // Perbaikan: Gunakan JPanel untuk menampung nama pengguna dan avatar
+        JPanel userInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        userInfoPanel.setBackground(Color.WHITE);
+
+        // --- Tambahkan placeholder avatar atau muat gambar profil jika ada ---
+        JLabel avatarLabel = new JLabel("U"); // Inisial atau ikon default
+        avatarLabel.setPreferredSize(new Dimension(30, 30));
+        avatarLabel.setOpaque(true);
+        avatarLabel.setBackground(QUANTRA_ORANGE_LIGHT); // Warna latar belakang avatar
+        avatarLabel.setForeground(Color.WHITE);
+        avatarLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        avatarLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        avatarLabel.setVerticalAlignment(SwingConstants.CENTER);
+        avatarLabel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
+        // Jika Anda memiliki gambar profil pengguna, Anda bisa memuatnya di sini
+        // Misalnya: avatarLabel.setIcon(new ImageIcon(ProductRepository.getProfilePicture(review.getUserId()).getScaledInstance(30,30,Image.SCALE_SMOOTH)));
+        
+        userInfoPanel.add(avatarLabel);
+        // --- Akhir placeholder avatar ---
+
+        JLabel userNameLabel = new JLabel(review.getUserName());
+        userNameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        userNameLabel.setForeground(TEXT_DARK);
+        userInfoPanel.add(userNameLabel);
+
+        header.add(userInfoPanel, BorderLayout.WEST);
+
+        // Bintang Review
+        JPanel starsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        starsPanel.setBackground(Color.WHITE);
+        for (int i = 1; i <= 5; i++) {
+            JLabel star = new JLabel("★");
+            // Perbaikan Font Bintang
+            star.setFont(new Font("Dialog", Font.PLAIN, 16)); // Gunakan "Dialog" atau "Segoe UI Emoji"
+            star.setForeground(i <= review.getRating() ? STAR_GOLD : STAR_GRAY_BACKGROUND);
+            starsPanel.add(star);
+        }
+        header.add(starsPanel, BorderLayout.CENTER);
+
+        JLabel dateLabel = new JLabel(review.getCreatedAt().format(DateTimeFormatter.ofPattern("dd MMM yyyy"))); // Format tahun penuh
+        dateLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        dateLabel.setForeground(TEXT_GRAY);
+        header.add(dateLabel, BorderLayout.EAST);
+
+        card.add(header, BorderLayout.NORTH);
+
+        // Teks Review
+        JTextArea reviewTextLabel = new JTextArea(review.getReviewText());
+        reviewTextLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+        reviewTextLabel.setForeground(TEXT_DARK);
+        reviewTextLabel.setBackground(Color.WHITE);
+        reviewTextLabel.setEditable(false);
+        reviewTextLabel.setLineWrap(true);
+        reviewTextLabel.setWrapStyleWord(true);
+        reviewTextLabel.setOpaque(false);
+        reviewTextLabel.setBorder(new EmptyBorder(10, 0, 0, 0)); // Padding atas untuk teks
+        card.add(reviewTextLabel, BorderLayout.CENTER);
+
+        // Gambar Testimoni (jika ada)
+        if (review.getLoadedReviewImage() != null) {
+            JPanel imagePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+            imagePanel.setBackground(Color.WHITE);
+            imagePanel.setBorder(new EmptyBorder(10, 0, 0, 0)); // Padding atas untuk gambar
+
+            JLabel reviewImageLabel = new JLabel();
+            Image originalImage = review.getLoadedReviewImage();
+            if (originalImage != null) {
+                // Skala gambar agar sesuai (misal: maks 100x100 piksel)
+                // Sesuaikan ukuran ini jika Anda ingin gambar testimoni lebih besar/kecil
+                int targetSize = 100;
+                Image scaledReviewImage = originalImage.getScaledInstance(targetSize, targetSize, Image.SCALE_SMOOTH);
+                reviewImageLabel.setIcon(new ImageIcon(scaledReviewImage));
+            } else {
+                reviewImageLabel.setText("Gambar Gagal Muat");
+                reviewImageLabel.setForeground(Color.RED);
+            }
+            imagePanel.add(reviewImageLabel);
+            card.add(imagePanel, BorderLayout.SOUTH); // Letakkan di bawah teks review
+        }
+
+
+        return card;
+    }
+
+
     private JPanel createRecommendationSection() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
@@ -771,7 +1076,7 @@ public class ProductDetailUI extends JPanel {
 
         JLabel titleLabel = new JLabel("Produk Serupa");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        titleLabel.setForeground(Color.BLACK);
+        titleLabel.setForeground(TEXT_DARK); // Warna tema
         panel.add(titleLabel, BorderLayout.NORTH);
 
         JPanel recommendedProductsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
@@ -786,7 +1091,7 @@ public class ProductDetailUI extends JPanel {
         if (recommendations.isEmpty()) {
             JLabel noRecLabel = new JLabel("Tidak ada produk serupa yang ditemukan.");
             noRecLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-            noRecLabel.setForeground(Color.GRAY);
+            noRecLabel.setForeground(TEXT_GRAY); // Warna tema
             recommendedProductsPanel.add(noRecLabel);
         } else {
             for (FavoritesUI.FavoriteItem recProduct : recommendations) {
@@ -818,7 +1123,6 @@ public class ProductDetailUI extends JPanel {
                 int panelWidth = getWidth();
                 int panelHeight = getHeight();
 
-                // --- START REVISION for "full" image display in recommendation card ---
                 g2d.setColor(item.getBgColor());
                 g2d.fillRect(0, 0, panelWidth, panelHeight);
 
@@ -838,22 +1142,18 @@ public class ProductDetailUI extends JPanel {
                     int originalWidth = mainImage.getWidth(null);
                     int originalHeight = mainImage.getHeight(null);
 
-                    // Penskalaan yang mengisi seluruh area panel (fill mode)
                     double scaleX = (double) panelWidth / originalWidth;
                     double scaleY = (double) panelHeight / originalHeight;
-                    double scale = Math.max(scaleX, scaleY); // Pilih skala yang lebih besar
+                    double scale = Math.max(scaleX, scaleY); 
 
                     int scaledWidth = (int) (originalWidth * scale);
                     int scaledHeight = (int) (originalHeight * scale);
 
-                    // Posisi gambar agar terpusat
                     int drawX = (panelWidth - scaledWidth) / 2;
                     int drawY = (panelHeight - scaledHeight) / 2;
 
-                    // Gambar di panel. Clipping tidak diperlukan jika gambar sudah discale untuk memenuhi.
                     g2d.drawImage(mainImage, drawX, drawY, scaledWidth, scaledHeight, null);
                 }
-                // --- AKHIR REVISI ---
             }
         };
         imagePanel.setPreferredSize(new Dimension(180, 150));
@@ -865,12 +1165,12 @@ public class ProductDetailUI extends JPanel {
 
         JLabel nameLabel = new JLabel("<html><div style='text-align: left;'>" + item.getName() + "</div></html>");
         nameLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        nameLabel.setForeground(Color.BLACK);
+        nameLabel.setForeground(TEXT_DARK); // Warna tema
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel priceLabel = new JLabel("Rp " + String.format("%,.0f", item.getPrice()) + "");
         priceLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        priceLabel.setForeground(new Color(255, 89, 0));
+        priceLabel.setForeground(QUANTRA_ORANGE_PRIMARY); // Warna tema
         priceLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         infoPanel.add(nameLabel);
@@ -890,7 +1190,7 @@ public class ProductDetailUI extends JPanel {
             }
             @Override
             public void mouseEntered(MouseEvent e) {
-                card.setBorder(BorderFactory.createLineBorder(new Color(255, 89, 0), 2));
+                card.setBorder(BorderFactory.createLineBorder(QUANTRA_ORANGE_PRIMARY, 2)); // Warna tema
             }
             @Override
             public void mouseExited(MouseEvent e) {
