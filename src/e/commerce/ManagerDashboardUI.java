@@ -1,5 +1,6 @@
 package e.commerce;
 
+import com.toedter.calendar.JDateChooser;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -10,11 +11,15 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import javax.swing.table.TableCellRenderer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.io.File; 
-import java.io.IOException; 
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
 
 // Import untuk JFreeChart
 import org.jfree.chart.ChartFactory;
@@ -25,7 +30,6 @@ import org.jfree.data.general.DefaultPieDataset;
 import org.jfree.data.general.PieDataset;
 import org.jfree.chart.ui.RectangleInsets;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
-
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.HorizontalAlignment;
 import org.jfree.chart.labels.StandardPieSectionLabelGenerator;
@@ -34,81 +38,84 @@ import java.text.DecimalFormat;
 import org.jfree.chart.util.Rotation;
 import java.awt.BasicStroke;
 import javax.swing.border.Border;
-
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.plot.CategoryPlot;
-import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.chart.renderer.category.BarRenderer;
 import java.util.Locale;
 
 public class ManagerDashboardUI extends JFrame {
     private JPanel mainPanel;
     private CardLayout cardLayout;
-    private JTable userTable;
-    private DefaultTableModel userTableModel;
     private JButton[] navButtons;
 
-    // Label untuk menampilkan data dashboard
+    // Komponen untuk User Management
+    private JTable userTable;
+    private DefaultTableModel userTableModel;
+
+    // Komponen untuk Dashboard
     private JLabel lblTotalUsersValue;
     private JLabel lblTotalProductsValue;
     private JLabel lblTotalTransactionsValue;
     private JLabel lblTotalRevenueValue;
+    private ExportExcelService exportService;
+    private ExportPdfService exportPdfService;
+    private JLabel exportStatusLabel;
 
-    // Variabel untuk fitur ekspor
-    private ExportExcelService exportService; 
-    private ExportPdfService exportPdfService; // Deklarasi ExportPdfService
-    private JLabel exportStatusLabel; 
+    // --- Komponen untuk Coupon Management (Dilebur ke sini) ---
+    private JTable couponTable;
+    private DefaultTableModel couponTableModel;
+    private JTextField couponCodeField;
+    private JComboBox<String> couponTypeComboBox;
+    private JSpinner couponValueSpinner;
+    private JSpinner couponMinPurchaseSpinner;
+    private JSpinner couponMaxDiscountSpinner;
+    private JSpinner couponUsageLimitUserSpinner;
+    private JSpinner couponTotalUsageLimitSpinner;
+    private JDateChooser couponValidFromChooser;
+    private JDateChooser couponValidUntilChooser;
+    private JCheckBox couponActiveCheckBox;
+    private JButton couponSaveButton;
+    private JButton couponClearButton;
+    private JLabel couponFormTitleLabel;
+    private Coupon selectedCoupon = null;
+    // --- Akhir Komponen Coupon Management ---
 
     public ManagerDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
         if (currentUser == null || (!currentUser.getRole().equalsIgnoreCase("admin") && !currentUser.getRole().equalsIgnoreCase("op_manager"))) {
             JOptionPane.showMessageDialog(this, "Akses ditolak! Hanya admin atau Operation Manager yang dapat mengakses halaman ini.", "Error", JOptionPane.ERROR_MESSAGE);
-            LoginUI loginUI = new LoginUI();
-            loginUI.setVisible(true);
+            new LoginUI().setVisible(true);
             dispose();
             return;
         }
 
-        // Inisialisasi Export Services dengan user yang sedang login
-        exportService = new ExportExcelService(currentUser); 
-        exportPdfService = new ExportPdfService(currentUser); // Inisialisasi ExportPdfService
+        exportService = new ExportExcelService(currentUser);
+        exportPdfService = new ExportPdfService(currentUser);
 
         setTitle("Quantra - Operation Manager Dashboard");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-
         setLayout(new BorderLayout());
-
         getContentPane().setBackground(Color.WHITE);
-
         IconUtil.setIcon(this);
 
-        // Sidebar
         JPanel sidebar = createSidebar();
-
-        // Main content area
         mainPanel = new JPanel();
         cardLayout = new CardLayout();
         mainPanel.setLayout(cardLayout);
 
-        // Header
         JPanel headerPanel = createHeaderPanel(currentUser);
-
-        // Dashboard panel
         JPanel dashboardPanel = createAdminDashboardPanel();
-
-        // User management panel
         JPanel userManagementPanel = createUserManagementPanel();
-
-        // Profile panel
+        JPanel couponManagementPanel = createCouponManagementPanel(); // Panggil metode baru
         ProfileUI profilePanel = new ProfileUI();
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(userManagementPanel, "UserManagement");
+        mainPanel.add(couponManagementPanel, "CouponManagement"); // Tambahkan panel ke CardLayout
         mainPanel.add(profilePanel, "Profile");
 
-        // Content wrapper with header and main panel
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.add(headerPanel, BorderLayout.NORTH);
         contentWrapper.add(mainPanel, BorderLayout.CENTER);
@@ -117,6 +124,7 @@ public class ManagerDashboardUI extends JFrame {
         add(contentWrapper, BorderLayout.CENTER);
 
         loadUserData();
+        loadCouponsData();
         refreshDashboardData();
     }
 
@@ -124,10 +132,9 @@ public class ManagerDashboardUI extends JFrame {
         JPanel sidebar = new JPanel();
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(new Color(245, 245, 245));
-        sidebar.setPreferredSize(new Dimension(200, 0));
+        sidebar.setPreferredSize(new Dimension(220, 0)); // Lebarkan sedikit sidebar
         sidebar.setBorder(new EmptyBorder(20, 10, 20, 10));
 
-        // Logo
         JLabel lblLogo = new JLabel();
         ImageIcon logoIcon = new ImageIcon(getClass().getResource("/Resources/Images/Logo.png"));
         Image scaledImage = logoIcon.getImage().getScaledInstance(100, 35, Image.SCALE_SMOOTH);
@@ -136,9 +143,9 @@ public class ManagerDashboardUI extends JFrame {
         sidebar.add(lblLogo);
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        // Navigation items
-        String[] navItems = {"Dashboard", "User Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "Profile", "Profile"}; 
+        // Tambahkan "Coupon Management" ke navigasi
+        String[] navItems = {"Dashboard", "User Management", "Coupon Management", "Profile", "Settings"};
+        String[] panelNames = {"Dashboard", "UserManagement", "CouponManagement", "Profile", "Profile"};
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -152,13 +159,12 @@ public class ManagerDashboardUI extends JFrame {
             navButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
             navButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-            if (navItems[i].equals("Dashboard")) {
+            if (i == 0) { // Set Dashboard sebagai default aktif
                 navButton.setBackground(new Color(255, 99, 71));
                 navButton.setForeground(Color.WHITE);
             }
 
             navButtons[i] = navButton;
-
             final String panelName = panelNames[i];
             final int index = i;
             navButton.addActionListener(e -> {
@@ -168,20 +174,12 @@ public class ManagerDashboardUI extends JFrame {
                 }
                 navButtons[index].setBackground(new Color(255, 99, 71));
                 navButtons[index].setForeground(Color.WHITE);
-
                 cardLayout.show(mainPanel, panelName);
 
-                if (panelName.equals("UserManagement")) {
-                    loadUserData();
-                }
-                if (panelName.equals("Dashboard")) {
-                    refreshDashboardData();
-                    // Reset status label ekspor ketika pindah ke Dashboard
-                    if (exportStatusLabel != null) {
-                        exportStatusLabel.setForeground(Color.BLACK);
-                        exportStatusLabel.setText("Siap untuk ekspor.");
-                    }
-                }
+                // Refresh data jika diperlukan
+                if (panelName.equals("UserManagement")) loadUserData();
+                if (panelName.equals("Dashboard")) refreshDashboardData();
+                if (panelName.equals("CouponManagement")) loadCouponsData();
             });
 
             sidebar.add(navButton);
@@ -189,19 +187,226 @@ public class ManagerDashboardUI extends JFrame {
         }
 
         sidebar.add(Box.createVerticalGlue());
-
-        JButton helpButton = new JButton("Help");
-        helpButton.setFont(new Font("Arial", Font.PLAIN, 14));
-        helpButton.setForeground(Color.BLACK);
-        helpButton.setBackground(new Color(245, 245, 245));
-        helpButton.setBorderPainted(false);
-        helpButton.setFocusPainted(false);
-        helpButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        helpButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        helpButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        sidebar.add(helpButton);
-
+        // ... (Tombol Help, dll)
         return sidebar;
+    }
+
+    // --- METODE-METODE UNTUK MANAJEMEN KUPON (DIAMBIL DARI CouponManagementPanel.java) ---
+
+    private JPanel createCouponManagementPanel() {
+        JPanel mainCouponPanel = new JPanel(new BorderLayout(20, 20));
+        mainCouponPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        mainCouponPanel.setBackground(Color.WHITE);
+
+        JPanel tablePanel = createCouponTablePanel();
+        JPanel formPanel = createCouponFormPanel();
+
+        mainCouponPanel.add(tablePanel, BorderLayout.CENTER);
+        mainCouponPanel.add(formPanel, BorderLayout.EAST);
+
+        return mainCouponPanel;
+    }
+
+    private JPanel createCouponTablePanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(Color.WHITE);
+
+        JLabel titleLabel = new JLabel("Daftar Kupon Tersedia");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        String[] columnNames = {"ID", "Kode", "Tipe", "Nilai", "Aktif", "Berlaku Hingga"};
+        couponTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        couponTable = new JTable(couponTableModel);
+        couponTable.setRowHeight(30);
+        couponTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        couponTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        couponTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        couponTable.getSelectionModel().addListSelectionListener(event -> {
+            if (!event.getValueIsAdjusting() && couponTable.getSelectedRow() != -1) {
+                int selectedRow = couponTable.getSelectedRow();
+                int couponId = (int) couponTableModel.getValueAt(selectedRow, 0);
+                loadCouponDataToForm(couponId);
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(couponTable);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createCouponFormPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+        panel.setBackground(new Color(248, 249, 250));
+        panel.setPreferredSize(new Dimension(350, 0));
+
+        couponFormTitleLabel = new JLabel("Tambah Kupon Baru");
+        couponFormTitleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        couponFormTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        couponCodeField = new JTextField(15);
+        couponTypeComboBox = new JComboBox<>(new String[]{"percentage", "fixed"});
+        couponValueSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
+        couponMinPurchaseSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 100000000.0, 5000.0));
+        couponMaxDiscountSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
+        couponUsageLimitUserSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
+        couponTotalUsageLimitSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100000, 10));
+        couponValidFromChooser = new JDateChooser();
+        couponValidFromChooser.setDateFormatString("yyyy-MM-dd");
+        couponValidUntilChooser = new JDateChooser();
+        couponValidUntilChooser.setDateFormatString("yyyy-MM-dd");
+        couponActiveCheckBox = new JCheckBox("Aktifkan Kupon Ini", true);
+
+        JPanel formGrid = new JPanel(new GridBagLayout());
+        formGrid.setBackground(panel.getBackground());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+
+        gbc.gridx = 0; gbc.gridy = 0; formGrid.add(new JLabel("Kode Kupon:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; formGrid.add(couponCodeField, gbc);
+        gbc.gridx = 0; gbc.gridy = 1; formGrid.add(new JLabel("Tipe Diskon:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 1; formGrid.add(couponTypeComboBox, gbc);
+        gbc.gridx = 0; gbc.gridy = 2; formGrid.add(new JLabel("Nilai Diskon:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 2; formGrid.add(couponValueSpinner, gbc);
+        gbc.gridx = 0; gbc.gridy = 3; formGrid.add(new JLabel("Min. Pembelian (Rp):"), gbc);
+        gbc.gridx = 1; gbc.gridy = 3; formGrid.add(couponMinPurchaseSpinner, gbc);
+        gbc.gridx = 0; gbc.gridy = 4; formGrid.add(new JLabel("Maks. Diskon (Rp):"), gbc);
+        gbc.gridx = 1; gbc.gridy = 4; formGrid.add(couponMaxDiscountSpinner, gbc);
+        gbc.gridx = 0; gbc.gridy = 5; formGrid.add(new JLabel("Limit/Pengguna:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 5; formGrid.add(couponUsageLimitUserSpinner, gbc);
+        gbc.gridx = 0; gbc.gridy = 6; formGrid.add(new JLabel("Total Kuota:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 6; formGrid.add(couponTotalUsageLimitSpinner, gbc);
+        gbc.gridx = 0; gbc.gridy = 7; formGrid.add(new JLabel("Berlaku Dari:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 7; formGrid.add(couponValidFromChooser, gbc);
+        gbc.gridx = 0; gbc.gridy = 8; formGrid.add(new JLabel("Berlaku Sampai:"), gbc);
+        gbc.gridx = 1; gbc.gridy = 8; formGrid.add(couponValidUntilChooser, gbc);
+        gbc.gridx = 1; gbc.gridy = 9; formGrid.add(couponActiveCheckBox, gbc);
+
+        couponSaveButton = new JButton("Simpan Kupon");
+        couponSaveButton.addActionListener(e -> saveCoupon());
+        couponClearButton = new JButton("Bersihkan");
+        couponClearButton.addActionListener(e -> clearCouponForm());
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBackground(panel.getBackground());
+        buttonPanel.add(couponClearButton);
+        buttonPanel.add(couponSaveButton);
+
+        panel.add(couponFormTitleLabel);
+        panel.add(Box.createVerticalStrut(15));
+        panel.add(formGrid);
+        panel.add(Box.createVerticalGlue());
+        panel.add(buttonPanel);
+
+        return panel;
+    }
+
+    private void loadCouponsData() {
+        couponTableModel.setRowCount(0);
+        try {
+            List<Coupon> coupons = ProductRepository.getAllCoupons();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy");
+            for (Coupon coupon : coupons) {
+                couponTableModel.addRow(new Object[]{
+                    coupon.getId(),
+                    coupon.getCouponCode(),
+                    coupon.getDiscountType(),
+                    coupon.getDiscountValue(),
+                    coupon.isActive() ? "Ya" : "Tidak",
+                    sdf.format(coupon.getValidUntil())
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat data kupon: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadCouponDataToForm(int couponId) {
+        try {
+            selectedCoupon = ProductRepository.getCouponById(couponId);
+            if (selectedCoupon != null) {
+                couponFormTitleLabel.setText("Edit Kupon: " + selectedCoupon.getCouponCode());
+                couponCodeField.setText(selectedCoupon.getCouponCode());
+                couponTypeComboBox.setSelectedItem(selectedCoupon.getDiscountType());
+                couponValueSpinner.setValue(selectedCoupon.getDiscountValue());
+                couponMinPurchaseSpinner.setValue(selectedCoupon.getMinPurchaseAmount());
+                couponMaxDiscountSpinner.setValue(selectedCoupon.getMaxDiscountAmount());
+                couponUsageLimitUserSpinner.setValue(selectedCoupon.getUsageLimitPerUser());
+                couponTotalUsageLimitSpinner.setValue(selectedCoupon.getTotalUsageLimit());
+                couponValidFromChooser.setDate(new Date(selectedCoupon.getValidFrom().getTime()));
+                couponValidUntilChooser.setDate(new Date(selectedCoupon.getValidUntil().getTime()));
+                couponActiveCheckBox.setSelected(selectedCoupon.isActive());
+                couponSaveButton.setText("Update Kupon");
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat detail kupon: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void clearCouponForm() {
+        selectedCoupon = null;
+        couponFormTitleLabel.setText("Tambah Kupon Baru");
+        couponCodeField.setText("");
+        couponTypeComboBox.setSelectedIndex(0);
+        couponValueSpinner.setValue(0.0);
+        couponMinPurchaseSpinner.setValue(0.0);
+        couponMaxDiscountSpinner.setValue(0.0);
+        couponUsageLimitUserSpinner.setValue(1);
+        couponTotalUsageLimitSpinner.setValue(100);
+        couponValidFromChooser.setDate(null);
+        couponValidUntilChooser.setDate(null);
+        couponActiveCheckBox.setSelected(true);
+        couponTable.clearSelection();
+        couponSaveButton.setText("Simpan Kupon");
+    }
+
+    private void saveCoupon() {
+        String code = couponCodeField.getText().trim().toUpperCase();
+        if (code.isEmpty() || couponValidFromChooser.getDate() == null || couponValidUntilChooser.getDate() == null) {
+            JOptionPane.showMessageDialog(this, "Kode dan Tanggal Berlaku harus diisi.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (couponValidFromChooser.getDate().after(couponValidUntilChooser.getDate())) {
+            JOptionPane.showMessageDialog(this, "Tanggal mulai tidak boleh setelah tanggal berakhir.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String type = (String) couponTypeComboBox.getSelectedItem();
+        double value = (double) couponValueSpinner.getValue();
+        double minPurchase = (double) couponMinPurchaseSpinner.getValue();
+        double maxDiscount = (double) couponMaxDiscountSpinner.getValue();
+        int limitPerUser = (int) couponUsageLimitUserSpinner.getValue();
+        int totalLimit = (int) couponTotalUsageLimitSpinner.getValue();
+        Timestamp validFrom = new Timestamp(couponValidFromChooser.getDate().getTime());
+        Timestamp validUntil = new Timestamp(couponValidUntilChooser.getDate().getTime());
+        boolean isActive = couponActiveCheckBox.isSelected();
+
+        try {
+            if (selectedCoupon == null) {
+                ProductRepository.createCoupon(code, type, value, minPurchase, maxDiscount, limitPerUser, totalLimit, validFrom, validUntil, isActive);
+                JOptionPane.showMessageDialog(this, "Kupon baru berhasil disimpan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                ProductRepository.updateCoupon(selectedCoupon.getId(), code, type, value, minPurchase, maxDiscount, limitPerUser, totalLimit, validFrom, validUntil, isActive);
+                JOptionPane.showMessageDialog(this, "Kupon berhasil diperbarui!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+            }
+            loadCouponsData();
+            clearCouponForm();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan kupon: " + e.getMessage(), "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JPanel createHeaderPanel(User currentUser) {
@@ -316,7 +521,7 @@ public class ManagerDashboardUI extends JFrame {
     private PieDataset createDataset() {
         DefaultPieDataset dataset = new DefaultPieDataset();
         dataset.setValue("Admin", getTotalUserCountByRole("admin"));
-        dataset.setValue("Seller", getTotalUserCountByRole("supervisor"));
+        dataset.setValue("Seller", getTotalUserCountByRole("seller"));
         dataset.setValue("Operation Manager", getTotalUserCountByRole("op_manager"));
         dataset.setValue("User", getTotalUserCountByRole("user"));
         return dataset;

@@ -319,9 +319,11 @@ public class SuccessUI extends JPanel {
                 @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
                 @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
-                @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
-                @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) {
-                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran (Sukses)");
+                @Override public void showAddressView(CouponResult couponResult) { System.out.println("Dummy: Tampilkan Tampilan Alamat dengan kupon."); }
+
+                @Override
+                public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat dan Kupon.");
                 }
                 @Override public void showSuccessView(int orderId) {
                     System.out.println("Dummy: Tampilkan Tampilan Sukses (Sukses) dengan ID pesanan: " + orderId);

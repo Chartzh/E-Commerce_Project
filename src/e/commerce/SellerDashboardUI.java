@@ -162,9 +162,8 @@ public class SellerDashboardUI extends JFrame {
             @Override public void showProfileView() { /* do nothing */ }
             @Override public void showOrdersView() { /* do nothing */ }
             @Override public void showCheckoutView() { /* do nothing */ }
-            @Override public void showAddressView() { /* do nothing */ }
-            @Override
-            public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) { /* do nothing */ }
+            @Override public void showAddressView(CouponResult couponResult) {  }
+            @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {}
             @Override public void showSuccessView(int orderId) { /* do nothing */ }
             @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
             @Override public void showChatWithSeller(int sellerId, String sellerUsername) {
@@ -1359,8 +1358,8 @@ public class SellerDashboardUI extends JFrame {
                     @Override public void showProfileView() { /* do nothing */ }
                     @Override public void showOrdersView() { /* do nothing */ }
                     @Override public void showCheckoutView() { /* do nothing */ }
-                    @Override public void showAddressView() { /* do nothing */ }
-                    @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount) { /* do nothing */ }
+                    @Override public void showAddressView(CouponResult couponResult) {  }
+                    @Override public void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {}
                     @Override public void showSuccessView(int orderId) { /* do nothing */ }
                     @Override public void showOrderDetailView(int orderId) { /* do nothing */ }
                     @Override public void showChatWithSeller(int sellerId, String sellerUsername) {

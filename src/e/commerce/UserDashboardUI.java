@@ -84,7 +84,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
         favoritesUI = new FavoritesUI(this, currentUser.getId());
 
-        addressUI = new AddressUI(this);
+        addressUI = new AddressUI(this, null);
 
         searchResultPanel = createSearchResultPanel();
 
@@ -243,34 +243,36 @@ public class UserDashboardUI extends JFrame implements ViewController {
     }
 
     @Override
-    public void showAddressView() {
+    public void showAddressView(CouponResult couponResult) {
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof AddressUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        AddressUI newAddressUI = new AddressUI(this);
+        AddressUI newAddressUI = new AddressUI(this, couponResult);
         mainPanel.add(newAddressUI, "Address");
         cardLayout.show(mainPanel, "Address");
         System.out.println("Navigasi ke Halaman Alamat.");
         chatFloatingButton.setVisible(false);
     }
+    
 
     @Override
-    public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount) {
+    public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {
         for (Component comp : mainPanel.getComponents()) {
             if (comp instanceof PaymentUI) {
                 mainPanel.remove(comp);
                 break;
             }
         }
-        PaymentUI newPaymentUI = new PaymentUI(this, selectedAddress, selectedShippingService);
+        PaymentUI newPaymentUI = new PaymentUI(this, selectedAddress, selectedShippingService, couponResult);
         mainPanel.add(newPaymentUI, "Payment");
         cardLayout.show(mainPanel, "Payment");
         System.out.println("Navigasi ke Halaman Pembayaran dengan Alamat dan Jasa Pengiriman.");
         chatFloatingButton.setVisible(false);
     }
+    
 
     @Override
     public void showSuccessView(int orderId) {

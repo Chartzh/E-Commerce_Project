@@ -22,6 +22,8 @@ import e.commerce.ProductRepository.CartItem;
 // Import kelas inner Address dan ShippingService dari AddressUI
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
+import e.commerce.CouponResult;
+
 
 
 public class PaymentUI extends JPanel {
@@ -59,6 +61,7 @@ public class PaymentUI extends JPanel {
 
     private ViewController viewController;
     private User currentUser;
+    private CouponResult appliedCouponResult;
 
     // Field baru untuk menyimpan data yang diteruskan dari AddressUI
     private Address selectedShippingAddress;
@@ -75,10 +78,11 @@ public class PaymentUI extends JPanel {
     private static final Color TEAL_FREE_TEXT = new Color(0, 150, 136);
 
     // Konstruktor yang dimodifikasi untuk menerima selectedAddress dan selectedShippingService
-    public PaymentUI(ViewController viewController, Address selectedShippingAddress, ShippingService selectedDeliveryService) {
+    public PaymentUI(ViewController viewController, Address selectedShippingAddress, ShippingService selectedDeliveryService, CouponResult couponResult) {
         this.viewController = viewController;
         this.selectedShippingAddress = selectedShippingAddress;
         this.selectedDeliveryService = selectedDeliveryService;
+        this.appliedCouponResult = couponResult;
 
         setLayout(new BorderLayout());
         setBackground(LIGHT_GRAY_BACKGROUND);
@@ -90,18 +94,21 @@ public class PaymentUI extends JPanel {
             // Secara opsional, arahkan ke halaman login
             return;
         }
+        
+         if (this.appliedCouponResult != null && this.appliedCouponResult.isSuccess()) {
+            this.couponSavings = this.appliedCouponResult.getDiscountAmount();
+        }
 
         loadCartItemsFromDatabase();
-        // Gunakan biaya pengiriman dari selectedDeliveryService
         if (selectedDeliveryService != null) {
             deliveryCharge = selectedDeliveryService.price;
         } else {
-            deliveryCharge = 0; // Fallback jika tidak ada jasa pengiriman yang dipilih
+            deliveryCharge = 0;
         }
 
         createComponents();
         updateSummaryTotals();
-        updatePayNowButtonText(); // Perbarui teks tombol dengan total akhir
+        updatePayNowButtonText(); 
     }
 
     private void loadCartItemsFromDatabase() {
@@ -183,7 +190,7 @@ public class PaymentUI extends JPanel {
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.addActionListener(e -> {
             if (viewController != null) {
-                viewController.showAddressView();
+                viewController.showAddressView(this.appliedCouponResult);
             }
         });
         leftSection.add(backButton);
@@ -730,7 +737,7 @@ public class PaymentUI extends JPanel {
         if (selectedShippingAddress == null || selectedDeliveryService == null) {
             JOptionPane.showMessageDialog(this, "Informasi alamat pengiriman atau jasa pengiriman tidak lengkap. Harap kembali ke halaman alamat.", "Error Pembayaran", JOptionPane.ERROR_MESSAGE); // Translated
             if (viewController != null) {
-                viewController.showAddressView(); // Arahkan kembali ke AddressUI
+                viewController.showAddressView(this.appliedCouponResult); // Arahkan kembali ke AddressUI
             }
             return;
         }
@@ -767,11 +774,11 @@ public class PaymentUI extends JPanel {
                 getTotalPaymentAmount(),
                 selectedShippingAddress,
                 selectedDeliveryService,
-                paymentMethod
+                paymentMethod,
+                this.appliedCouponResult 
             );
 
             if (orderId != -1) {
-                JOptionPane.showMessageDialog(this, "Pembayaran berhasil dengan metode: " + paymentMethod + ". Nomor Pesanan: " + orderId, "Pembayaran Sukses", JOptionPane.INFORMATION_MESSAGE); // Translated
                 if (viewController != null) {
                     viewController.showSuccessView(orderId); // Teruskan ID pesanan yang sebenarnya
                 }
@@ -831,16 +838,13 @@ public class PaymentUI extends JPanel {
         deliveryLabel = new JLabel();
         finalTotalLabel = new JLabel();
 
-        summaryDetails.add(createSummaryRowPanel("Total MRP", totalMRPLabel, DARK_TEXT_COLOR, totalMRP)); // Translated
+        summaryDetails.add(createSummaryRowPanel("Total", totalMRPLabel, DARK_TEXT_COLOR, totalMRP)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Diskon pada MRP", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP)); // Translated
+        summaryDetails.add(createSummaryRowPanel("Diskon", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
         summaryDetails.add(createSummaryRowPanel("Penghematan Kupon", couponSavingsLabel, GREEN_DISCOUNT_TEXT, couponSavings)); // Translated
-        summaryDetails.add(Box.createVerticalStrut(5));
-
-        summaryDetails.add(createSummaryRowPanel("PPN yang Berlaku", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
         // Display "Gratis" jika biaya pengiriman 0
@@ -920,9 +924,7 @@ public class PaymentUI extends JPanel {
     private void updateSummaryTotals() {
         totalMRP = 0;
         discountOnMRP = 0;
-        couponSavings = 0;
         applicableGST = 0;
-        // deliveryCharge sudah diatur dari selectedDeliveryService di konstruktor, tidak perlu dihitung ulang dari awal kecuali logika berubah
 
         if (cartItems != null) {
             for (ProductRepository.CartItem item : cartItems) {
@@ -934,14 +936,14 @@ public class PaymentUI extends JPanel {
         double finalTotal = totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
 
         if (totalMRPLabel != null) totalMRPLabel.setText(formatCurrency(totalMRP));
-        if (discountOnMRPLabel != null) discountOnMRPLabel.setText(formatCurrency(discountOnMRP));
-        if (couponSavingsLabel != null) couponSavingsLabel.setText(formatCurrency(couponSavings));
+        if (discountOnMRPLabel != null) discountOnMRPLabel.setText("-" + formatCurrency(discountOnMRP));
+        if (couponSavingsLabel != null) couponSavingsLabel.setText("-" + formatCurrency(couponSavings));
         if (applicableGSTLabel != null) applicableGSTLabel.setText(formatCurrency(applicableGST));
+        if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
 
         if (deliveryLabel != null) {
             deliveryLabel.setText(deliveryCharge == 0.0 ? "Gratis" : formatCurrency(deliveryCharge));
         }
-        if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
 
         updatePayNowButtonText();
     }
@@ -1077,14 +1079,11 @@ public class PaymentUI extends JPanel {
                 @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
                 @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)");}
+                @Override public void showAddressView(CouponResult couponResult) { System.out.println("Dummy: Tampilkan Tampilan Alamat dengan kupon."); }
+
                 @Override
-                public void showAddressView() {
-                    System.out.println("Dummy: Tampilkan Tampilan Alamat."); // Translated
-                    // Dalam aplikasi nyata, ini akan beralih panel ke AddressUI
-                }
-                @Override
-                public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount) {
-                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran (Sukses) dengan alamat dan pengiriman."); // Translated
+                public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat dan Kupon.");
                 }
                 @Override
                 public void showSuccessView(int orderId) {
@@ -1103,7 +1102,7 @@ public class PaymentUI extends JPanel {
                 }
             };
 
-            PaymentUI paymentUI = new PaymentUI(dummyVC, dummyAddress, dummyShipping);
+            PaymentUI paymentUI = new PaymentUI(dummyVC, dummyAddress, dummyShipping, null);
             frame.add(paymentUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

@@ -1,7 +1,10 @@
 package e.commerce;
 
-// Interface ini mendefinisikan metode untuk beralih antara panel UI yang berbeda.
-// Ini memisahkan panel UI (seperti FavoritesUI) dari implementasi JFrame yang konkret.
+import e.commerce.AddressUI.Address;
+import e.commerce.AddressUI.ShippingService;
+import e.commerce.CouponResult; 
+
+
 public interface ViewController {
     void showProductDetail(FavoritesUI.FavoriteItem product);
     void showFavoritesView();
@@ -10,8 +13,8 @@ public interface ViewController {
     void showProfileView();
     void showOrdersView();
     void showCheckoutView();
-    void showAddressView();
-    void showPaymentView(AddressUI.Address selectedAddress, AddressUI.ShippingService selectedShippingService, double totalAmount);
+    void showAddressView(CouponResult couponResult); 
+    void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount, CouponResult couponResult); // Metode baru
     void showSuccessView(int orderId);
     void showOrderDetailView(int orderId);
     void showChatWithSeller(int sellerId, String sellerUsername);

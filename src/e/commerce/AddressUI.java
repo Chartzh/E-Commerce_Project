@@ -60,6 +60,7 @@ public class AddressUI extends JPanel {
 
     private Map<String, ShippingService> shippingServices; // Key: nama jasa pengiriman
     private ShippingService selectedShippingService; // Ini akan menyimpan ShippingService yang terhitung
+    private CouponResult appliedCouponResult;
 
 
     private static final Color ORANGE_THEME = new Color(255, 69, 0);
@@ -163,10 +164,15 @@ public class AddressUI extends JPanel {
         public double getChargeableWeight() { return chargeableWeight; }
     }
 
-    public AddressUI(ViewController viewController) {
+    public AddressUI(ViewController viewController, CouponResult couponResult) {
         this.viewController = viewController;
+        this.appliedCouponResult = couponResult;
         setLayout(new BorderLayout());
         setBackground(LIGHT_GRAY_BACKGROUND);
+        
+        if (this.appliedCouponResult != null && this.appliedCouponResult.isSuccess()) {
+            this.couponSavings = this.appliedCouponResult.getDiscountAmount();
+        }
 
         this.currentUser = Authentication.getCurrentUser();
         if (this.currentUser == null) {
@@ -755,16 +761,13 @@ public class AddressUI extends JPanel {
         deliveryLabel = new JLabel();
         finalTotalLabel = new JLabel();
 
-        summaryDetails.add(createSummaryRowPanel("Total MRP", totalMRPLabel, DARK_TEXT_COLOR, totalMRP));
+        summaryDetails.add(createSummaryRowPanel("Total", totalMRPLabel, DARK_TEXT_COLOR, totalMRP));
         summaryDetails.add(Box.createVerticalStrut(5));
 
-        summaryDetails.add(createSummaryRowPanel("Diskon dari MRP", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP)); // Translated
+        summaryDetails.add(createSummaryRowPanel("Diskon", discountOnMRPLabel, GREEN_DISCOUNT_TEXT, discountOnMRP)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
         summaryDetails.add(createSummaryRowPanel("Penghematan Kupon", couponSavingsLabel, GREEN_DISCOUNT_TEXT, couponSavings)); // Translated
-        summaryDetails.add(Box.createVerticalStrut(5));
-
-        summaryDetails.add(createSummaryRowPanel("PPN yang Berlaku", applicableGSTLabel, DARK_TEXT_COLOR, applicableGST)); // Translated
         summaryDetails.add(Box.createVerticalStrut(5));
 
         summaryDetails.add(createSummaryRowPanel("Pengiriman", deliveryLabel, TEAL_FREE_TEXT, deliveryCharge)); // Translated
@@ -796,8 +799,8 @@ public class AddressUI extends JPanel {
         continueButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         continueButton.setPreferredSize(new Dimension(200, 40));
         continueButton.addActionListener(e -> {
-            if (selectedAddress == null) {
-                JOptionPane.showMessageDialog(this, "Silakan pilih alamat pengiriman.", "Peringatan", JOptionPane.WARNING_MESSAGE); // Translated
+            if (selectedAddress == null || selectedShippingService == null) {
+                JOptionPane.showMessageDialog(this, "Silakan pilih alamat dan jasa pengiriman.", "Peringatan", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             if (selectedShippingService == null) {
@@ -808,8 +811,7 @@ public class AddressUI extends JPanel {
             if (viewController != null) {
                 updateSummaryTotals();
                 double finalTotal = totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
-
-                viewController.showPaymentView(selectedAddress, selectedShippingService, finalTotal); 
+                viewController.showPaymentView(selectedAddress, selectedShippingService, finalTotal, this.appliedCouponResult);
             } else {
                 JOptionPane.showMessageDialog(this, "Lanjut ke halaman Pembayaran.", "Pembayaran", JOptionPane.INFORMATION_MESSAGE); // Translated
             }
@@ -1080,7 +1082,6 @@ public class AddressUI extends JPanel {
     private void updateSummaryTotals() {
         totalMRP = 0;
         discountOnMRP = 0;
-        couponSavings = 0;
         applicableGST = 0;
 
         if (cartItems != null) {
@@ -1091,11 +1092,12 @@ public class AddressUI extends JPanel {
         }
 
         double finalTotal = totalMRP - discountOnMRP - couponSavings + applicableGST + deliveryCharge;
-
+        
         if (totalMRPLabel != null) totalMRPLabel.setText(formatCurrency(totalMRP));
-        if (discountOnMRPLabel != null) discountOnMRPLabel.setText(formatCurrency(discountOnMRP));
-        if (couponSavingsLabel != null) couponSavingsLabel.setText(formatCurrency(couponSavings));
+        if (discountOnMRPLabel != null) discountOnMRPLabel.setText("-" + formatCurrency(discountOnMRP));
+        if (couponSavingsLabel != null) couponSavingsLabel.setText("-" + formatCurrency(couponSavings));
         if (applicableGSTLabel != null) applicableGSTLabel.setText(formatCurrency(applicableGST));
+        if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
 
         if (deliveryLabel != null) {
             if (deliveryCharge == 0) {
@@ -1106,8 +1108,6 @@ public class AddressUI extends JPanel {
                 deliveryLabel.setForeground(DARK_TEXT_COLOR);
             }
         }
-        
-        if (finalTotalLabel != null) finalTotalLabel.setText(formatCurrency(finalTotal));
     }
 
     // This method is now removed as delivery dates come from ShippingCostResult
@@ -1935,11 +1935,13 @@ public class AddressUI extends JPanel {
                 @Override public void showProfileView() { System.out.println("Dummy: Tampilkan Tampilan Profil"); }
                 @Override public void showOrdersView() { System.out.println("Dummy: Tampilkan Tampilan Pesanan"); }
                 @Override public void showCheckoutView() { System.out.println("Dummy: Tampilkan Tampilan Checkout (Sukses)"); }
-                @Override public void showAddressView() { System.out.println("Dummy: Tampilkan Tampilan Alamat (Sukses)"); }
+                @Override public void showAddressView(CouponResult couponResult) { System.out.println("Dummy: Tampilkan Tampilan Alamat dengan kupon."); }
+
                 @Override
-                public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount) {
-                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat (" + selectedAddress.getLabel() + ") dan Jasa Pengiriman (" + selectedShippingService.providerName + ") dengan Total Amount: " + totalAmount);
+                public void showPaymentView(Address selectedAddress, ShippingService selectedShippingService, double totalAmount, CouponResult couponResult) {
+                    System.out.println("Dummy: Tampilkan Tampilan Pembayaran dengan Alamat dan Kupon.");
                 }
+
                 @Override
                 public void showSuccessView(int orderId) {
                     System.out.println("Dummy: Tampilkan Tampilan Sukses dengan ID pesanan: " + orderId);
@@ -1957,7 +1959,8 @@ public class AddressUI extends JPanel {
                 }
             };
 
-            AddressUI addressUI = new AddressUI(dummyVC);
+            AddressUI addressUI = new AddressUI(dummyVC, null); 
+            
             frame.add(addressUI);
             frame.setLocationRelativeTo(null);
             frame.setVisible(true);

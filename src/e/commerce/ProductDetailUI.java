@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.HashMap;
 
+import e.commerce.CouponResult;
+
 public class ProductDetailUI extends JPanel {
     private FavoritesUI.FavoriteItem currentProduct;
     private int currentImageIndex = 0;
@@ -546,7 +548,7 @@ public class ProductDetailUI extends JPanel {
                     JOptionPane.INFORMATION_MESSAGE);
 
                 if (viewController != null) {
-                    viewController.showAddressView();
+                    viewController.showAddressView(null);
                 }
 
             } catch (SQLException ex) {

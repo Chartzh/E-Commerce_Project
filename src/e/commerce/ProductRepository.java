@@ -1630,9 +1630,34 @@ public class ProductRepository {
      * @return ID pesanan yang baru dibuat, atau -1 jika operasi gagal.
      * @throws SQLException jika terjadi kesalahan akses database.
      */
+        /**
+     * Membuat pesanan baru di database. VERSI LAMA.
+     * Anda bisa menghapus ini atau menjaganya jika masih ada bagian kode lain yang menggunakannya.
+     */
     public static int createOrder(int userId, List<CartItem> cartItems, double totalAmount,
                                   Address shippingAddress, ShippingService shippingService,
                                   String paymentMethod) throws SQLException {
+        // Panggil versi baru dengan parameter kupon null
+        return createOrder(userId, cartItems, totalAmount, shippingAddress, shippingService, paymentMethod, null);
+    }
+
+    /**
+     * Membuat pesanan baru di database dan memindahkan item dari keranjang ke order_items.
+     * VERSI BARU dengan penanganan kupon.
+     *
+     * @param userId            ID pengguna yang membuat pesanan.
+     * @param cartItems         Daftar item dalam keranjang pengguna.
+     * @param totalAmount       Jumlah total akhir pesanan (sudah termasuk diskon).
+     * @param shippingAddress   Alamat pengiriman yang dipilih.
+     * @param shippingService   Jasa pengiriman yang dipilih.
+     * @param paymentMethod     Metode pembayaran yang dipilih.
+     * @param appliedCoupon     Objek CouponResult dari kupon yang diterapkan (bisa null).
+     * @return ID pesanan yang baru dibuat, atau -1 jika operasi gagal.
+     * @throws SQLException jika terjadi kesalahan akses database.
+     */
+    public static int createOrder(int userId, List<CartItem> cartItems, double totalAmount,
+                                  Address shippingAddress, ShippingService shippingService,
+                                  String paymentMethod, CouponResult appliedCoupon) throws SQLException {
         Connection conn = null;
         int orderId = -1;
 
@@ -1640,9 +1665,11 @@ public class ProductRepository {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false); 
 
+            // Modifikasi SQL untuk menyertakan coupon_id dan discount_applied
             String orderSql = "INSERT INTO orders (user_id, order_number, order_date, total_amount, " + 
-                              "shipping_address_id, shipping_service_name, shipping_cost, payment_method, order_status, delivery_estimate, created_at) " + 
-                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"; 
+                              "shipping_address_id, shipping_service_name, shipping_cost, payment_method, order_status, " + 
+                              "delivery_estimate, created_at, coupon_id, discount_applied) " + 
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)"; 
             try (PreparedStatement orderStmt = conn.prepareStatement(orderSql, Statement.RETURN_GENERATED_KEYS)) {
 
                 String orderNumber = generateUniqueOrderNumber();
@@ -1657,7 +1684,16 @@ public class ProductRepository {
                 orderStmt.setDouble(7, shippingService.getPrice()); 
                 orderStmt.setString(8, paymentMethod);
                 orderStmt.setString(9, "Pending Payment"); 
-                orderStmt.setString(10, shippingService.arrivalEstimate);
+                orderStmt.setString(10, shippingService.getArrivalEstimate());
+                
+                // Set data kupon
+                if (appliedCoupon != null && appliedCoupon.isSuccess()) {
+                    orderStmt.setInt(11, appliedCoupon.getCouponId());
+                    orderStmt.setDouble(12, appliedCoupon.getDiscountAmount());
+                } else {
+                    orderStmt.setNull(11, java.sql.Types.INTEGER);
+                    orderStmt.setDouble(12, 0.0);
+                }
                 
                 int affectedRows = orderStmt.executeUpdate();
                 if (affectedRows == 0) {
@@ -1673,6 +1709,7 @@ public class ProductRepository {
                 }
             }
 
+            // ... (Kode untuk memasukkan order_items tetap sama)
             String itemSql = "INSERT INTO order_items (order_id, product_id, product_name, quantity, price_per_item, original_price_per_item) VALUES (?, ?, ?, ?, ?, ?)"; 
             try (PreparedStatement itemStmt = conn.prepareStatement(itemSql)) {
                 for (CartItem item : cartItems) {
@@ -1687,6 +1724,12 @@ public class ProductRepository {
                 itemStmt.executeBatch();
             }
 
+            // Jika kupon digunakan, catat penggunaannya
+            if (appliedCoupon != null && appliedCoupon.isSuccess()) {
+                recordCouponUsage(conn, userId, appliedCoupon.getCouponId());
+            }
+
+            // Kosongkan keranjang
             clearCart(userId);
 
             conn.commit(); 
@@ -2253,6 +2296,204 @@ public class ProductRepository {
             DatabaseConnection.closeConnection(conn, stmt, rs);
         }
         return ratingSummary;
+    }
+    
+    /**
+     * Mengambil detail kupon dari database berdasarkan kodenya.
+     *
+     * @param couponCode Kode kupon yang dicari.
+     * @return Objek Coupon jika ditemukan, atau null jika tidak.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static Coupon getCouponByCode(String couponCode) throws SQLException {
+        String sql = "SELECT * FROM coupons WHERE coupon_code = ? AND is_active = 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, couponCode);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Coupon(
+                        rs.getInt("id"),
+                        rs.getString("coupon_code"),
+                        rs.getString("discount_type"),
+                        rs.getDouble("discount_value"),
+                        rs.getDouble("min_purchase_amount"),
+                        rs.getDouble("max_discount_amount"),
+                        rs.getInt("usage_limit_per_user"),
+                        rs.getInt("total_usage_limit"),
+                        rs.getInt("current_usage_count"),
+                        rs.getTimestamp("valid_from"),
+                        rs.getTimestamp("valid_until"),
+                        rs.getBoolean("is_active")
+                    );
+                }
+            }
+        }
+        return null; // Kupon tidak ditemukan
+    }
+
+    /**
+     * Mendapatkan berapa kali seorang pengguna telah menggunakan kupon tertentu.
+     *
+     * @param userId    ID pengguna.
+     * @param couponId  ID kupon.
+     * @return Jumlah penggunaan, atau 0 jika belum pernah digunakan.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static int getUserCouponUsageCount(int userId, int couponId) throws SQLException {
+        String sql = "SELECT usage_count FROM user_coupon_usage WHERE user_id = ? AND coupon_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, couponId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("usage_count");
+                }
+            }
+        }
+        return 0; // Belum pernah pakai
+    }
+
+    /**
+     * Mencatat penggunaan kupon setelah pesanan berhasil dibuat.
+     * Metode ini harus dipanggil di dalam transaksi yang sama dengan createOrder.
+     *
+     * @param conn      Koneksi database yang aktif (dari transaksi).
+     * @param userId    ID pengguna.
+     * @param couponId  ID kupon yang digunakan.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static void recordCouponUsage(Connection conn, int userId, int couponId) throws SQLException {
+        // 1. Tingkatkan jumlah penggunaan global
+        String updateTotalUsageSql = "UPDATE coupons SET current_usage_count = current_usage_count + 1 WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(updateTotalUsageSql)) {
+            pstmt.setInt(1, couponId);
+            pstmt.executeUpdate();
+        }
+
+        // 2. Tingkatkan jumlah penggunaan per pengguna (atau buat entri baru)
+        String updateUserUsageSql = "INSERT INTO user_coupon_usage (user_id, coupon_id, usage_count, last_used_at) " +
+                                    "VALUES (?, ?, 1, NOW()) " +
+                                    "ON DUPLICATE KEY UPDATE usage_count = usage_count + 1, last_used_at = NOW()";
+        try (PreparedStatement pstmt = conn.prepareStatement(updateUserUsageSql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setInt(2, couponId);
+            pstmt.executeUpdate();
+        }
+    }
+    
+    /**
+     * Mengambil semua kupon dari database.
+     * @return Daftar semua objek Coupon.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static List<Coupon> getAllCoupons() throws SQLException {
+        List<Coupon> coupons = new ArrayList<>();
+        String sql = "SELECT * FROM coupons ORDER BY id DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                coupons.add(mapRowToCoupon(rs));
+            }
+        }
+        return coupons;
+    }
+
+    /**
+     * Mengambil satu kupon berdasarkan ID-nya.
+     * @param couponId ID kupon yang dicari.
+     * @return Objek Coupon jika ditemukan, atau null.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static Coupon getCouponById(int couponId) throws SQLException {
+        String sql = "SELECT * FROM coupons WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, couponId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToCoupon(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Membuat kupon baru di database.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static void createCoupon(String code, String type, double value, double minPurchase, double maxDiscount, int limitPerUser, int totalLimit, Timestamp validFrom, Timestamp validUntil, boolean isActive) throws SQLException {
+        String sql = "INSERT INTO coupons (coupon_code, discount_type, discount_value, min_purchase_amount, max_discount_amount, usage_limit_per_user, total_usage_limit, valid_from, valid_until, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, code);
+            pstmt.setString(2, type);
+            pstmt.setDouble(3, value);
+            pstmt.setDouble(4, minPurchase);
+            pstmt.setDouble(5, maxDiscount);
+            pstmt.setInt(6, limitPerUser);
+            pstmt.setInt(7, totalLimit);
+            pstmt.setTimestamp(8, validFrom);
+            pstmt.setTimestamp(9, validUntil);
+            pstmt.setBoolean(10, isActive);
+            
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Memperbarui kupon yang sudah ada di database.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    public static void updateCoupon(int id, String code, String type, double value, double minPurchase, double maxDiscount, int limitPerUser, int totalLimit, Timestamp validFrom, Timestamp validUntil, boolean isActive) throws SQLException {
+        String sql = "UPDATE coupons SET coupon_code = ?, discount_type = ?, discount_value = ?, min_purchase_amount = ?, max_discount_amount = ?, usage_limit_per_user = ?, total_usage_limit = ?, valid_from = ?, valid_until = ?, is_active = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, code);
+            pstmt.setString(2, type);
+            pstmt.setDouble(3, value);
+            pstmt.setDouble(4, minPurchase);
+            pstmt.setDouble(5, maxDiscount);
+            pstmt.setInt(6, limitPerUser);
+            pstmt.setInt(7, totalLimit);
+            pstmt.setTimestamp(8, validFrom);
+            pstmt.setTimestamp(9, validUntil);
+            pstmt.setBoolean(10, isActive);
+            pstmt.setInt(11, id);
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Helper method untuk memetakan baris ResultSet ke objek Coupon.
+     * @param rs ResultSet yang aktif.
+     * @return Objek Coupon.
+     * @throws SQLException jika terjadi kesalahan database.
+     */
+    private static Coupon mapRowToCoupon(ResultSet rs) throws SQLException {
+        return new Coupon(
+            rs.getInt("id"),
+            rs.getString("coupon_code"),
+            rs.getString("discount_type"),
+            rs.getDouble("discount_value"),
+            rs.getDouble("min_purchase_amount"),
+            rs.getDouble("max_discount_amount"),
+            rs.getInt("usage_limit_per_user"),
+            rs.getInt("total_usage_limit"),
+            rs.getInt("current_usage_count"),
+            rs.getTimestamp("valid_from"),
+            rs.getTimestamp("valid_until"),
+            rs.getBoolean("is_active")
+        );
     }
 
 }
