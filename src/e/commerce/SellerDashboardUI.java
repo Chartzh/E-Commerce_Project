@@ -6,8 +6,9 @@ import javax.swing.border.LineBorder;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellEditor;
-import javax.swing.text.JTextComponent; 
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
@@ -17,13 +18,21 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.text.NumberFormat;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Locale;
-import java.sql.*; 
+import java.sql.*;
 
-// PENTING: Import ini harus tetap ada dan merujuk ke definisi FavoriteItem Anda yang sebenarnya
-import e.commerce.FavoritesUI.FavoriteItem; 
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartPanel;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
+import org.jfree.data.category.DefaultCategoryDataset;
+
+import e.commerce.FavoritesUI.FavoriteItem;
 
 
 public class SellerDashboardUI extends JFrame {
@@ -43,7 +52,11 @@ public class SellerDashboardUI extends JFrame {
 
     private ExportExcelService exportService;
     private ExportPdfService exportPdfService;
-    private JLabel exportStatusLabel; 
+    private JLabel exportStatusLabel;
+
+    private JLabel lblMyProductsValue;
+    private JLabel lblMySalesValue;
+    private JLabel lblMyRevenueValue;
 
     private static final Color ORANGE_PRIMARY = new Color(255, 102, 0);
     private static final Color ORANGE_LIGHT = new Color(255, 153, 51);
@@ -60,7 +73,7 @@ public class SellerDashboardUI extends JFrame {
     private static final Color BLUE_PRIMARY = new Color(74, 110, 255);
     private static final Color SELLER_TEXT_COLOR = new Color(70, 130, 180);
 
-    // --- Placeholder focus listener class (disalin dari AddressUI) ---
+    // Placeholder focus listener class
     private class PlaceholderFocusListener implements FocusListener {
         private JTextComponent component;
         private String placeholder;
@@ -71,7 +84,6 @@ public class SellerDashboardUI extends JFrame {
             this.component = component;
             this.placeholder = placeholder;
             this.placeholderColor = placeholderColor;
-            // Dapatkan warna asli teks sebelum placeholder diterapkan
             this.originalForeground = component.getForeground();
         }
 
@@ -92,16 +104,14 @@ public class SellerDashboardUI extends JFrame {
         }
     }
 
-    // --- Helper method untuk setup placeholder (disalin dari AddressUI) ---
+    // Helper method untuk setup placeholder
     private void setupPlaceholder(JTextComponent component, String placeholder) {
-        // Hanya terapkan placeholder jika teks kosong atau masih placeholder lama
         if (component.getText().isEmpty() || component.getText().equals(component.getClientProperty("placeholder"))) {
              component.setText(placeholder);
              component.setForeground(GRAY_TEXT_COLOR);
-             component.putClientProperty("placeholder", placeholder); 
+             component.putClientProperty("placeholder", placeholder);
         }
-        
-        // Pastikan listener hanya ditambahkan sekali
+
         boolean listenerExists = false;
         for (FocusListener listener : component.getFocusListeners()) {
             if (listener instanceof PlaceholderFocusListener && ((PlaceholderFocusListener) listener).component == component) {
@@ -113,7 +123,6 @@ public class SellerDashboardUI extends JFrame {
             component.addFocusListener(new PlaceholderFocusListener(component, placeholder, GRAY_TEXT_COLOR));
         }
     }
-
 
     public SellerDashboardUI() {
         currentUser = Authentication.getCurrentUser();
@@ -142,10 +151,16 @@ public class SellerDashboardUI extends JFrame {
         JPanel sidebar = createSidebar();
         JPanel headerPanel = createHeaderPanel(currentUser);
         
+        JPanel dashboardPanel = createSellerDashboardPanel();
         JPanel productPanel = createProductManagementPanel();
         JPanel ordersPanel = createOrdersPanel();
-        ProfileUI profilePanel = new ProfileUI(); 
-        
+        ProfileUI profilePanel = new ProfileUI();
+
+        JScrollPane dashboardScrollPane = new JScrollPane(dashboardPanel);
+        dashboardScrollPane.setBorder(null);
+        dashboardScrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        mainPanel.add(dashboardScrollPane, "Dashboard");
         mainPanel.add(productPanel, "Produk");
         mainPanel.add(ordersPanel, "Pesanan");
         mainPanel.add(profilePanel, "Profil");
@@ -155,7 +170,7 @@ public class SellerDashboardUI extends JFrame {
         add(mainPanel);
 
         ViewController dummyVCForChatPopup = new ViewController() {
-            @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ } // Menggunakan FavoritesUI.FavoriteItem
+            @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ }
             @Override public void showFavoritesView() { /* do nothing */ }
             @Override public void showDashboardView() { /* do nothing */ }
             @Override public void showCartView() { /* do nothing */ }
@@ -174,7 +189,7 @@ public class SellerDashboardUI extends JFrame {
 
         chatFloatingButton = new ChatFloatingButton(this, dummyVCForChatPopup);
         chatFloatingButton.setSize(chatFloatingButton.getPreferredSize());
-        
+
         JLayeredPane layeredPane = getRootPane().getLayeredPane();
         layeredPane.add(chatFloatingButton, JLayeredPane.PALETTE_LAYER);
 
@@ -215,7 +230,8 @@ public class SellerDashboardUI extends JFrame {
             }
         });
 
-        cardLayout.show(mainPanel, "Produk");
+        cardLayout.show(mainPanel, "Dashboard");
+        refreshSellerDashboardData();
     }
 
     private JPanel createSidebar() {
@@ -233,8 +249,8 @@ public class SellerDashboardUI extends JFrame {
         sidebar.add(lblLogo);
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
-        String[] navItems = {"Produk Saya", "Pesanan", "Profil", "Logout"};
-        String[] panelNames = {"Produk", "Pesanan", "Profil", "LogoutAction"};
+        String[] navItems = {"Dashboard", "Produk Saya", "Pesanan", "Profil", "Logout"};
+        String[] panelNames = {"Dashboard", "Produk", "Pesanan", "Profil", "LogoutAction"};
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -286,11 +302,13 @@ public class SellerDashboardUI extends JFrame {
                             exportStatusLabel.setForeground(TEXT_DARK);
                             exportStatusLabel.setText("Siap untuk ekspor.");
                         }
+                    } else if(panelName.equals("Dashboard")) {
+                        refreshSellerDashboardData();
                     }
                     chatFloatingButton.setVisible(true);
                 });
 
-                if (navItems[i].equals("Produk Saya")) {
+                if (i == 0) { // Set Dashboard sebagai default aktif
                     navButton.setBackground(ORANGE_PRIMARY);
                     navButton.setForeground(WHITE);
                 }
@@ -305,7 +323,146 @@ public class SellerDashboardUI extends JFrame {
 
         return sidebar;
     }
+    
+    private JPanel createSellerDashboardPanel() {
+        JPanel dashboardPanel = new JPanel(new BorderLayout(0, 20));
+        dashboardPanel.setBackground(Color.WHITE);
+        dashboardPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
+        JPanel summaryCardsPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+        summaryCardsPanel.setBackground(Color.WHITE);
+
+        lblMyProductsValue = new JLabel("0");
+        lblMySalesValue = new JLabel("0");
+        lblMyRevenueValue = new JLabel("Rp0");
+
+        summaryCardsPanel.add(createSummaryCard("Total Produk Saya", lblMyProductsValue, ORANGE_PRIMARY));
+        summaryCardsPanel.add(createSummaryCard("Pesanan Terjual", lblMySalesValue, SUCCESS_GREEN));
+        summaryCardsPanel.add(createSummaryCard("Total Pendapatan", lblMyRevenueValue, BLUE_PRIMARY));
+
+        dashboardPanel.add(summaryCardsPanel, BorderLayout.NORTH);
+        JPanel barChartPanel = createSalesTrendChartPanelForSeller(); 
+        JPanel chartWrapperPanel = new JPanel(new BorderLayout());
+        chartWrapperPanel.add(barChartPanel, BorderLayout.CENTER);
+        dashboardPanel.add(chartWrapperPanel, BorderLayout.CENTER);
+
+        return dashboardPanel;
+    }
+
+    private JPanel createSummaryCard(String title, JLabel valueLabel, Color color) {
+        JPanel card = new JPanel();
+        card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
+        card.setBackground(color);
+        card.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        card.setPreferredSize(new Dimension(250, 90));
+
+        JLabel lblTitle = new JLabel(title);
+        lblTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        valueLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        valueLabel.setForeground(Color.WHITE);
+        valueLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        card.add(lblTitle);
+        card.add(Box.createVerticalStrut(8));
+        card.add(valueLabel);
+        return card;
+    }
+
+    private void refreshSellerDashboardData() {
+        if(currentUser == null) return;
+        int sellerId = currentUser.getId();
+
+        lblMyProductsValue.setText(String.valueOf(getMyTotalProductCount(sellerId)));
+        lblMySalesValue.setText(String.valueOf(getMyTotalSalesCount(sellerId)));
+
+        NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+        lblMyRevenueValue.setText(currencyFormat.format(getMyTotalRevenue(sellerId)));
+        
+        // Refresh chart juga jika perlu
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
+
+    private int getMyTotalProductCount(int sellerId) {
+        try {
+            return ProductRepository.countProductsBySeller(sellerId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    private int getMyTotalSalesCount(int sellerId) {
+        try {
+            return ProductRepository.countSoldOrdersBySeller(sellerId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    private double getMyTotalRevenue(int sellerId) {
+        try {
+            return ProductRepository.getTotalRevenueBySeller(sellerId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return 0.0;
+        }
+    }
+
+    private JPanel createSalesTrendChartPanelForSeller() {
+        DefaultCategoryDataset dataset = ProductRepository.getMonthlyRevenueDatasetForSeller(currentUser.getId());
+
+        JFreeChart barChart = ChartFactory.createBarChart(
+                "Pendapatan Bulanan Saya", "Bulan", "Pendapatan (Rp)",
+                dataset, org.jfree.chart.plot.PlotOrientation.VERTICAL,
+                false, true, false
+        );
+        styleChart(barChart); // Menerapkan style umum
+        return wrapChart(barChart);
+    }
+    
+    private JPanel createSalesLineChartPanelForSeller() {
+        DefaultCategoryDataset dataset = ProductRepository.getMonthlyRevenueDatasetForSeller(currentUser.getId());
+
+        JFreeChart lineChart = ChartFactory.createLineChart(
+                "Tren Penjualan Bulanan", "Bulan", "Pendapatan (Rp)",
+                dataset, org.jfree.chart.plot.PlotOrientation.VERTICAL,
+                false, true, false
+        );
+        styleChart(lineChart); // Menerapkan style umum
+        return wrapChart(lineChart);
+    }
+    
+    private void styleChart(JFreeChart chart) {
+        chart.setBackgroundPaint(Color.WHITE);
+        chart.getTitle().setFont(new Font("Arial", Font.BOLD, 18));
+
+        CategoryPlot plot = chart.getCategoryPlot();
+        plot.setBackgroundPaint(new Color(248, 248, 248));
+        plot.setRangeGridlinePaint(new Color(230, 230, 230));
+        plot.setOutlineVisible(false);
+
+        if (plot.getRenderer() instanceof BarRenderer) {
+            BarRenderer renderer = (BarRenderer) plot.getRenderer();
+            renderer.setSeriesPaint(0, new Color(255, 102, 0));
+            renderer.setDrawBarOutline(false);
+            // Baris ini PENTING untuk mengontrol lebar bar agar tidak terlalu gemuk
+            renderer.setMaximumBarWidth(0.06);
+        }
+    }
+
+    private JPanel wrapChart(JFreeChart chart) {
+        ChartPanel chartPanel = new ChartPanel(chart);
+        chartPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        chartPanel.setBackground(Color.WHITE);
+        return chartPanel;
+    }
+
+    
     private JPanel createHeaderPanel(User currentUser) {
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setBackground(Color.WHITE);
@@ -444,7 +601,7 @@ public class SellerDashboardUI extends JFrame {
 
     public void loadProductsForSupervisor() {
         productTableModel.setRowCount(0);
-        List<FavoritesUI.FavoriteItem> productsToDisplay; // MENGGUNAKAN FAVORITESUI.FavoriteItem
+        List<FavoritesUI.FavoriteItem> productsToDisplay; 
         if (currentUser.getRole().equals("seller")) {
             productsToDisplay = ProductRepository.getProductsBySeller(currentUser.getId());
         } else if (currentUser.getRole().equals("admin")) {
@@ -455,7 +612,7 @@ public class SellerDashboardUI extends JFrame {
         }
         NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("in", "ID"));
         currencyFormat.setMinimumFractionDigits(0);
-        for (FavoritesUI.FavoriteItem product : productsToDisplay) { // MENGGUNAKAN FAVORITESUI.FavoriteItem
+        for (FavoritesUI.FavoriteItem product : productsToDisplay) { 
             String formattedPrice = currencyFormat.format(product.getPrice());
             productTableModel.addRow(new Object[]{
                 product.getProductId(), 
@@ -464,7 +621,7 @@ public class SellerDashboardUI extends JFrame {
                 product.getStock(),
                 product.getBrand(),
                 product.getCondition(),
-                "" // Aksi
+                ""
             });
         }
     }
@@ -472,7 +629,7 @@ public class SellerDashboardUI extends JFrame {
     public void showProductDialog(Integer productId) {
         String title = (productId == null) ? "Tambah Produk Baru" : "Edit Produk";
         JDialog dialog = new JDialog(this, title, true);
-        dialog.setSize(450, 700); // Increased height to accommodate new field and maintain spacing
+        dialog.setSize(450, 700);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout());
 
@@ -480,49 +637,39 @@ public class SellerDashboardUI extends JFrame {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        // Field: Nama Produk
         JLabel lblName = new JLabel("Nama Produk:");
         JTextField txtName = new JTextField(20);
         txtName.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Harga
         JLabel lblPrice = new JLabel("Harga:");
         JTextField txtPrice = new JTextField(20);
         txtPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Harga Asli (opsional)
         JLabel lblOriginalPrice = new JLabel("Harga Asli (opsional):");
         JTextField txtOriginalPrice = new JTextField(20);
         txtOriginalPrice.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Stok
         JLabel lblStock = new JLabel("Stok:");
         JTextField txtStock = new JTextField(20);
         txtStock.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         
-        // --- TAMBAHAN: FIELD UNTUK BERAT ---
         JLabel lblWeight = new JLabel("Berat (kg):");
         JTextField txtWeight = new JTextField(20);
         txtWeight.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         setupPlaceholder(txtWeight, "Contoh: 0.5 (kg)");
-        // --- AKHIR TAMBAHAN ---
-
-        // Field: Kondisi
+        
         JLabel lblCondition = new JLabel("Kondisi:");
         JComboBox<String> comboCondition = new JComboBox<>(new String[]{"Baru", "Bekas"});
         comboCondition.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Pesanan Minimum
         JLabel lblMinOrder = new JLabel("Pesanan Minimum:");
         JTextField txtMinOrder = new JTextField(20);
         txtMinOrder.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Merek
         JLabel lblBrand = new JLabel("Merek:");
         JTextField txtBrand = new JTextField(20);
         txtBrand.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
 
-        // Field: Deskripsi
         JLabel lblDescription = new JLabel("Deskripsi:");
         JTextArea txtDescription = new JTextArea(5, 20);
         txtDescription.setLineWrap(true);
@@ -530,7 +677,6 @@ public class SellerDashboardUI extends JFrame {
         JScrollPane descScrollPane = new JScrollPane(txtDescription);
         descScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
-        // Field: Gambar Produk
         JLabel lblImage = new JLabel("Gambar Produk:");
         JPanel imageControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JTextField txtImagePath = new JTextField(20);
@@ -548,7 +694,6 @@ public class SellerDashboardUI extends JFrame {
             btnBrowseImage.setVisible(false);
             txtImagePath.setVisible(false);
             imageControlPanel.add(btnManageImages);
-            // MENGGUNAKAN FAVORITESUI.FavoriteItem
             FavoritesUI.FavoriteItem productToEdit = ProductRepository.getProductById(productId); 
             if (productToEdit != null) {
                 txtName.setText(productToEdit.getName());
@@ -561,7 +706,7 @@ public class SellerDashboardUI extends JFrame {
                 txtMinOrder.setText(productToEdit.getMinOrder());
                 txtBrand.setText(productToEdit.getBrand());
                 txtDescription.setText(productToEdit.getDescription());
-                txtWeight.setText(String.valueOf(productToEdit.getWeight())); // Memuat berat saat edit
+                txtWeight.setText(String.valueOf(productToEdit.getWeight())); 
             } else {
                 JOptionPane.showMessageDialog(dialog, "Produk dengan ID " + productId + " tidak ditemukan.", "Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -645,9 +790,9 @@ public class SellerDashboardUI extends JFrame {
                 double price = Double.parseDouble(priceText);
                 double originalPrice = originalPriceText.isEmpty() ? 0.0 : Double.parseDouble(originalPriceText);
                 int stock = Integer.parseInt(stockText);
-                double weight = Double.parseDouble(weightText); // Parsing berat
+                double weight = Double.parseDouble(weightText); 
 
-                if (price <= 0 || stock < 0 || weight <= 0) { // Validasi berat
+                if (price <= 0 || stock < 0 || weight <= 0) { 
                     JOptionPane.showMessageDialog(dialog, "Harga dan berat harus lebih besar dari 0, dan stok tidak boleh negatif!", "Error Validasi", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
@@ -664,8 +809,7 @@ public class SellerDashboardUI extends JFrame {
                             JOptionPane.showMessageDialog(dialog, "ID Pengguna tidak ditemukan. Mohon login sebagai penjual.", "Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-
-                        // Panggilan saveProduct dengan argumen weight
+                        
                         int newProductId = ProductRepository.saveProduct(name, description, price, originalPrice, stock, condition, minOrder, brand, userIdForProduct, weight);
 
                         if (newProductId != -1 && !imagesToUpload.isEmpty()) {
@@ -675,7 +819,6 @@ public class SellerDashboardUI extends JFrame {
                         }
                         JOptionPane.showMessageDialog(dialog, "Produk berhasil ditambahkan!", "Sukses", JOptionPane.INFORMATION_MESSAGE);
                     } else {
-                        // Panggilan updateProduct dengan argumen weight
                         boolean updateProductSuccess = ProductRepository.updateProduct(productId, name, description, price, originalPrice, stock, condition, minOrder, brand, weight);
 
                         if (updateProductSuccess) {
@@ -701,7 +844,6 @@ public class SellerDashboardUI extends JFrame {
         buttonPanel.add(btnCancel);
         buttonPanel.add(btnSave);
 
-        // Menambahkan komponen ke panel
         panel.add(lblName); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtName);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblPrice); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtPrice);
@@ -710,7 +852,7 @@ public class SellerDashboardUI extends JFrame {
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblStock); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtStock);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
-        panel.add(lblWeight); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtWeight); // Tambahkan field Berat
+        panel.add(lblWeight); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(txtWeight); 
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         panel.add(lblCondition); panel.add(Box.createRigidArea(new Dimension(0, 5))); panel.add(comboCondition);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -1325,6 +1467,7 @@ public class SellerDashboardUI extends JFrame {
             return panel;
         }
 
+
         @Override
         public Object getCellEditorValue() {
             return "";
@@ -1351,7 +1494,7 @@ public class SellerDashboardUI extends JFrame {
                 detailDialog.setLayout(new BorderLayout());
 
                 ViewController dummyVCForOrderDetail = new ViewController() {
-                    @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ } // Menggunakan FavoritesUI.FavoriteItem
+                    @Override public void showProductDetail(FavoritesUI.FavoriteItem product) { /* do nothing */ } 
                     @Override public void showFavoritesView() { /* do nothing */ }
                     @Override public void showDashboardView() { /* do nothing */ }
                     @Override public void showCartView() { /* do nothing */ }

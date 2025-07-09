@@ -25,6 +25,7 @@ import e.commerce.AddressUI.ShippingService;
 import e.commerce.FavoritesUI.FavoriteItem;
 import java.awt.Graphics2D;
 import java.io.IOException;
+import org.jfree.data.category.DefaultCategoryDataset;
 
 /**
  * Kelas repositori untuk mengelola interaksi database terkait produk, keranjang, pesanan, dan pesan chat.
@@ -2635,6 +2636,101 @@ public class ProductRepository {
             rs.getTimestamp("updated_at")
         );
     }
+    
+    /**
+     * Menghitung total produk yang dimiliki oleh seorang penjual.
+     * @param sellerId ID penjual.
+     * @return Jumlah produk.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static int countProductsBySeller(int sellerId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM products WHERE seller_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+    
+    /**
+     * Menghitung jumlah pesanan unik yang mengandung produk dari seorang penjual.
+     * @param sellerId ID penjual.
+     * @return Jumlah pesanan yang terjual.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static int countSoldOrdersBySeller(int sellerId) throws SQLException {
+        String sql = "SELECT COUNT(DISTINCT o.id) FROM orders o " +
+                     "JOIN order_items oi ON o.id = oi.order_id " +
+                     "JOIN products p ON oi.product_id = p.product_id " +
+                     "WHERE p.seller_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
 
+    /**
+     * Menghitung total pendapatan dari semua produk yang dijual oleh seorang penjual.
+     * @param sellerId ID penjual.
+     * @return Total pendapatan.
+     * @throws SQLException Jika terjadi kesalahan database.
+     */
+    public static double getTotalRevenueBySeller(int sellerId) throws SQLException {
+        String sql = "SELECT SUM(oi.quantity * oi.price_per_item) FROM order_items oi " +
+                     "JOIN products p ON oi.product_id = p.product_id " +
+                     "WHERE p.seller_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        }
+        return 0.0;
+    }
+
+    /**
+     * Membuat dataset untuk JFreeChart yang berisi pendapatan bulanan seorang penjual.
+     * @param sellerId ID penjual.
+     * @return DefaultCategoryDataset untuk digunakan di chart.
+     */
+    public static DefaultCategoryDataset getMonthlyRevenueDatasetForSeller(int sellerId) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        String sql = "SELECT DATE_FORMAT(o.order_date, '%Y-%m') AS sales_month, SUM(oi.quantity * oi.price_per_item) AS monthly_revenue " +
+                     "FROM orders o " +
+                     "JOIN order_items oi ON o.id = oi.order_id " +
+                     "JOIN products p ON oi.product_id = p.product_id " +
+                     "WHERE p.seller_id = ? " +
+                     "GROUP BY sales_month " +
+                     "ORDER BY sales_month ASC";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, sellerId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String month = rs.getString("sales_month");
+                    double revenue = rs.getDouble("monthly_revenue");
+                    dataset.addValue(revenue, "Pendapatan", month);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return dataset;
+    }
 
 }
