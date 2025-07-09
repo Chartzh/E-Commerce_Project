@@ -15,12 +15,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class ShippingCalculator {
 
-    // --- KONFIGURASI ZONA PENGIRIMAN ---
     private static final Map<String, Map<String, String[]>> SHIPPING_ZONES_CONFIG = new HashMap<>();
 
-    // Ini akan diisi dari database
     private static String ORIGIN_PROVINCE;
-    private static String ORIGIN_KABUPATEN; // Atau City, sesuaikan dengan kolom database Anda
+    private static String ORIGIN_KABUPATEN; 
 
     static {
         // Inisialisasi konfigurasi zona
@@ -217,7 +215,7 @@ public class ShippingCalculator {
             conn = DatabaseConnection.getConnection();
             
             // 1. Dapatkan user_id dari user dengan role 'supervisor'
-            String getUserIdQuery = "SELECT id FROM users WHERE role = 'supervisor' LIMIT 1";
+            String getUserIdQuery = "SELECT id FROM users WHERE role = 'seller' LIMIT 1";
             stmt = conn.prepareStatement(getUserIdQuery);
             rs = stmt.executeQuery();
 

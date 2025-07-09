@@ -42,6 +42,10 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.BarRenderer;
 import java.util.Locale;
+import e.commerce.ProductRepository.SupportTicket; 
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
+
 
 public class ManagerDashboardUI extends JFrame {
     private JPanel mainPanel;
@@ -79,6 +83,9 @@ public class ManagerDashboardUI extends JFrame {
     private JLabel couponFormTitleLabel;
     private Coupon selectedCoupon = null;
     // --- Akhir Komponen Coupon Management ---
+    
+    private JTable ticketManagementTable;
+    private DefaultTableModel ticketTableModel;
 
     public ManagerDashboardUI() {
         User currentUser = Authentication.getCurrentUser();
@@ -108,12 +115,15 @@ public class ManagerDashboardUI extends JFrame {
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createAdminDashboardPanel();
         JPanel userManagementPanel = createUserManagementPanel();
-        JPanel couponManagementPanel = createCouponManagementPanel(); // Panggil metode baru
+        JPanel couponManagementPanel = createCouponManagementPanel(); 
+        JPanel ticketManagementPanel = createTicketManagementPanel();
+
         ProfileUI profilePanel = new ProfileUI();
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(userManagementPanel, "UserManagement");
         mainPanel.add(couponManagementPanel, "CouponManagement"); // Tambahkan panel ke CardLayout
+        mainPanel.add(ticketManagementPanel, "TicketManagement");
         mainPanel.add(profilePanel, "Profile");
 
         JPanel contentWrapper = new JPanel(new BorderLayout());
@@ -144,8 +154,8 @@ public class ManagerDashboardUI extends JFrame {
         sidebar.add(Box.createRigidArea(new Dimension(0, 30)));
 
         // Tambahkan "Coupon Management" ke navigasi
-        String[] navItems = {"Dashboard", "User Management", "Coupon Management", "Profile", "Settings"};
-        String[] panelNames = {"Dashboard", "UserManagement", "CouponManagement", "Profile", "Profile"};
+        String[] navItems = {"Dashboard", "Manajemen Pengguna", "Manajemen Kupon", "Manajemen Pengaduan", "Profil"};
+        String[] panelNames = {"Dashboard", "UserManagement", "CouponManagement", "TicketManagement", "Profile"};
         navButtons = new JButton[navItems.length];
 
         for (int i = 0; i < navItems.length; i++) {
@@ -191,28 +201,53 @@ public class ManagerDashboardUI extends JFrame {
         return sidebar;
     }
 
-    // --- METODE-METODE UNTUK MANAJEMEN KUPON (DIAMBIL DARI CouponManagementPanel.java) ---
 
     private JPanel createCouponManagementPanel() {
-        JPanel mainCouponPanel = new JPanel(new BorderLayout(20, 20));
-        mainCouponPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
-        mainCouponPanel.setBackground(Color.WHITE);
+        JPanel mainCouponPanel = new JPanel(new BorderLayout(0, 0));
+        mainCouponPanel.setBackground(new Color(248, 250, 252));
+
+        // Header panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(229, 231, 235)),
+            new EmptyBorder(24, 32, 24, 32)
+        ));
+
+        JLabel mainTitle = new JLabel("Manajemen Kupon");
+        mainTitle.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        mainTitle.setForeground(new Color(17, 24, 39));
+        headerPanel.add(mainTitle, BorderLayout.WEST);
+
+        JPanel contentPanel = new JPanel(new BorderLayout(24, 0));
+        contentPanel.setBackground(new Color(248, 250, 252));
+        contentPanel.setBorder(new EmptyBorder(24, 32, 32, 32));
 
         JPanel tablePanel = createCouponTablePanel();
         JPanel formPanel = createCouponFormPanel();
-
-        mainCouponPanel.add(tablePanel, BorderLayout.CENTER);
-        mainCouponPanel.add(formPanel, BorderLayout.EAST);
+        JScrollPane formScrollPane = new JScrollPane(formPanel);
+        formScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        formScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        formScrollPane.setBorder(null);
+        contentPanel.add(tablePanel, BorderLayout.CENTER);
+        contentPanel.add(formScrollPane, BorderLayout.EAST);
+        mainCouponPanel.add(headerPanel, BorderLayout.NORTH);
+        mainCouponPanel.add(contentPanel, BorderLayout.CENTER);
 
         return mainCouponPanel;
     }
 
     private JPanel createCouponTablePanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        JPanel panel = new JPanel(new BorderLayout(0, 20));
         panel.setBackground(Color.WHITE);
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            new RoundedBorder(12, new Color(229, 231, 235)),
+            new EmptyBorder(24, 24, 24, 24)
+        ));
 
         JLabel titleLabel = new JLabel("Daftar Kupon Tersedia");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(17, 24, 39));
         panel.add(titleLabel, BorderLayout.NORTH);
 
         String[] columnNames = {"ID", "Kode", "Tipe", "Nilai", "Aktif", "Berlaku Hingga"};
@@ -222,11 +257,41 @@ public class ManagerDashboardUI extends JFrame {
                 return false;
             }
         };
+
         couponTable = new JTable(couponTableModel);
-        couponTable.setRowHeight(30);
-        couponTable.setFont(new Font("Arial", Font.PLAIN, 12));
-        couponTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+
+        couponTable.setRowHeight(45);
+        couponTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        couponTable.setBackground(Color.WHITE);
+
+        couponTable.setSelectionBackground(new Color(255, 69, 0, 50));
+        couponTable.setSelectionForeground(Color.BLACK);
+        couponTable.setGridColor(new Color(230, 230, 230));
+
+        couponTable.setShowVerticalLines(false);
+        couponTable.setIntercellSpacing(new Dimension(0, 1));
         couponTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        JTableHeader header = couponTable.getTableHeader();
+        header.setBackground(new Color(255, 69, 0));
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        header.setPreferredSize(new Dimension(0, 40));
+        header.setBorder(BorderFactory.createEmptyBorder()); // Menghapus border header
+
+        couponTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                c.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+                setBorder(new EmptyBorder(8, 12, 8, 12)); // Memberi padding pada sel
+                if (!isSelected) {
+                    setBackground(Color.WHITE);
+                }
+                return c;
+            }
+        });
+
 
         couponTable.getSelectionModel().addListSelectionListener(event -> {
             if (!event.getValueIsAdjusting() && couponTable.getSelectedRow() != -1) {
@@ -237,6 +302,9 @@ public class ManagerDashboardUI extends JFrame {
         });
 
         JScrollPane scrollPane = new JScrollPane(couponTable);
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(229, 231, 235), 1));
+        scrollPane.setBackground(Color.WHITE);
+        scrollPane.getViewport().setBackground(Color.WHITE);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
@@ -245,75 +313,236 @@ public class ManagerDashboardUI extends JFrame {
     private JPanel createCouponFormPanel() {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
-            new EmptyBorder(15, 15, 15, 15)
-        ));
-        panel.setBackground(new Color(248, 249, 250));
-        panel.setPreferredSize(new Dimension(350, 0));
+        panel.setBackground(Color.WHITE);
+        panel.setBorder(new RoundedBorder(12, new Color(229, 231, 235)));
+
+        // Form container with padding
+        JPanel formContainer = new JPanel();
+        formContainer.setLayout(new BoxLayout(formContainer, BoxLayout.Y_AXIS));
+        formContainer.setBackground(Color.WHITE);
+        formContainer.setBorder(new EmptyBorder(24, 24, 24, 24));
 
         couponFormTitleLabel = new JLabel("Tambah Kupon Baru");
-        couponFormTitleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        couponFormTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        couponFormTitleLabel.setForeground(new Color(17, 24, 39));
         couponFormTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        couponCodeField = new JTextField(15);
-        couponTypeComboBox = new JComboBox<>(new String[]{"percentage", "fixed"});
-        couponValueSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
-        couponMinPurchaseSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 100000000.0, 5000.0));
-        couponMaxDiscountSpinner = new JSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
-        couponUsageLimitUserSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
-        couponTotalUsageLimitSpinner = new JSpinner(new SpinnerNumberModel(1, 1, 100000, 10));
-        couponValidFromChooser = new JDateChooser();
-        couponValidFromChooser.setDateFormatString("yyyy-MM-dd");
-        couponValidUntilChooser = new JDateChooser();
-        couponValidUntilChooser.setDateFormatString("yyyy-MM-dd");
+        // Modern input fields
+        couponCodeField = createStyledTextField();
+        couponTypeComboBox = createStyledComboBox(new String[]{"percentage", "fixed"});
+        couponValueSpinner = createStyledSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
+        couponMinPurchaseSpinner = createStyledSpinner(new SpinnerNumberModel(0.0, 0.0, 100000000.0, 5000.0));
+        couponMaxDiscountSpinner = createStyledSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
+        couponUsageLimitUserSpinner = createStyledSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
+        couponTotalUsageLimitSpinner = createStyledSpinner(new SpinnerNumberModel(1, 1, 100000, 10));
+
+        couponValidFromChooser = createStyledDateChooser();
+        couponValidUntilChooser = createStyledDateChooser();
+
         couponActiveCheckBox = new JCheckBox("Aktifkan Kupon Ini", true);
+        couponActiveCheckBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        couponActiveCheckBox.setBackground(Color.WHITE);
+        couponActiveCheckBox.setForeground(new Color(17, 24, 39));
+        couponActiveCheckBox.setFocusPainted(false);
 
-        JPanel formGrid = new JPanel(new GridBagLayout());
-        formGrid.setBackground(panel.getBackground());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.WEST;
+        // Form fields with modern styling
+        formContainer.add(couponFormTitleLabel);
+        formContainer.add(Box.createVerticalStrut(24));
 
-        gbc.gridx = 0; gbc.gridy = 0; formGrid.add(new JLabel("Kode Kupon:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; formGrid.add(couponCodeField, gbc);
-        gbc.gridx = 0; gbc.gridy = 1; formGrid.add(new JLabel("Tipe Diskon:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 1; formGrid.add(couponTypeComboBox, gbc);
-        gbc.gridx = 0; gbc.gridy = 2; formGrid.add(new JLabel("Nilai Diskon:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 2; formGrid.add(couponValueSpinner, gbc);
-        gbc.gridx = 0; gbc.gridy = 3; formGrid.add(new JLabel("Min. Pembelian (Rp):"), gbc);
-        gbc.gridx = 1; gbc.gridy = 3; formGrid.add(couponMinPurchaseSpinner, gbc);
-        gbc.gridx = 0; gbc.gridy = 4; formGrid.add(new JLabel("Maks. Diskon (Rp):"), gbc);
-        gbc.gridx = 1; gbc.gridy = 4; formGrid.add(couponMaxDiscountSpinner, gbc);
-        gbc.gridx = 0; gbc.gridy = 5; formGrid.add(new JLabel("Limit/Pengguna:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 5; formGrid.add(couponUsageLimitUserSpinner, gbc);
-        gbc.gridx = 0; gbc.gridy = 6; formGrid.add(new JLabel("Total Kuota:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 6; formGrid.add(couponTotalUsageLimitSpinner, gbc);
-        gbc.gridx = 0; gbc.gridy = 7; formGrid.add(new JLabel("Berlaku Dari:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 7; formGrid.add(couponValidFromChooser, gbc);
-        gbc.gridx = 0; gbc.gridy = 8; formGrid.add(new JLabel("Berlaku Sampai:"), gbc);
-        gbc.gridx = 1; gbc.gridy = 8; formGrid.add(couponValidUntilChooser, gbc);
-        gbc.gridx = 1; gbc.gridy = 9; formGrid.add(couponActiveCheckBox, gbc);
+        formContainer.add(createFormField("Kode Kupon:", couponCodeField));
+        formContainer.add(createFormField("Tipe Diskon:", couponTypeComboBox));
+        formContainer.add(createFormField("Nilai Diskon:", couponValueSpinner));
+        formContainer.add(createFormField("Min. Pembelian (Rp):", couponMinPurchaseSpinner));
+        formContainer.add(createFormField("Maks. Diskon (Rp):", couponMaxDiscountSpinner));
+        formContainer.add(createFormField("Limit/Pengguna:", couponUsageLimitUserSpinner));
+        formContainer.add(createFormField("Total Kuota:", couponTotalUsageLimitSpinner));
+        formContainer.add(createFormField("Berlaku Dari:", couponValidFromChooser));
+        formContainer.add(createFormField("Berlaku Sampai:", couponValidUntilChooser));
 
-        couponSaveButton = new JButton("Simpan Kupon");
-        couponSaveButton.addActionListener(e -> saveCoupon());
-        couponClearButton = new JButton("Bersihkan");
+        formContainer.add(Box.createVerticalStrut(16));
+        formContainer.add(couponActiveCheckBox);
+
+        formContainer.add(Box.createVerticalGlue());
+
+        // Modern buttons
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonPanel.setBackground(Color.WHITE);
+
+        couponClearButton = createStyledButton("Bersihkan", false);
         couponClearButton.addActionListener(e -> clearCouponForm());
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(panel.getBackground());
+
+        couponSaveButton = createStyledButton("Simpan Kupon", true);
+        couponSaveButton.addActionListener(e -> saveCoupon());
+
         buttonPanel.add(couponClearButton);
+        buttonPanel.add(Box.createHorizontalStrut(12));
         buttonPanel.add(couponSaveButton);
 
-        panel.add(couponFormTitleLabel);
-        panel.add(Box.createVerticalStrut(15));
-        panel.add(formGrid);
-        panel.add(Box.createVerticalGlue());
-        panel.add(buttonPanel);
+        formContainer.add(buttonPanel);
+        panel.add(formContainer);
 
         return panel;
     }
 
+    private JPanel createFormField(String labelText, JComponent component) {
+        JPanel fieldPanel = new JPanel(new BorderLayout(0, 8));
+        fieldPanel.setBackground(Color.WHITE);
+        fieldPanel.setBorder(new EmptyBorder(0, 0, 16, 0));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setForeground(new Color(55, 65, 81));
+
+        fieldPanel.add(label, BorderLayout.NORTH);
+        fieldPanel.add(component, BorderLayout.CENTER);
+
+        return fieldPanel;
+    }
+
+    private JTextField createStyledTextField() {
+        JTextField field = new JTextField();
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        field.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
+            new EmptyBorder(10, 12, 10, 12)
+        ));
+        field.setBackground(Color.WHITE);
+        field.setPreferredSize(new Dimension(0, 40));
+
+        // Focus border effect
+        field.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(255, 69, 0), 2),
+                    new EmptyBorder(9, 11, 9, 11)
+                ));
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                field.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
+                    new EmptyBorder(10, 12, 10, 12)
+                ));
+            }
+        });
+
+        return field;
+    }
+
+    private JComboBox<String> createStyledComboBox(String[] items) {
+        JComboBox<String> comboBox = new JComboBox<>(items);
+        comboBox.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        comboBox.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
+        comboBox.setBackground(Color.WHITE);
+        comboBox.setPreferredSize(new Dimension(0, 40));
+        return comboBox;
+    }
+
+    private JSpinner createStyledSpinner(SpinnerModel model) {
+        JSpinner spinner = new JSpinner(model);
+        spinner.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        spinner.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
+        spinner.setPreferredSize(new Dimension(0, 40));
+
+        // Style the spinner editor
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor) {
+            JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
+            textField.setBorder(new EmptyBorder(0, 8, 0, 8));
+            textField.setBackground(Color.WHITE);
+        }
+
+        return spinner;
+    }
+
+    private JDateChooser createStyledDateChooser() {
+        JDateChooser chooser = new JDateChooser();
+        chooser.setDateFormatString("yyyy-MM-dd");
+        chooser.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        chooser.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
+        chooser.setPreferredSize(new Dimension(0, 40));
+        chooser.setBackground(Color.WHITE);
+        return chooser;
+    }
+
+    private JButton createStyledButton(String text, boolean isPrimary) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setPreferredSize(new Dimension(120, 40));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        if (isPrimary) {
+            button.setBackground(new Color(255, 69, 0));
+            button.setForeground(Color.WHITE);
+
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(new Color(234, 58, 0));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(new Color(255, 69, 0));
+                }
+            });
+        } else {
+            button.setBackground(new Color(243, 244, 246));
+            button.setForeground(new Color(75, 85, 99));
+            button.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
+
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    button.setBackground(new Color(229, 231, 235));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    button.setBackground(new Color(243, 244, 246));
+                }
+            });
+        }
+
+        return button;
+    }
+
+    // Custom rounded border class
+    class RoundedBorder implements Border {
+        private int radius;
+        private Color color;
+
+        public RoundedBorder(int radius, Color color) {
+            this.radius = radius;
+            this.color = color;
+        }
+
+        @Override
+        public Insets getBorderInsets(Component c) {
+            return new Insets(1, 1, 1, 1);
+        }
+
+        @Override
+        public boolean isBorderOpaque() {
+            return false;
+        }
+
+        @Override
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setColor(color);
+            g2d.setStroke(new BasicStroke(1));
+            g2d.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
+            g2d.dispose();
+        }
+    }
+
+    // Keep the existing methods unchanged
     private void loadCouponsData() {
         couponTableModel.setRowCount(0);
         try {
@@ -646,35 +875,7 @@ public class ManagerDashboardUI extends JFrame {
         return chartWrapperPanel;
     }
 
-    class RoundedBorder implements Border {
-        private int radius;
-        private Color color;
-
-        public RoundedBorder(int radius, Color color) {
-            this.radius = radius;
-            this.color = color;
-        }
-
-        @Override
-        public Insets getBorderInsets(Component c) {
-            return new Insets(1, 1, 1, 1);
-        }
-
-        @Override
-        public boolean isBorderOpaque() {
-            return false;
-        }
-
-        @Override
-        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(color);
-            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
-            g2.dispose();
-        }
-    }
-
+    
     private JPanel createAdminDashboardPanel() {
         JPanel dashboardPanel = new JPanel(new BorderLayout());
         dashboardPanel.setBackground(Color.WHITE);
@@ -1831,6 +2032,336 @@ public class ManagerDashboardUI extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ManagerDashboardUI().setVisible(true));
+            SwingUtilities.invokeLater(() -> new ManagerDashboardUI().setVisible(true));
+        }
+
+    private JPanel createTicketManagementPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
+        panel.setBackground(new Color(250, 250, 250));
+
+        // Header Panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(Color.WHITE);
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(224, 224, 224)),
+            new EmptyBorder(15, 20, 15, 20)
+        ));
+
+        // Title
+        JLabel titleLabel = new JLabel("Manajemen Pengaduan");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(13, 13, 13));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        headerPanel.add(titleLabel, BorderLayout.CENTER);
+
+        // Refresh button in header
+        JButton refreshButton = createModernButton("Refresh Data", new Color(255, 69, 0));
+        refreshButton.addActionListener(e -> loadAllTickets());
+        headerPanel.add(refreshButton, BorderLayout.EAST);
+
+        headerPanel.add(Box.createHorizontalStrut(refreshButton.getPreferredSize().width), BorderLayout.WEST);
+
+        panel.add(headerPanel, BorderLayout.NORTH);
+
+        // Main Content
+        JPanel mainPanel = new JPanel(new BorderLayout(15, 15));
+        mainPanel.setBorder(new EmptyBorder(25, 25, 25, 25));
+        mainPanel.setBackground(new Color(250, 250, 250));
+
+        // Table setup
+        String[] columnNames = {"ID", "User ID", "Subjek", "Status", "Tanggal Masuk"};
+        ticketTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override 
+            public boolean isCellEditable(int row, int column) { 
+                return false; 
+            }
+        };
+
+        ticketManagementTable = new JTable(ticketTableModel);
+        setupModernTable(ticketManagementTable);
+
+        ticketManagementTable.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = ticketManagementTable.getSelectedRow();
+                    if (row != -1) {
+                        int ticketId = (int) ticketTableModel.getValueAt(row, 0);
+                        showTicketDetailDialogForManager(ticketId);
+                    }
+                }
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(ticketManagementTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+
+        panel.add(mainPanel, BorderLayout.CENTER);
+
+        // Load data when panel is first created
+        loadAllTickets();
+        return panel;
+    }
+
+    private void setupModernTable(JTable table) {
+        table.setRowHeight(45);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.setBackground(Color.WHITE);
+        table.setSelectionBackground(new Color(255, 69, 0, 50)); // Light orange selection
+        table.setSelectionForeground(Color.BLACK);
+        table.setGridColor(new Color(230, 230, 230));
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 1));
+
+        // Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(new Color(255, 69, 0));
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        header.setPreferredSize(new Dimension(0, 40));
+        header.setBorder(BorderFactory.createEmptyBorder());
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(60);
+        table.getColumnModel().getColumn(1).setPreferredWidth(80);
+        table.getColumnModel().getColumn(2).setPreferredWidth(200);
+        table.getColumnModel().getColumn(3).setPreferredWidth(120);
+        table.getColumnModel().getColumn(4).setPreferredWidth(150);
+
+        // Status column renderer
+        table.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
+    }
+
+    private JButton createModernButton(String text, Color backgroundColor) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setBackground(backgroundColor);
+        button.setForeground(backgroundColor.equals(Color.WHITE) ? new Color(50, 50, 50) : Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (backgroundColor.equals(Color.WHITE)) {
+                    button.setBackground(new Color(240, 240, 240));
+                } else {
+                    button.setBackground(backgroundColor.darker());
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(backgroundColor);
+            }
+        });
+
+        return button;
+    }
+
+    // Custom cell renderer for status column
+    private class StatusCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            if (!isSelected) {
+                String status = value.toString().toLowerCase();
+                switch (status) {
+                    case "dibuka":
+                    case "open":
+                    case "terbuka":
+                        setBackground(new Color(254, 243, 199));
+                        setForeground(new Color(146, 64, 14));
+                        break;
+                    case "selesai":
+                    case "closed":
+                    case "tertutup":
+                        setBackground(new Color(220, 252, 231));
+                        setForeground(new Color(22, 101, 52));
+                        break;
+                    case "dibalas manajer":
+                    case "pending":
+                        setBackground(new Color(255, 69, 0, 30));
+                        setForeground(new Color(255, 69, 0));
+                        break;
+                    default:
+                        setBackground(Color.WHITE);
+                        setForeground(Color.BLACK);
+                }
+            }
+
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setBorder(new EmptyBorder(8, 12, 8, 12));
+
+            return c;
+        }
+    }
+
+    private void loadAllTickets() {
+        ticketTableModel.setRowCount(0);
+        try {
+            List<SupportTicket> tickets = ProductRepository.getAllTickets();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm");
+            for (SupportTicket ticket : tickets) {
+                ticketTableModel.addRow(new Object[]{
+                    ticket.getId(), 
+                    ticket.getUserId(), 
+                    ticket.getSubject(), 
+                    ticket.getStatus(), 
+                    sdf.format(ticket.getCreatedAt())
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat tiket: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showTicketDetailDialogForManager(int ticketId) {
+        try {
+            SupportTicket ticket = ProductRepository.getTicketById(ticketId);
+            if (ticket == null) return;
+
+            JDialog dialog = new JDialog(this, "Detail Tiket #" + ticketId, true);
+            dialog.setSize(550, 650);
+            dialog.setLocationRelativeTo(this);
+            dialog.setLayout(new BorderLayout(15, 15));
+            dialog.getContentPane().setBackground(new Color(250, 250, 250));
+
+            // Header panel with ticket info
+            JPanel headerPanel = new JPanel();
+            headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+            headerPanel.setBackground(new Color(250, 250, 250));
+            headerPanel.setBorder(new EmptyBorder(20, 20, 10, 20));
+
+            JLabel titleLabel = new JLabel("Detail Tiket #" + ticketId);
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            titleLabel.setForeground(new Color(255, 69, 0));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JPanel infoPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+            infoPanel.setBackground(new Color(250, 250, 250));
+            infoPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+            infoPanel.add(createInfoLabel("ID Pengguna:", String.valueOf(ticket.getUserId())));
+            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(createInfoLabel("Subjek:", ticket.getSubject()));
+            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(createInfoLabel("Status Saat Ini:", ticket.getStatus()));
+            infoPanel.add(new JLabel()); // Empty cell
+
+            headerPanel.add(titleLabel);
+            headerPanel.add(infoPanel);
+
+            // Message area
+            JTextArea messageArea = new JTextArea(ticket.getMessage());
+            messageArea.setEditable(false);
+            messageArea.setLineWrap(true);
+            messageArea.setWrapStyleWord(true);
+            messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            messageArea.setBackground(Color.WHITE);
+            messageArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+            JScrollPane messageScroll = new JScrollPane(messageArea);
+            messageScroll.setBorder(createModernTitledBorder("Pesan dari Pengguna"));
+            messageScroll.setPreferredSize(new Dimension(0, 150));
+
+            // Reply area
+            JTextArea replyArea = new JTextArea(ticket.getManagerReply() != null ? ticket.getManagerReply() : "");
+            replyArea.setLineWrap(true);
+            replyArea.setWrapStyleWord(true);
+            replyArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            replyArea.setBackground(Color.WHITE);
+            replyArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+            JScrollPane replyScroll = new JScrollPane(replyArea);
+            replyScroll.setBorder(createModernTitledBorder("Tulis Balasan Anda"));
+            replyScroll.setPreferredSize(new Dimension(0, 150));
+
+            // Control panel
+            JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
+            controlPanel.setBackground(new Color(250, 250, 250));
+            controlPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
+
+            JLabel statusLabel = new JLabel("Ubah Status:");
+            statusLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            statusLabel.setForeground(new Color(70, 70, 70));
+
+            JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"Dibuka", "Dibalas Manajer", "Selesai"});
+            statusComboBox.setSelectedItem(ticket.getStatus());
+            statusComboBox.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            statusComboBox.setBackground(Color.WHITE);
+            statusComboBox.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(200, 200, 200)),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)
+            ));
+
+            JButton saveButton = createModernButton("Simpan & Balas", new Color(255, 69, 0));
+            saveButton.addActionListener(e -> {
+                try {
+                    String newStatus = (String) statusComboBox.getSelectedItem();
+                    String replyText = replyArea.getText().trim();
+                    ProductRepository.updateTicketStatusAndReply(ticketId, newStatus, replyText);
+                    JOptionPane.showMessageDialog(dialog, "Tiket berhasil diperbarui.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                    loadAllTickets();
+                    dialog.dispose();
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(dialog, "Gagal memperbarui tiket.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
+
+            controlPanel.add(statusLabel);
+            controlPanel.add(statusComboBox);
+            controlPanel.add(saveButton);
+
+            // Center panel for message and reply
+            JPanel centerPanel = new JPanel(new GridLayout(2, 1, 0, 15));
+            centerPanel.setBackground(new Color(250, 250, 250));
+            centerPanel.setBorder(new EmptyBorder(0, 20, 0, 20));
+            centerPanel.add(messageScroll);
+            centerPanel.add(replyScroll);
+
+            dialog.add(headerPanel, BorderLayout.NORTH);
+            dialog.add(centerPanel, BorderLayout.CENTER);
+            dialog.add(controlPanel, BorderLayout.SOUTH);
+            dialog.setVisible(true);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal membuka detail tiket.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private JPanel createInfoLabel(String label, String value) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panel.setBackground(new Color(250, 250, 250));
+
+        JLabel labelComponent = new JLabel(label);
+        labelComponent.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        labelComponent.setForeground(new Color(70, 70, 70));
+
+        JLabel valueComponent = new JLabel(value);
+        valueComponent.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        valueComponent.setForeground(new Color(100, 100, 100));
+
+        panel.add(labelComponent);
+        panel.add(Box.createHorizontalStrut(10));
+        panel.add(valueComponent);
+
+        return panel;
+    }
+
+    private javax.swing.border.TitledBorder createModernTitledBorder(String title) {
+        javax.swing.border.TitledBorder border = BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+            title
+        );
+        border.setTitleFont(new Font("Segoe UI", Font.BOLD, 14));
+        border.setTitleColor(new Color(255, 69, 0));
+        return border;
     }
 }

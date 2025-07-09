@@ -2495,5 +2495,146 @@ public class ProductRepository {
             rs.getBoolean("is_active")
         );
     }
+    
+    /**
+     * Kelas model data untuk tiket pengaduan.
+     * Didefinisikan sebagai inner class agar tidak perlu membuat file baru.
+     */
+    public static class SupportTicket {
+        private int id;
+        private int userId;
+        private String subject;
+        private String message;
+        private String status;
+        private String managerReply;
+        private Timestamp createdAt;
+        private Timestamp updatedAt;
+
+        public SupportTicket(int id, int userId, String subject, String message, String status, String managerReply, Timestamp createdAt, Timestamp updatedAt) {
+            this.id = id;
+            this.userId = userId;
+            this.subject = subject;
+            this.message = message;
+            this.status = status;
+            this.managerReply = managerReply;
+            this.createdAt = createdAt;
+            this.updatedAt = updatedAt;
+        }
+
+        // Getters
+        public int getId() { return id; }
+        public int getUserId() { return userId; }
+        public String getSubject() { return subject; }
+        public String getMessage() { return message; }
+        public String getStatus() { return status; }
+        public String getManagerReply() { return managerReply; }
+        public Timestamp getCreatedAt() { return createdAt; }
+        public Timestamp getUpdatedAt() { return updatedAt; }
+    }
+
+    /**
+     * Membuat tiket pengaduan baru dari pengguna.
+     * @return true jika berhasil, false jika gagal.
+     */
+    public static boolean createSupportTicket(int userId, String subject, String message) throws SQLException {
+        String sql = "INSERT INTO support_tickets (user_id, subject, message) VALUES (?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, subject);
+            pstmt.setString(3, message);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        }
+    }
+
+    /**
+     * Mengambil semua tiket yang pernah dibuat oleh satu pengguna.
+     * @param userId ID pengguna.
+     * @return Daftar SupportTicket.
+     */
+    public static List<SupportTicket> getTicketsByUserId(int userId) throws SQLException {
+        List<SupportTicket> tickets = new ArrayList<>();
+        String sql = "SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    tickets.add(mapRowToSupportTicket(rs));
+                }
+            }
+        }
+        return tickets;
+    }
+
+    /**
+     * Mengambil SEMUA tiket dari semua pengguna (untuk Manajer).
+     * @return Daftar semua SupportTicket.
+     */
+    public static List<SupportTicket> getAllTickets() throws SQLException {
+        List<SupportTicket> tickets = new ArrayList<>();
+        String sql = "SELECT st.*, u.username FROM support_tickets st JOIN users u ON st.user_id = u.id ORDER BY st.created_at DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                tickets.add(mapRowToSupportTicket(rs));
+            }
+        }
+        return tickets;
+    }
+
+    /**
+     * Mengambil satu tiket spesifik berdasarkan ID-nya.
+     * @param ticketId ID tiket.
+     * @return Objek SupportTicket jika ditemukan.
+     */
+    public static SupportTicket getTicketById(int ticketId) throws SQLException {
+        String sql = "SELECT * FROM support_tickets WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, ticketId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToSupportTicket(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Memperbarui status dan menambahkan balasan dari manajer.
+     * @return true jika berhasil, false jika gagal.
+     */
+    public static boolean updateTicketStatusAndReply(int ticketId, String newStatus, String reply) throws SQLException {
+        String sql = "UPDATE support_tickets SET status = ?, manager_reply = ? WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newStatus);
+            pstmt.setString(2, reply);
+            pstmt.setInt(3, ticketId);
+            int affectedRows = pstmt.executeUpdate();
+            return affectedRows > 0;
+        }
+    }
+
+    /**
+     * Helper method untuk memetakan baris ResultSet ke objek SupportTicket.
+     */
+    private static SupportTicket mapRowToSupportTicket(ResultSet rs) throws SQLException {
+        return new SupportTicket(
+            rs.getInt("id"),
+            rs.getInt("user_id"),
+            rs.getString("subject"),
+            rs.getString("message"),
+            rs.getString("status"),
+            rs.getString("manager_reply"),
+            rs.getTimestamp("created_at"),
+            rs.getTimestamp("updated_at")
+        );
+    }
+
 
 }

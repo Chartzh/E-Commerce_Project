@@ -17,6 +17,11 @@ import e.commerce.ProductRepository.ChatMessage;
 
 import e.commerce.AddressUI.Address;
 import e.commerce.AddressUI.ShippingService;
+import e.commerce.ProductRepository.SupportTicket;
+import java.text.SimpleDateFormat;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 
 public class UserDashboardUI extends JFrame implements ViewController {
     private CardLayout cardLayout;
@@ -47,6 +52,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
 
     private static final double BANNER_ASPECT_RATIO = 16.0 / 5.0;
     private static final int DEFAULT_BANNER_HEIGHT = 300;
+    
+    private static final Color ORANGE_THEME = new Color(255, 69, 0);
 
     private JPanel searchResultPanel;
     private JPanel searchContentCardPanel;
@@ -54,6 +61,11 @@ public class UserDashboardUI extends JFrame implements ViewController {
     private JPanel noResultsPanel;
     private JPanel productsGridPanel;
     private JLabel searchTitleLabel;
+    
+    private JTable ticketTable;
+    private DefaultTableModel ticketTableModel;
+    private JTextField subjectField;
+    private JTextArea messageArea;
 
     public UserDashboardUI() {
         currentUser = Authentication.getCurrentUser();
@@ -79,7 +91,7 @@ public class UserDashboardUI extends JFrame implements ViewController {
         JPanel dashboardPanel = createDashboardPanel();
         ProfileUI profilePanel = new ProfileUI();
         JPanel ordersPanel = createOrdersPanel();
-
+        JPanel supportPanel = createCustomerSupportPanel();
         JPanel cartPanel = new CartUI(this);
 
         favoritesUI = new FavoritesUI(this, currentUser.getId());
@@ -95,6 +107,8 @@ public class UserDashboardUI extends JFrame implements ViewController {
         mainPanel.add(favoritesUI, "Favorites");
         mainPanel.add(addressUI, "Address");
         mainPanel.add(searchResultPanel, "SearchResults");
+        mainPanel.add(supportPanel, "Support");
+
 
         add(headerPanel);
         add(mainPanel);
@@ -321,6 +335,10 @@ public class UserDashboardUI extends JFrame implements ViewController {
         this.revalidate();
         this.repaint();
     }
+    
+    public void showSupportView() {
+        cardLayout.show(mainPanel, "Support");
+    }
 
     private JPanel createHeaderPanel(User currentUser) {
         JPanel headerPanel = new JPanel(new BorderLayout());
@@ -383,6 +401,18 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 showCartView();
             }
         });
+        
+        ImageIcon supportIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/support_icon.png"));
+        Image scaledSupportImage = supportIcon.getImage().getScaledInstance(24, 24, Image.SCALE_SMOOTH);
+        JLabel lblSupport = new JLabel(new ImageIcon(scaledSupportImage));
+        lblSupport.setToolTipText("Pusat Bantuan");
+        lblSupport.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        lblSupport.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showSupportView();
+            }
+        });
 
         ImageIcon orderIcon = new ImageIcon(getClass().getClassLoader().getResource("Resources/Images/order_icon.png"));
         Image originalOrderImage = orderIcon.getImage();
@@ -398,7 +428,6 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 showOrdersView();
             }
         });
-        rightPanel.add(lblOrders);
 
         profileImageLabel = new JLabel();
         ImageIcon profileIcon = loadUserProfileImage(currentUser);
@@ -410,11 +439,13 @@ public class UserDashboardUI extends JFrame implements ViewController {
                 showProfileView();
             }
         });
-
+        
+        rightPanel.add(lblSupport);
+        rightPanel.add(lblOrders);
         rightPanel.add(lblFav);
         rightPanel.add(lblCart);
         rightPanel.add(profileImageLabel);
-
+        
         headerPanel.add(rightPanel, BorderLayout.EAST);
 
         return headerPanel;
@@ -1535,5 +1566,430 @@ public class UserDashboardUI extends JFrame implements ViewController {
             dashboard.updateHeaderCartAndFavCounts();
             dashboard.getComponentListeners()[0].componentResized(new ComponentEvent(dashboard, ComponentEvent.COMPONENT_RESIZED));
         });
+    }
+    
+    private JPanel createCustomerSupportPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 0));
+        panel.setBackground(new Color(250, 250, 250));
+
+        // Header Panel
+        JPanel headerCsPanel = new JPanel(new BorderLayout());
+        headerCsPanel.setBackground(Color.WHITE);
+        headerCsPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(224, 224, 224)),
+            new EmptyBorder(15, 20, 15, 20)
+        ));
+
+        // Back Button
+        JButton backButton = createModernButton("← Kembali", Color.WHITE);
+        backButton.setForeground(new Color(50, 50, 50));
+        backButton.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
+        backButton.addActionListener(e -> showDashboardView());
+        headerCsPanel.add(backButton, BorderLayout.WEST);
+
+        // Title
+        JLabel titleLabel = new JLabel("Pusat Bantuan");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        titleLabel.setForeground(new Color(255, 69, 0));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        headerCsPanel.add(titleLabel, BorderLayout.CENTER);
+
+        headerCsPanel.add(Box.createHorizontalStrut(backButton.getPreferredSize().width), BorderLayout.EAST);
+
+        panel.add(headerCsPanel, BorderLayout.NORTH);
+
+        // Main Content
+        JPanel mainPanelCs = new JPanel(new BorderLayout(30, 0));
+        mainPanelCs.setBorder(new EmptyBorder(25, 25, 25, 25));
+        mainPanelCs.setBackground(new Color(250, 250, 250));
+
+        JPanel historyPanel = createHistoryPanel();
+        JPanel formPanel = createFormPanel();
+
+        mainPanelCs.add(historyPanel, BorderLayout.CENTER);
+        mainPanelCs.add(formPanel, BorderLayout.EAST);
+
+        panel.add(mainPanelCs, BorderLayout.CENTER);
+
+        loadUserTickets();
+        return panel;
+    }
+
+    private JPanel createHistoryPanel() {
+        JPanel historyPanel = new JPanel(new BorderLayout(15, 15));
+        historyPanel.setBackground(new Color(250, 250, 250));
+
+        // Header Panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(new Color(250, 250, 250));
+        headerPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
+
+        JLabel title = new JLabel("Riwayat Pengaduan Anda");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(new Color(255, 69, 0));
+        headerPanel.add(title, BorderLayout.WEST);
+
+        historyPanel.add(headerPanel, BorderLayout.NORTH);
+
+        // Table setup
+        String[] columnNames = {"ID Tiket", "Subjek", "Status", "Tanggal Dibuat"};
+        ticketTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override 
+            public boolean isCellEditable(int row, int column) { 
+                return false; 
+            }
+        };
+
+        ticketTable = new JTable(ticketTableModel);
+        setupModernTable(ticketTable);
+
+        ticketTable.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent evt) {
+                if (evt.getClickCount() == 2) {
+                    int row = ticketTable.rowAtPoint(evt.getPoint());
+                    if (row >= 0) {
+                        int ticketId = (int) ticketTableModel.getValueAt(row, 0);
+                        showTicketDetail(ticketId);
+                    }
+                }
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(ticketTable);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        historyPanel.add(scrollPane, BorderLayout.CENTER);
+
+        return historyPanel;
+    }
+
+    private JPanel createFormPanel() {
+        JPanel formContainer = new JPanel(new BorderLayout());
+        formContainer.setBackground(new Color(250, 250, 250));
+        formContainer.setPreferredSize(new Dimension(400, 0));
+
+        JPanel formPanel = new JPanel();
+        formPanel.setLayout(new BoxLayout(formPanel, BoxLayout.Y_AXIS));
+        formPanel.setBackground(Color.WHITE);
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+            new EmptyBorder(25, 25, 25, 25)
+        ));
+
+        // Title
+        JLabel formTitle = new JLabel("Buat Pengaduan Baru");
+        formTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        formTitle.setForeground(new Color(255, 69, 0));
+        formTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Subject field
+        JLabel subjectLabel = new JLabel("Subjek");
+        subjectLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        subjectLabel.setForeground(new Color(70, 70, 70));
+        subjectLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        subjectField = new JTextField();
+        subjectField.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subjectField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        subjectField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+            new EmptyBorder(10, 12, 10, 12)
+        ));
+        subjectField.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Message area
+        JLabel messageLabel = new JLabel("Pesan Anda");
+        messageLabel.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        messageLabel.setForeground(new Color(70, 70, 70));
+        messageLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        messageArea = new JTextArea(8, 0);
+        messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        messageArea.setLineWrap(true);
+        messageArea.setWrapStyleWord(true);
+        messageArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+        messageArea.setBackground(Color.WHITE);
+
+        JScrollPane messageScrollPane = new JScrollPane(messageArea);
+        messageScrollPane.setBorder(createModernTitledBorder("Tulis pesan Anda di sini..."));
+        messageScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, 200));
+        messageScrollPane.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // Submit button
+        JButton submitButton = createModernButton("Kirim Pengaduan", new Color(255, 69, 0));
+        submitButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        submitButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 45));
+        submitButton.addActionListener(e -> submitTicket());
+
+        // Layout
+        formPanel.add(formTitle);
+        formPanel.add(Box.createVerticalStrut(25));
+        formPanel.add(subjectLabel);
+        formPanel.add(Box.createVerticalStrut(8));
+        formPanel.add(subjectField);
+        formPanel.add(Box.createVerticalStrut(20));
+        formPanel.add(messageLabel);
+        formPanel.add(Box.createVerticalStrut(8));
+        formPanel.add(messageScrollPane);
+        formPanel.add(Box.createVerticalStrut(25));
+        formPanel.add(submitButton);
+        formPanel.add(Box.createVerticalGlue());
+
+        formContainer.add(formPanel, BorderLayout.NORTH);
+        return formContainer;
+    }
+
+    private void setupModernTable(JTable table) {
+        table.setRowHeight(45);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.setBackground(Color.WHITE);
+        table.setSelectionBackground(new Color(255, 69, 0, 50)); // Light orange selection
+        table.setSelectionForeground(Color.BLACK);
+        table.setGridColor(new Color(230, 230, 230));
+        table.setShowVerticalLines(false);
+        table.setIntercellSpacing(new Dimension(0, 1));
+
+        // Header styling
+        JTableHeader header = table.getTableHeader();
+        header.setBackground(new Color(255, 69, 0));
+        header.setForeground(Color.WHITE);
+        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        header.setPreferredSize(new Dimension(0, 40));
+        header.setBorder(BorderFactory.createEmptyBorder());
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(80);
+        table.getColumnModel().getColumn(1).setPreferredWidth(200);
+        table.getColumnModel().getColumn(2).setPreferredWidth(120);
+        table.getColumnModel().getColumn(3).setPreferredWidth(150);
+
+        // Status column renderer
+        table.getColumnModel().getColumn(2).setCellRenderer(new StatusCellRenderer());
+    }
+
+    private JButton createModernButton(String text, Color backgroundColor) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setBackground(backgroundColor);
+        button.setForeground(backgroundColor.equals(Color.WHITE) ? new Color(50, 50, 50) : Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        button.setFocusPainted(false);
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        // Hover effect
+        button.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (backgroundColor.equals(Color.WHITE)) {
+                    button.setBackground(new Color(240, 240, 240));
+                } else {
+                    button.setBackground(backgroundColor.darker());
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                button.setBackground(backgroundColor);
+            }
+        });
+
+        return button;
+    }
+
+    private javax.swing.border.TitledBorder createModernTitledBorder(String title) {
+        javax.swing.border.TitledBorder border = BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+            title
+        );
+        border.setTitleFont(new Font("Segoe UI", Font.BOLD, 14));
+        border.setTitleColor(new Color(255, 69, 0));
+        return border;
+    }
+
+    // Custom cell renderer for status column
+    private class StatusCellRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+                                                       boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            if (!isSelected) {
+                String status = value.toString().toLowerCase();
+                switch (status) {
+                    case "dibuka":
+                    case "open":
+                    case "terbuka":
+                        setBackground(new Color(254, 243, 199));
+                        setForeground(new Color(146, 64, 14));
+                        break;
+                    case "selesai":
+                    case "closed":
+                    case "tertutup":
+                        setBackground(new Color(220, 252, 231));
+                        setForeground(new Color(22, 101, 52));
+                        break;
+                    case "dibalas manajer":
+                    case "pending":
+                        setBackground(new Color(255, 69, 0, 30));
+                        setForeground(new Color(255, 69, 0));
+                        break;
+                    default:
+                        setBackground(Color.WHITE);
+                        setForeground(Color.BLACK);
+                }
+            }
+
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            setHorizontalAlignment(SwingConstants.CENTER);
+            setBorder(new EmptyBorder(8, 12, 8, 12));
+
+            return c;
+        }
+    }
+
+    private void loadUserTickets() {
+        ticketTableModel.setRowCount(0);
+        try {
+            List<SupportTicket> tickets = ProductRepository.getTicketsByUserId(currentUser.getId());
+            SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, HH:mm"); 
+            for (SupportTicket ticket : tickets) {
+                ticketTableModel.addRow(new Object[]{
+                    ticket.getId(), 
+                    ticket.getSubject(), 
+                    ticket.getStatus(), 
+                    sdf.format(ticket.getCreatedAt())
+                });
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal memuat riwayat tiket.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void submitTicket() {
+        String subject = subjectField.getText().trim();
+        String message = messageArea.getText().trim();
+        if (subject.isEmpty() || message.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Subjek dan pesan tidak boleh kosong.", "Peringatan", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        try {
+            if (ProductRepository.createSupportTicket(currentUser.getId(), subject, message)) {
+                JOptionPane.showMessageDialog(this, "Pengaduan Anda berhasil dikirim.", "Sukses", JOptionPane.INFORMATION_MESSAGE);
+                subjectField.setText("");
+                messageArea.setText("");
+                loadUserTickets();
+            } else {
+                JOptionPane.showMessageDialog(this, "Gagal mengirim pengaduan.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Terjadi kesalahan database.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void showTicketDetail(int ticketId) {
+        try {
+            SupportTicket ticket = ProductRepository.getTicketById(ticketId);
+            if (ticket == null) return;
+
+            JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Detail Pengaduan #" + ticketId, true);
+            dialog.setSize(550, 650);
+            dialog.setLocationRelativeTo(this);
+            dialog.setLayout(new BorderLayout(15, 15));
+            dialog.getContentPane().setBackground(new Color(250, 250, 250));
+
+            // Header panel with ticket info
+            JPanel headerPanel = new JPanel();
+            headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
+            headerPanel.setBackground(new Color(250, 250, 250));
+            headerPanel.setBorder(new EmptyBorder(20, 20, 10, 20));
+
+            JLabel titleLabel = new JLabel("Detail Pengaduan #" + ticketId);
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            titleLabel.setForeground(new Color(255, 69, 0));
+            titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            JPanel infoPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+            infoPanel.setBackground(new Color(250, 250, 250));
+            infoPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+            infoPanel.add(createInfoLabel("ID Tiket:", String.valueOf(ticket.getId())));
+            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(createInfoLabel("Subjek:", ticket.getSubject()));
+            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(createInfoLabel("Status:", ticket.getStatus()));
+            infoPanel.add(new JLabel()); // Empty cell
+
+            headerPanel.add(titleLabel);
+            headerPanel.add(infoPanel);
+
+            // Message area
+            JTextArea messageArea = new JTextArea(ticket.getMessage());
+            messageArea.setEditable(false);
+            messageArea.setLineWrap(true);
+            messageArea.setWrapStyleWord(true);
+            messageArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            messageArea.setBackground(Color.WHITE);
+            messageArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+            JScrollPane messageScroll = new JScrollPane(messageArea);
+            messageScroll.setBorder(createModernTitledBorder("Pesan Anda"));
+            messageScroll.setPreferredSize(new Dimension(0, 150));
+
+            // Reply area
+            JTextArea replyArea = new JTextArea(ticket.getManagerReply() != null ? ticket.getManagerReply() : "Belum ada balasan dari manajer.");
+            replyArea.setEditable(false);
+            replyArea.setLineWrap(true);
+            replyArea.setWrapStyleWord(true);
+            replyArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            replyArea.setBackground(Color.WHITE);
+            replyArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+            JScrollPane replyScroll = new JScrollPane(replyArea);
+            replyScroll.setBorder(createModernTitledBorder("Balasan Manajer"));
+            replyScroll.setPreferredSize(new Dimension(0, 150));
+
+            // Control panel
+            JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
+            controlPanel.setBackground(new Color(250, 250, 250));
+            controlPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
+
+            JButton closeButton = createModernButton("Tutup", new Color(255, 69, 0));
+            closeButton.addActionListener(e -> dialog.dispose());
+            controlPanel.add(closeButton);
+
+            // Center panel for message and reply
+            JPanel centerPanel = new JPanel(new GridLayout(2, 1, 0, 15));
+            centerPanel.setBackground(new Color(250, 250, 250));
+            centerPanel.setBorder(new EmptyBorder(0, 20, 0, 20));
+            centerPanel.add(messageScroll);
+            centerPanel.add(replyScroll);
+
+            dialog.add(headerPanel, BorderLayout.NORTH);
+            dialog.add(centerPanel, BorderLayout.CENTER);
+            dialog.add(controlPanel, BorderLayout.SOUTH);
+            dialog.setVisible(true);
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Gagal mengambil detail tiket.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private JPanel createInfoLabel(String label, String value) {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panel.setBackground(new Color(250, 250, 250));
+
+        JLabel labelComponent = new JLabel(label);
+        labelComponent.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        labelComponent.setForeground(new Color(70, 70, 70));
+
+        JLabel valueComponent = new JLabel(value);
+        valueComponent.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        valueComponent.setForeground(new Color(100, 100, 100));
+
+        panel.add(labelComponent);
+        panel.add(Box.createHorizontalStrut(10));
+        panel.add(valueComponent);
+
+        return panel;
     }
 }
