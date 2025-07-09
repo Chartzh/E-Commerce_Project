@@ -42,7 +42,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.renderer.category.BarRenderer;
 import java.util.Locale;
-import e.commerce.ProductRepository.SupportTicket; 
+import e.commerce.ProductRepository.SupportTicket;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.JTableHeader;
 
@@ -114,15 +114,24 @@ public class ManagerDashboardUI extends JFrame {
 
         JPanel headerPanel = createHeaderPanel(currentUser);
         JPanel dashboardPanel = createAdminDashboardPanel();
+        
+        // --- REVISI 1: Membungkus Panel Dashboard dengan JScrollPane ---
+        JScrollPane dashboardScrollPane = new JScrollPane(dashboardPanel);
+        dashboardScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        dashboardScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        dashboardScrollPane.setBorder(null); // Menghilangkan border default
+        dashboardScrollPane.getVerticalScrollBar().setUnitIncrement(16); // Scroll lebih mulus
+        
         JPanel userManagementPanel = createUserManagementPanel();
         JPanel couponManagementPanel = createCouponManagementPanel(); 
         JPanel ticketManagementPanel = createTicketManagementPanel();
 
         ProfileUI profilePanel = new ProfileUI();
 
-        mainPanel.add(dashboardPanel, "Dashboard");
+        // --- REVISI 1: Menambahkan ScrollPane ke CardLayout, bukan panelnya langsung ---
+        mainPanel.add(dashboardScrollPane, "Dashboard");
         mainPanel.add(userManagementPanel, "UserManagement");
-        mainPanel.add(couponManagementPanel, "CouponManagement"); // Tambahkan panel ke CardLayout
+        mainPanel.add(couponManagementPanel, "CouponManagement");
         mainPanel.add(ticketManagementPanel, "TicketManagement");
         mainPanel.add(profilePanel, "Profile");
 
@@ -277,14 +286,14 @@ public class ManagerDashboardUI extends JFrame {
         header.setForeground(Color.WHITE);
         header.setFont(new Font("Segoe UI", Font.BOLD, 14));
         header.setPreferredSize(new Dimension(0, 40));
-        header.setBorder(BorderFactory.createEmptyBorder()); // Menghapus border header
+        header.setBorder(BorderFactory.createEmptyBorder());
 
         couponTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 c.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-                setBorder(new EmptyBorder(8, 12, 8, 12)); // Memberi padding pada sel
+                setBorder(new EmptyBorder(8, 12, 8, 12)); 
                 if (!isSelected) {
                     setBackground(Color.WHITE);
                 }
@@ -316,7 +325,6 @@ public class ManagerDashboardUI extends JFrame {
         panel.setBackground(Color.WHITE);
         panel.setBorder(new RoundedBorder(12, new Color(229, 231, 235)));
 
-        // Form container with padding
         JPanel formContainer = new JPanel();
         formContainer.setLayout(new BoxLayout(formContainer, BoxLayout.Y_AXIS));
         formContainer.setBackground(Color.WHITE);
@@ -327,7 +335,6 @@ public class ManagerDashboardUI extends JFrame {
         couponFormTitleLabel.setForeground(new Color(17, 24, 39));
         couponFormTitleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Modern input fields
         couponCodeField = createStyledTextField();
         couponTypeComboBox = createStyledComboBox(new String[]{"percentage", "fixed"});
         couponValueSpinner = createStyledSpinner(new SpinnerNumberModel(0.0, 0.0, 10000000.0, 1000.0));
@@ -345,7 +352,6 @@ public class ManagerDashboardUI extends JFrame {
         couponActiveCheckBox.setForeground(new Color(17, 24, 39));
         couponActiveCheckBox.setFocusPainted(false);
 
-        // Form fields with modern styling
         formContainer.add(couponFormTitleLabel);
         formContainer.add(Box.createVerticalStrut(24));
 
@@ -364,7 +370,6 @@ public class ManagerDashboardUI extends JFrame {
 
         formContainer.add(Box.createVerticalGlue());
 
-        // Modern buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         buttonPanel.setBackground(Color.WHITE);
 
@@ -409,7 +414,6 @@ public class ManagerDashboardUI extends JFrame {
         field.setBackground(Color.WHITE);
         field.setPreferredSize(new Dimension(0, 40));
 
-        // Focus border effect
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -446,7 +450,6 @@ public class ManagerDashboardUI extends JFrame {
         spinner.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
         spinner.setPreferredSize(new Dimension(0, 40));
 
-        // Style the spinner editor
         JComponent editor = spinner.getEditor();
         if (editor instanceof JSpinner.DefaultEditor) {
             JTextField textField = ((JSpinner.DefaultEditor) editor).getTextField();
@@ -511,7 +514,6 @@ public class ManagerDashboardUI extends JFrame {
         return button;
     }
 
-    // Custom rounded border class
     class RoundedBorder implements Border {
         private int radius;
         private Color color;
@@ -542,7 +544,6 @@ public class ManagerDashboardUI extends JFrame {
         }
     }
 
-    // Keep the existing methods unchanged
     private void loadCouponsData() {
         couponTableModel.setRowCount(0);
         try {
@@ -864,7 +865,7 @@ public class ManagerDashboardUI extends JFrame {
 
         chartWrapperPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
-            BorderFactory.createEmptyBorder(24, 24, 24, 24)
+            new EmptyBorder(24, 24, 24, 24)
         ));
 
         chartWrapperPanel.setPreferredSize(new Dimension(480, 320));
@@ -873,6 +874,72 @@ public class ManagerDashboardUI extends JFrame {
         chartWrapperPanel.add(chartPanel, BorderLayout.CENTER);
 
         return chartWrapperPanel;
+    }
+    
+    private JPanel createMonthlySalesLineChartPanel() {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                 "SELECT DATE_FORMAT(order_date, '%Y-%m') AS sales_month, SUM(total_amount) AS monthly_revenue FROM orders GROUP BY sales_month ORDER BY sales_month"
+             );
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String month = rs.getString("sales_month");
+                double revenue = rs.getDouble("monthly_revenue");
+                dataset.addValue(revenue, "Pendapatan", month);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        JFreeChart lineChart = ChartFactory.createLineChart(
+                "Tren Penjualan Bulanan",
+                "Bulan",
+                "Pendapatan (Rp)",
+                dataset,
+                org.jfree.chart.plot.PlotOrientation.VERTICAL,
+                false, 
+                true,
+                false
+        );
+
+        lineChart.setBackgroundPaint(Color.WHITE);
+        lineChart.getTitle().setFont(new Font("Inter", Font.BOLD, 18));
+        lineChart.getTitle().setPaint(new Color(30, 30, 30));
+
+        CategoryPlot plot = (CategoryPlot) lineChart.getPlot();
+        plot.setBackgroundPaint(new Color(245, 245, 245));
+        plot.setOutlineVisible(false);
+        plot.setRangeGridlinePaint(new Color(200, 200, 200));
+        plot.setDomainGridlinePaint(Color.LIGHT_GRAY);
+
+        // --- REVISI 2: Memperbaiki format angka pada Line Chart ---
+        org.jfree.chart.axis.NumberAxis rangeAxisLine = (org.jfree.chart.axis.NumberAxis) plot.getRangeAxis();
+        DecimalFormat decimalFormatLine = new DecimalFormat("#,##0");
+        rangeAxisLine.setNumberFormatOverride(decimalFormatLine);
+
+        org.jfree.chart.renderer.category.LineAndShapeRenderer renderer = (org.jfree.chart.renderer.category.LineAndShapeRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, new Color(74, 110, 255)); 
+        renderer.setSeriesStroke(0, new BasicStroke(2.5f)); 
+        renderer.setSeriesShapesVisible(0, true); 
+
+        plot.getDomainAxis().setTickLabelFont(new Font("Arial", Font.PLAIN, 12));
+        plot.getRangeAxis().setTickLabelFont(new Font("Arial", Font.PLAIN, 12));
+
+        ChartPanel chartPanel = createModernChartPanel(lineChart);
+        chartPanel.setPreferredSize(new Dimension(600, 350));
+
+        JPanel chartWrapper = new JPanel(new BorderLayout());
+        chartWrapper.setBackground(Color.WHITE);
+        chartWrapper.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(229, 231, 235), 1),
+            new EmptyBorder(15, 15, 15, 15)
+        ));
+        chartWrapper.add(chartPanel, BorderLayout.CENTER);
+        return chartWrapper;
     }
 
     
@@ -892,52 +959,48 @@ public class ManagerDashboardUI extends JFrame {
         summaryCardsPanel.add(createSummaryCard("Total Pengguna", lblTotalUsersValue, new Color(255, 99, 71)));
         summaryCardsPanel.add(createSummaryCard("Total Produk", lblTotalProductsValue, new Color(255, 99, 71)));
         summaryCardsPanel.add(createSummaryCard("Total Transaksi", lblTotalTransactionsValue, new Color(255, 99, 71)));
-        summaryCardsPanel.add(createSummaryCard("Total Pendapatan", lblTotalRevenueValue, new Color(76, 175, 80))); // Green color
+        summaryCardsPanel.add(createSummaryCard("Total Pendapatan", lblTotalRevenueValue, new Color(76, 175, 80)));
 
-        // --- START: Tambahkan Panel Kontrol Ekspor ---
         JPanel exportControlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 5));
         exportControlPanel.setBackground(Color.WHITE);
-        exportControlPanel.setBorder(new EmptyBorder(10, 0, 10, 0)); 
-
-        // Mengubah tombol menjadi tombol Ekspor universal
-        JButton exportButton = new JButton("Ekspor Laporan"); // Ubah teks tombol
-        exportButton.setBackground(new Color(74, 110, 255)); // BLUE_PRIMARY
+        exportControlPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
+        JButton exportButton = new JButton("Ekspor Laporan");
+        exportButton.setBackground(new Color(74, 110, 255));
         exportButton.setForeground(Color.WHITE);
         exportButton.setBorderPainted(false);
         exportButton.setFocusPainted(false);
         exportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        exportButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showExportOptionDialog(); // Panggil dialog pilihan
-            }
-        });
-
-        exportStatusLabel = new JLabel("Siap untuk ekspor."); // Inisialisasi label status
-        exportStatusLabel.setForeground(Color.BLACK); 
+        exportButton.addActionListener(e -> showExportOptionDialog());
+        exportStatusLabel = new JLabel("Siap untuk ekspor.");
+        exportStatusLabel.setForeground(Color.BLACK);
         exportStatusLabel.setFont(new Font("Arial", Font.PLAIN, 12));
-
-        exportControlPanel.add(exportButton); // Gunakan tombol yang sudah diubah
-        exportControlPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spasi
+        exportControlPanel.add(exportButton);
+        exportControlPanel.add(Box.createRigidArea(new Dimension(10, 0)));
         exportControlPanel.add(exportStatusLabel);
 
-        // Bungkus summaryCardsPanel dan exportControlPanel
         JPanel topPanelWrapper = new JPanel(new BorderLayout());
         topPanelWrapper.setBackground(Color.WHITE);
         topPanelWrapper.add(summaryCardsPanel, BorderLayout.NORTH);
         topPanelWrapper.add(exportControlPanel, BorderLayout.CENTER);
+        dashboardPanel.add(topPanelWrapper, BorderLayout.NORTH);
 
-        dashboardPanel.add(topPanelWrapper, BorderLayout.NORTH); 
-        // --- END: Tambahkan Panel Kontrol Ekspor ---
-
-        JPanel chartAndDetailsPanel = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel chartAndDetailsPanel = new JPanel(new BorderLayout(0, 20));
         chartAndDetailsPanel.setBackground(Color.WHITE);
         chartAndDetailsPanel.setOpaque(true);
-        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0)); 
-        
-        chartAndDetailsPanel.add(createModernChartWrapper());
-        chartAndDetailsPanel.add(createMonthlySalesTrendChartPanel());
+        chartAndDetailsPanel.setBorder(new EmptyBorder(20, 0, 0, 0));
+        JPanel pieChartPanel = createModernChartWrapper();
+        JPanel barChartPanel = createMonthlySalesTrendChartPanel();
+
+        JSplitPane topSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pieChartPanel, barChartPanel);
+        topSplitPane.setResizeWeight(0.5);
+        topSplitPane.setBorder(null);     
+        topSplitPane.setBackground(Color.WHITE);
+        topSplitPane.setContinuousLayout(true); 
+
+        JPanel bottomChartPanel = createMonthlySalesLineChartPanel();
+        chartAndDetailsPanel.add(topSplitPane, BorderLayout.NORTH);
+        chartAndDetailsPanel.add(bottomChartPanel, BorderLayout.CENTER);
+
 
         dashboardPanel.add(chartAndDetailsPanel, BorderLayout.CENTER);
 
@@ -989,9 +1052,6 @@ public class ManagerDashboardUI extends JFrame {
                     "Gagal memuat data penjualan bulanan dari database.\n" + e.getMessage(),
                     "Error Database",
                     JOptionPane.ERROR_MESSAGE);
-        } finally {
-            // Pastikan koneksi ditutup jika tidak menggunakan try-with-resources
-            // DatabaseConnection.closeConnection(conn, stmt, rs); // Dihapus karena sudah try-with-resources
         }
 
         JFreeChart barChart = ChartFactory.createBarChart(
@@ -1018,6 +1078,11 @@ public class ManagerDashboardUI extends JFrame {
         plot.setRangeGridlinesVisible(true);
         plot.setDomainGridlinesVisible(true);
 
+        // --- REVISI 2: Memperbaiki format angka pada Bar Chart ---
+        org.jfree.chart.axis.NumberAxis rangeAxis = (org.jfree.chart.axis.NumberAxis) plot.getRangeAxis();
+        DecimalFormat decimalFormat = new DecimalFormat("#,##0");
+        rangeAxis.setNumberFormatOverride(decimalFormat);
+        
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setDrawBarOutline(false);
 
@@ -1888,6 +1953,7 @@ public class ManagerDashboardUI extends JFrame {
                             "Data berhasil diekspor ke " + fileToSave.getName(),
                             "Ekspor Berhasil",
                             JOptionPane.INFORMATION_MESSAGE);
+
                 } catch (java.io.IOException e) {
                     e.printStackTrace();
                     JOptionPane.showMessageDialog(this,
@@ -1906,7 +1972,6 @@ public class ManagerDashboardUI extends JFrame {
         }
     }
 
-    // Metode untuk aksi ekspor data penjualan (diubah namanya dan menerima enum)
     private void showExportOptionDialog() {
         String[] options = {"Excel", "PDF"};
         int choice = JOptionPane.showOptionDialog(
@@ -1925,12 +1990,11 @@ public class ManagerDashboardUI extends JFrame {
         } else if (choice == 1) { // PDF
             exportSalesData(ExportFormat.PDF);
         } else {
-            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
+            exportStatusLabel.setForeground(Color.BLACK);
             exportStatusLabel.setText("Ekspor dibatalkan.");
         }
     }
     
-    // Enum untuk format ekspor (harus dideklarasikan di luar metode, bisa di dalam kelas ManagerDashboardUI)
     private enum ExportFormat {
         EXCEL, PDF
     }
@@ -1940,14 +2004,11 @@ public class ManagerDashboardUI extends JFrame {
         String fileExtension;
         String dialogTitle;
         
-        // Tidak perlu deklarasi variabel lokal currentExportExcelService dan currentExportPdfService
-        // karena kita akan langsung menggunakan field kelas exportService dan exportPdfService
-
         if (format == ExportFormat.EXCEL) {
             defaultFileName = "LaporanPenjualan.xlsx";
             fileExtension = "xlsx";
             dialogTitle = "Simpan Laporan Penjualan (Excel)";
-        } else { // PDF
+        } else { 
             defaultFileName = "LaporanPenjualan.pdf";
             fileExtension = "pdf";
             dialogTitle = "Simpan Laporan Penjualan (PDF)";
@@ -1977,7 +2038,7 @@ public class ManagerDashboardUI extends JFrame {
             String finalPath = fileToSave.getAbsolutePath();
             System.out.println("DEBUG: User selected path: " + finalPath);
 
-            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
+            exportStatusLabel.setForeground(Color.BLACK); 
             exportStatusLabel.setText("Mengekspor data penjualan ke " + format.name() + "... Mohon tunggu.");
             
             new SwingWorker<Void, Void>() {
@@ -1989,10 +2050,8 @@ public class ManagerDashboardUI extends JFrame {
                     try {
                         System.out.println("DEBUG: SwingWorker doInBackground started. Calling exportService for " + format.name() + ".");
                         if (format == ExportFormat.EXCEL) {
-                            // Menggunakan field kelas 'exportService' secara langsung
                             exportService.exportSalesDataToExcel(finalPath);
-                        } else { // PDF
-                            // Menggunakan field kelas 'exportPdfService' secara langsung
+                        } else {
                             exportPdfService.exportSalesDataToPdf(finalPath);
                         }
                         message = "Data berhasil diekspor ke:<br>" + finalPath;
@@ -2016,7 +2075,7 @@ public class ManagerDashboardUI extends JFrame {
                 protected void done() {
                     if (message == null) {
                         message = "Terjadi kesalahan tidak terduga, pesan status kosong.";
-                        msgColor = new Color(220, 53, 69); // CANCEL_RED
+                        msgColor = new Color(220, 53, 69);
                         System.err.println("DEBUG: Message in SwingWorker.done() was unexpectedly null.");
                     }
                     exportStatusLabel.setForeground(msgColor);
@@ -2025,7 +2084,7 @@ public class ManagerDashboardUI extends JFrame {
                 }
             }.execute();
         } else {
-            exportStatusLabel.setForeground(Color.BLACK); // Gunakan Color.BLACK
+            exportStatusLabel.setForeground(Color.BLACK);
             exportStatusLabel.setText("Ekspor dibatalkan.");
             System.out.println("DEBUG: Export cancelled by user.");
         }
@@ -2099,7 +2158,6 @@ public class ManagerDashboardUI extends JFrame {
 
         panel.add(mainPanel, BorderLayout.CENTER);
 
-        // Load data when panel is first created
         loadAllTickets();
         return panel;
     }
@@ -2108,13 +2166,12 @@ public class ManagerDashboardUI extends JFrame {
         table.setRowHeight(45);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         table.setBackground(Color.WHITE);
-        table.setSelectionBackground(new Color(255, 69, 0, 50)); // Light orange selection
+        table.setSelectionBackground(new Color(255, 69, 0, 50));
         table.setSelectionForeground(Color.BLACK);
         table.setGridColor(new Color(230, 230, 230));
         table.setShowVerticalLines(false);
         table.setIntercellSpacing(new Dimension(0, 1));
 
-        // Header styling
         JTableHeader header = table.getTableHeader();
         header.setBackground(new Color(255, 69, 0));
         header.setForeground(Color.WHITE);
@@ -2122,14 +2179,12 @@ public class ManagerDashboardUI extends JFrame {
         header.setPreferredSize(new Dimension(0, 40));
         header.setBorder(BorderFactory.createEmptyBorder());
 
-        // Column widths
         table.getColumnModel().getColumn(0).setPreferredWidth(60);
         table.getColumnModel().getColumn(1).setPreferredWidth(80);
         table.getColumnModel().getColumn(2).setPreferredWidth(200);
         table.getColumnModel().getColumn(3).setPreferredWidth(120);
         table.getColumnModel().getColumn(4).setPreferredWidth(150);
 
-        // Status column renderer
         table.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
     }
 
@@ -2142,7 +2197,6 @@ public class ManagerDashboardUI extends JFrame {
         button.setFocusPainted(false);
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        // Hover effect
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -2162,7 +2216,6 @@ public class ManagerDashboardUI extends JFrame {
         return button;
     }
 
-    // Custom cell renderer for status column
     private class StatusCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
@@ -2233,7 +2286,6 @@ public class ManagerDashboardUI extends JFrame {
             dialog.setLayout(new BorderLayout(15, 15));
             dialog.getContentPane().setBackground(new Color(250, 250, 250));
 
-            // Header panel with ticket info
             JPanel headerPanel = new JPanel();
             headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
             headerPanel.setBackground(new Color(250, 250, 250));
@@ -2249,16 +2301,15 @@ public class ManagerDashboardUI extends JFrame {
             infoPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
 
             infoPanel.add(createInfoLabel("ID Pengguna:", String.valueOf(ticket.getUserId())));
-            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(new JLabel());
             infoPanel.add(createInfoLabel("Subjek:", ticket.getSubject()));
-            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(new JLabel());
             infoPanel.add(createInfoLabel("Status Saat Ini:", ticket.getStatus()));
-            infoPanel.add(new JLabel()); // Empty cell
+            infoPanel.add(new JLabel());
 
             headerPanel.add(titleLabel);
             headerPanel.add(infoPanel);
 
-            // Message area
             JTextArea messageArea = new JTextArea(ticket.getMessage());
             messageArea.setEditable(false);
             messageArea.setLineWrap(true);
@@ -2271,7 +2322,6 @@ public class ManagerDashboardUI extends JFrame {
             messageScroll.setBorder(createModernTitledBorder("Pesan dari Pengguna"));
             messageScroll.setPreferredSize(new Dimension(0, 150));
 
-            // Reply area
             JTextArea replyArea = new JTextArea(ticket.getManagerReply() != null ? ticket.getManagerReply() : "");
             replyArea.setLineWrap(true);
             replyArea.setWrapStyleWord(true);
@@ -2283,7 +2333,6 @@ public class ManagerDashboardUI extends JFrame {
             replyScroll.setBorder(createModernTitledBorder("Tulis Balasan Anda"));
             replyScroll.setPreferredSize(new Dimension(0, 150));
 
-            // Control panel
             JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 15));
             controlPanel.setBackground(new Color(250, 250, 250));
             controlPanel.setBorder(new EmptyBorder(10, 20, 20, 20));
@@ -2319,7 +2368,6 @@ public class ManagerDashboardUI extends JFrame {
             controlPanel.add(statusComboBox);
             controlPanel.add(saveButton);
 
-            // Center panel for message and reply
             JPanel centerPanel = new JPanel(new GridLayout(2, 1, 0, 15));
             centerPanel.setBackground(new Color(250, 250, 250));
             centerPanel.setBorder(new EmptyBorder(0, 20, 0, 20));
